@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,11 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const despesaSchema = z.object({
   fornecedor: z.string().min(1, "Fornecedor é obrigatório"),
@@ -40,7 +43,7 @@ const despesaSchema = z.object({
 type DespesaFormData = z.infer<typeof despesaSchema>;
 
 interface Despesa {
-  id: number;
+  id: string;
   fornecedor: string;
   cnpj: string;
   data: string;
@@ -66,54 +69,13 @@ const DespesasDetalhes = () => {
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedDespesa, setSelectedDespesa] = useState<Despesa | null>(null);
 
-  // Mock data - filtered by obra
-  const [despesas, setDespesas] = useState<Despesa[]>([
-    {
-      id: 1,
-      fornecedor: "Construtora XYZ",
-      cnpj: "12.345.678/0001-90",
-      data: "2025-01-15",
-      hora: "14:30",
-      formaPagamento: "Crédito à vista",
-      tipoParcela: "À vista",
-      quantidadeParcelas: 1,
-      valorParcela: 8500.00,
-      bandeira: "Visa",
-      categoria: "Material",
-      status: "validado",
-      responsavel: "João Silva"
-    },
-    {
-      id: 4,
-      fornecedor: "Elétrica Pro",
-      cnpj: "98.765.432/0001-10",
-      data: "2025-01-12",
-      hora: "10:15",
-      formaPagamento: "Débito",
-      tipoParcela: "À vista",
-      quantidadeParcelas: 1,
-      valorParcela: 5400.00,
-      bandeira: "Mastercard",
-      categoria: "Material Elétrico",
-      status: "rejeitado",
-      responsavel: "João Silva"
-    },
-    {
-      id: 5,
-      fornecedor: "Hidráulica Central",
-      cnpj: "11.222.333/0001-44",
-      data: "2025-01-10",
-      hora: "16:45",
-      formaPagamento: "Crédito parcelado",
-      tipoParcela: "Parcelado",
-      quantidadeParcelas: 3,
-      valorParcela: 1066.67,
-      bandeira: "Elo",
-      categoria: "Material Hidráulico",
-      status: "pendente",
-      responsavel: "João Silva"
-    },
-  ]);
+  const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = getFromStorage<Despesa>(STORAGE_KEYS.DESPESAS);
+    setDespesas(stored);
+  }, []);
 
   const form = useForm<DespesaFormData>({
     resolver: zodResolver(despesaSchema),
@@ -135,8 +97,8 @@ const DespesasDetalhes = () => {
   });
 
   const handleCreate = (data: DespesaFormData) => {
-    const novaDespesa: Despesa = {
-      id: despesas.length + 1,
+    const novaDespesa: any = {
+      id: Date.now().toString(),
       fornecedor: data.fornecedor,
       cnpj: data.cnpj,
       data: data.data,
@@ -152,7 +114,8 @@ const DespesasDetalhes = () => {
       imagemComprovante: data.imagemComprovante,
     };
 
-    setDespesas([novaDespesa, ...despesas]);
+    const updated = addToStorage(STORAGE_KEYS.DESPESAS, novaDespesa);
+    setDespesas(updated);
     setOpenCreate(false);
     form.reset();
     toast({
@@ -164,28 +127,23 @@ const DespesasDetalhes = () => {
   const handleEdit = (data: DespesaFormData) => {
     if (!selectedDespesa) return;
 
-    const despesasAtualizadas = despesas.map(d => 
-      d.id === selectedDespesa.id 
-        ? { 
-            ...d, 
-            fornecedor: data.fornecedor,
-            cnpj: data.cnpj,
-            data: data.data,
-            hora: data.hora,
-            formaPagamento: data.formaPagamento,
-            tipoParcela: data.tipoParcela,
-            quantidadeParcelas: parseInt(data.quantidadeParcelas),
-            valorParcela: parseFloat(data.valorParcela),
-            bandeira: data.bandeira,
-            categoria: data.categoria,
-            status: data.status,
-            responsavel: data.responsavel,
-            imagemComprovante: data.imagemComprovante,
-          }
-        : d
-    );
+    const updated = updateInStorage<Despesa>(STORAGE_KEYS.DESPESAS, selectedDespesa.id.toString(), {
+      fornecedor: data.fornecedor,
+      cnpj: data.cnpj,
+      data: data.data,
+      hora: data.hora,
+      formaPagamento: data.formaPagamento,
+      tipoParcela: data.tipoParcela,
+      quantidadeParcelas: parseInt(data.quantidadeParcelas),
+      valorParcela: parseFloat(data.valorParcela),
+      bandeira: data.bandeira,
+      categoria: data.categoria,
+      status: data.status,
+      responsavel: data.responsavel,
+      imagemComprovante: data.imagemComprovante,
+    });
 
-    setDespesas(despesasAtualizadas);
+    setDespesas(updated);
     setOpenEdit(false);
     setSelectedDespesa(null);
     form.reset();
@@ -193,6 +151,18 @@ const DespesasDetalhes = () => {
       title: "Despesa atualizada!",
       description: "As alterações foram salvas com sucesso.",
     });
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      const updated = deleteFromStorage<Despesa>(STORAGE_KEYS.DESPESAS, deleteId);
+      setDespesas(updated);
+      toast({
+        title: "Despesa excluída!",
+        description: "A despesa foi removida com sucesso.",
+      });
+      setDeleteId(null);
+    }
   };
 
   const openEditDialog = (despesa: Despesa) => {
@@ -334,7 +304,7 @@ const DespesasDetalhes = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-sm text-muted-foreground mb-1">Total</div>
                     <div className="text-xl font-bold">
@@ -344,6 +314,9 @@ const DespesasDetalhes = () => {
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(despesa)}>
                     <Edit className="h-4 w-4 mr-1" />
                     Editar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setDeleteId(despesa.id.toString())}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -849,6 +822,21 @@ const DespesasDetalhes = () => {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

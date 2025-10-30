@@ -21,6 +21,8 @@ import {
   Plus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
+import { STORAGE_KEYS, getFromStorage, addToStorage } from "@/lib/localStorage";
 
 const financeiroSchema = z.object({
   descricao: z.string().min(1, "Descrição é obrigatória"),
@@ -45,6 +47,59 @@ const Financeiro = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [despesas, setDespesas] = useState<any[]>([]);
+
+  useEffect(() => {
+    const stored = getFromStorage<any>(STORAGE_KEYS.DESPESAS);
+    if (stored.length === 0) {
+      const defaultDespesas = [
+        {
+          id: 1,
+          fornecedor: "Construtora XYZ",
+          valor: 8500.00,
+          categoria: "Material",
+          obra: "Edifício Alpha",
+          data: "2025-01-15",
+          status: "validado",
+          responsavel: "João Silva"
+        },
+        {
+          id: 2,
+          fornecedor: "Ferragens ABC",
+          valor: 2350.00,
+          categoria: "Ferramentas",
+          obra: "Residencial Beta",
+          data: "2025-01-14",
+          status: "pendente",
+          responsavel: "Maria Santos"
+        },
+        {
+          id: 3,
+          fornecedor: "Transportes Rápidos",
+          valor: 1200.00,
+          categoria: "Logística",
+          obra: "Comercial Gamma",
+          data: "2025-01-13",
+          status: "validado",
+          responsavel: "Pedro Costa"
+        },
+        {
+          id: 4,
+          fornecedor: "Elétrica Pro",
+          valor: 5400.00,
+          categoria: "Material Elétrico",
+          obra: "Edifício Alpha",
+          data: "2025-01-12",
+          status: "rejeitado",
+          responsavel: "João Silva"
+        },
+      ];
+      setDespesas(defaultDespesas);
+      localStorage.setItem(STORAGE_KEYS.DESPESAS, JSON.stringify(defaultDespesas));
+    } else {
+      setDespesas(stored);
+    }
+  }, []);
 
   const mockRequisicoes = [
     { id: "REQ-2025-001", descricao: "Cimento CP-II 50kg", obra: "Edifício Alpha" },
@@ -70,7 +125,19 @@ const Financeiro = () => {
   });
 
   const onSubmit = (data: FinanceiroFormData) => {
-    console.log("Despesa financeira:", data);
+    const novaDespesa = {
+      id: Date.now().toString(),
+      fornecedor: data.cliente,
+      valor: parseFloat(data.valorDespesa),
+      categoria: data.categoria,
+      obra: data.projeto || "Sem projeto",
+      data: data.dataEmissao.toISOString().split('T')[0],
+      status: "pendente",
+      responsavel: "Sistema",
+    };
+
+    const updated = addToStorage(STORAGE_KEYS.DESPESAS, novaDespesa);
+    setDespesas(updated);
     setOpen(false);
     form.reset({
       descricao: "",
@@ -92,48 +159,9 @@ const Financeiro = () => {
     });
   };
 
-  const mockExpenses = [
-    {
-      id: 1,
-      fornecedor: "Construtora XYZ",
-      valor: 8500.00,
-      categoria: "Material",
-      obra: "Edifício Alpha",
-      data: "2025-01-15",
-      status: "validado",
-      responsavel: "João Silva"
-    },
-    {
-      id: 2,
-      fornecedor: "Ferragens ABC",
-      valor: 2350.00,
-      categoria: "Ferramentas",
-      obra: "Residencial Beta",
-      data: "2025-01-14",
-      status: "pendente",
-      responsavel: "Maria Santos"
-    },
-    {
-      id: 3,
-      fornecedor: "Transportes Rápidos",
-      valor: 1200.00,
-      categoria: "Logística",
-      obra: "Comercial Gamma",
-      data: "2025-01-13",
-      status: "validado",
-      responsavel: "Pedro Costa"
-    },
-    {
-      id: 4,
-      fornecedor: "Elétrica Pro",
-      valor: 5400.00,
-      categoria: "Material Elétrico",
-      obra: "Edifício Alpha",
-      data: "2025-01-12",
-      status: "rejeitado",
-      responsavel: "João Silva"
-    },
-  ];
+  const totalDespesas = despesas.reduce((acc, d) => acc + d.valor, 0);
+  const despesasValidadas = despesas.filter(d => d.status === "validado").reduce((acc, d) => acc + d.valor, 0);
+  const despesasPendentes = despesas.filter(d => d.status === "pendente").reduce((acc, d) => acc + d.valor, 0);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string; icon: any }> = {
@@ -472,8 +500,8 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Total do Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 17.450,00</div>
-            <p className="text-xs text-muted-foreground mt-1">4 despesas registradas</p>
+            <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDespesas)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{despesas.length} despesas registradas</p>
           </CardContent>
         </Card>
         <Card>
@@ -481,8 +509,8 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">R$ 2.350,00</div>
-            <p className="text-xs text-muted-foreground mt-1">1 validação pendente</p>
+            <div className="text-2xl font-bold text-yellow-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasPendentes)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{despesas.filter(d => d.status === "pendente").length} validação(ões) pendente(s)</p>
           </CardContent>
         </Card>
         <Card>
@@ -490,8 +518,8 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Validados</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">R$ 9.700,00</div>
-            <p className="text-xs text-muted-foreground mt-1">2 despesas aprovadas</p>
+            <div className="text-2xl font-bold text-green-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasValidadas)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{despesas.filter(d => d.status === "validado").length} despesa(s) aprovada(s)</p>
           </CardContent>
         </Card>
       </div>
@@ -522,7 +550,7 @@ const Financeiro = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {mockExpenses.map((expense) => (
+            {despesas.map((expense) => (
               <div 
                 key={expense.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"

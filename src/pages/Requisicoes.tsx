@@ -11,7 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Plus, Search, CheckCircle, Clock, XCircle, ShoppingCart, Trash2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage } from "@/lib/localStorage";
+import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const produtoSchema = z.object({
   numeroItem: z.string().min(1, "Número do item é obrigatório"),
@@ -60,6 +61,19 @@ const Requisicoes = () => {
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
   const [carrinho, setCarrinho] = useState<Produto[]>([]);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleDelete = () => {
+    if (deleteId) {
+      const updated = deleteFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES, deleteId);
+      setRequisicoes(updated);
+      toast({
+        title: "Requisição excluída!",
+        description: "A requisição foi removida com sucesso.",
+      });
+      setDeleteId(null);
+    }
+  };
 
   const mockObras = getFromStorage(STORAGE_KEYS.OBRAS, [
     { id: "1", nome: "Edifício Alpha" },
@@ -629,12 +643,34 @@ const Requisicoes = () => {
                       </Button>
                     </>
                   )}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setDeleteId(req.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta requisição? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

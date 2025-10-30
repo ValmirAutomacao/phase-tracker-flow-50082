@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
+import { useEffect } from "react";
 
 const etapaSchema = z.object({
   nome: z.string().min(1, "Nome da etapa é obrigatório"),
@@ -35,9 +36,10 @@ interface ObrasFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: ObraFormData) => void;
+  editData?: ObraFormData & { id: string };
 }
 
-export function ObrasForm({ open, onOpenChange, onSubmit }: ObrasFormProps) {
+export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormProps) {
   const mockClientes = [
     "João Silva",
     "Construtora ABC Ltda",
@@ -72,6 +74,24 @@ export function ObrasForm({ open, onOpenChange, onSubmit }: ObrasFormProps) {
     name: "etapas",
   });
 
+  useEffect(() => {
+    if (editData) {
+      form.reset(editData);
+    } else {
+      form.reset({
+        nome: "",
+        cliente: "",
+        endereco: "",
+        responsavel: "",
+        status: "",
+        dataInicio: "",
+        dataPrevisaoFinal: "",
+        orcamento: "",
+        etapas: [],
+      });
+    }
+  }, [editData, form]);
+
   const handleSubmit = (data: ObraFormData) => {
     onSubmit(data);
     form.reset();
@@ -81,9 +101,9 @@ export function ObrasForm({ open, onOpenChange, onSubmit }: ObrasFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nova Obra</DialogTitle>
+          <DialogTitle>{editData ? "Editar Obra" : "Nova Obra"}</DialogTitle>
           <DialogDescription>
-            Cadastre uma nova obra no sistema
+            {editData ? "Atualize as informações da obra" : "Cadastre uma nova obra no sistema"}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -338,7 +358,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit }: ObrasFormProps) {
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Cadastrar</Button>
+              <Button type="submit">{editData ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </Form>

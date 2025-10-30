@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, Search, Edit, MapPin, Calendar } from "lucide-react";
+import { Building2, Plus, Search, Edit, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObrasForm, ObraFormData } from "./ObrasForm";
-import { STORAGE_KEYS, getFromStorage, addToStorage } from "@/lib/localStorage";
+import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Obra {
   id: string;
@@ -72,27 +73,66 @@ const Obras = () => {
     }
   }, []);
 
-  const onSubmit = (data: ObraFormData) => {
-    const novaObra: Obra = {
-      id: Date.now().toString(),
-      nome: data.nome,
-      cliente: data.cliente,
-      endereco: data.endereco,
-      responsavel: data.responsavel,
-      status: data.status,
-      dataInicio: data.dataInicio,
-      dataPrevisao: data.dataPrevisaoFinal,
-      orcamento: parseFloat(data.orcamento),
-      progresso: 0,
-    };
+  const [editingObra, setEditingObra] = useState<Obra | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const updated = addToStorage(STORAGE_KEYS.OBRAS, novaObra);
-    setObras(updated);
+  const onSubmit = (data: ObraFormData) => {
+    if (editingObra) {
+      const updated = updateInStorage<Obra>(STORAGE_KEYS.OBRAS, editingObra.id, {
+        nome: data.nome,
+        cliente: data.cliente,
+        endereco: data.endereco,
+        responsavel: data.responsavel,
+        status: data.status,
+        dataInicio: data.dataInicio,
+        dataPrevisao: data.dataPrevisaoFinal,
+        orcamento: parseFloat(data.orcamento),
+      });
+      setObras(updated);
+      toast({
+        title: "Obra atualizada!",
+        description: `${data.nome} foi atualizada com sucesso.`,
+      });
+      setEditingObra(null);
+    } else {
+      const novaObra: Obra = {
+        id: Date.now().toString(),
+        nome: data.nome,
+        cliente: data.cliente,
+        endereco: data.endereco,
+        responsavel: data.responsavel,
+        status: data.status,
+        dataInicio: data.dataInicio,
+        dataPrevisao: data.dataPrevisaoFinal,
+        orcamento: parseFloat(data.orcamento),
+        progresso: 0,
+      };
+
+      const updated = addToStorage(STORAGE_KEYS.OBRAS, novaObra);
+      setObras(updated);
+      toast({
+        title: "Obra cadastrada!",
+        description: `${data.nome} foi adicionada com sucesso com ${data.etapas.length} etapa(s).`,
+      });
+    }
     setOpen(false);
-    toast({
-      title: "Obra cadastrada!",
-      description: `${data.nome} foi adicionada com sucesso com ${data.etapas.length} etapa(s).`,
-    });
+  };
+
+  const handleEdit = (obra: Obra) => {
+    setEditingObra(obra);
+    setOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      const updated = deleteFromStorage<Obra>(STORAGE_KEYS.OBRAS, deleteId);
+      setObras(updated);
+      toast({
+        title: "Obra excluída!",
+        description: "A obra foi removida com sucesso.",
+      });
+      setDeleteId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -116,11 +156,22 @@ const Obras = () => {
           <h1 className="text-3xl font-bold">Cadastro de Obras</h1>
           <p className="text-muted-foreground">Gerenciamento completo de obras e projetos</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => setOpen(true)}>
+        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingObra(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Obra
         </Button>
-        <ObrasForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} />
+        <ObrasForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingObra ? { 
+          nome: editingObra.nome,
+          cliente: editingObra.cliente || "",
+          endereco: editingObra.endereco,
+          responsavel: editingObra.responsavel,
+          status: editingObra.status,
+          dataInicio: editingObra.dataInicio,
+          dataPrevisaoFinal: editingObra.dataPrevisao || "",
+          orcamento: editingObra.orcamento?.toString() || "",
+          etapas: [],
+          id: editingObra.id
+        } : undefined} />
       </div>
 
       {/* Stats */}
@@ -214,10 +265,16 @@ const Obras = () => {
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)}>
+                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                      Excluir
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="space-y-1">
@@ -241,6 +298,21 @@ const Obras = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta obra? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

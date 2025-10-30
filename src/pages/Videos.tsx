@@ -289,9 +289,14 @@ const Videos = () => {
               <p className="text-sm text-muted-foreground max-w-2xl mx-auto mt-2">
                 <strong>1.</strong> Crie um novo vídeo e adicione um prompt descritivo<br/>
                 <strong>2.</strong> Faça upload de até 150 fotos da obra (serão salvas no Google Drive via n8n)<br/>
-                <strong>3.</strong> Clique em "Iniciar Vídeo" para acionar a automação de envio das fotos<br/>
+                <strong>3.</strong> Clique em "Iniciar Renderização" para acionar a automação de envio das fotos<br/>
                 <strong>4.</strong> Clique em "Renderizar Vídeo" para iniciar o processamento<br/>
-                <strong>5.</strong> O vídeo será gerado e enviado automaticamente para o app
+                <strong>5.</strong> O vídeo será gerado e enviado automaticamente para o app<br/>
+                <br/>
+                <strong>Rotas de Automação N8N:</strong><br/>
+                • Upload de fotos: POST /api/videos/:id/photos<br/>
+                • Iniciar renderização: POST /api/videos/:id/render<br/>
+                • Status do vídeo: GET /api/videos/:id/status
               </p>
             </div>
           </div>
@@ -358,7 +363,7 @@ const Videos = () => {
                         Upload Fotos
                       </Button>
                       <Button variant="outline" size="sm">
-                        Iniciar Vídeo
+                        Iniciar Renderização
                       </Button>
                     </>
                   )}

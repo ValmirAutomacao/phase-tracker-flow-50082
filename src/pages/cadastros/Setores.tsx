@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserCog, Plus, Search, Edit, Users } from "lucide-react";
+import { UserCog, Plus, Search, Edit, Users, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SetoresForm, SetorFormData } from "./SetoresForm";
-import { STORAGE_KEYS, getFromStorage, addToStorage } from "@/lib/localStorage";
+import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Setor {
   id: string;
@@ -59,23 +60,53 @@ const Setores = () => {
     }
   }, []);
 
-  const onSubmit = (data: SetorFormData) => {
-    const novoSetor: Setor = {
-      id: Date.now().toString(),
-      nome: data.nome,
-      descricao: data.descricao,
-      responsavel: data.responsavel,
-      totalColaboradores: 0,
-      status: "ativo",
-    };
+  const [editingSetor, setEditingSetor] = useState<Setor | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const updated = addToStorage(STORAGE_KEYS.SETORES, novoSetor);
-    setSetores(updated);
+  const onSubmit = (data: SetorFormData) => {
+    if (editingSetor) {
+      const updated = updateInStorage<Setor>(STORAGE_KEYS.SETORES, editingSetor.id, data);
+      setSetores(updated);
+      toast({
+        title: "Setor atualizado!",
+        description: `${data.nome} foi atualizado com sucesso.`,
+      });
+      setEditingSetor(null);
+    } else {
+      const novoSetor: Setor = {
+        id: Date.now().toString(),
+        nome: data.nome,
+        descricao: data.descricao,
+        responsavel: data.responsavel,
+        totalColaboradores: 0,
+        status: "ativo",
+      };
+
+      const updated = addToStorage(STORAGE_KEYS.SETORES, novoSetor);
+      setSetores(updated);
+      toast({
+        title: "Setor cadastrado!",
+        description: `${data.nome} foi adicionado com sucesso.`,
+      });
+    }
     setOpen(false);
-    toast({
-      title: "Setor cadastrado!",
-      description: `${data.nome} foi adicionado com sucesso.`,
-    });
+  };
+
+  const handleEdit = (setor: Setor) => {
+    setEditingSetor(setor);
+    setOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      const updated = deleteFromStorage<Setor>(STORAGE_KEYS.SETORES, deleteId);
+      setSetores(updated);
+      toast({
+        title: "Setor excluído!",
+        description: "O setor foi removido com sucesso.",
+      });
+      setDeleteId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -98,11 +129,11 @@ const Setores = () => {
           <h1 className="text-3xl font-bold">Cadastro de Setores</h1>
           <p className="text-muted-foreground">Gerenciamento de departamentos e áreas</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => setOpen(true)}>
+        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingSetor(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Setor
         </Button>
-        <SetoresForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} />
+        <SetoresForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingSetor ? { ...editingSetor } : undefined} />
       </div>
 
       {/* Stats */}
@@ -198,16 +229,36 @@ const Setores = () => {
                     <span className="text-muted-foreground">Colaboradores:</span>
                     <Badge variant="outline">{setor.totalColaboradores}</Badge>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar Setor
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(setor)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(setor.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este setor? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
