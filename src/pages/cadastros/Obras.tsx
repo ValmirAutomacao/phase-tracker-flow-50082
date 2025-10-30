@@ -9,17 +9,33 @@ import { ObrasForm, ObraFormData } from "./ObrasForm";
 import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
+interface Etapa {
+  id?: string;
+  nome: string;
+  responsavel: string;
+  dataInicio: string;
+  dataPrevisao: string;
+  progresso?: number;
+  status?: string;
+}
+
 interface Obra {
   id: string;
   nome: string;
   cliente?: string;
   endereco: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
   dataInicio: string;
   dataPrevisao?: string;
   status: string;
   progresso: number;
   responsavel: string;
   orcamento?: number;
+  etapas?: Etapa[];
 }
 
 const Obras = () => {
@@ -36,34 +52,118 @@ const Obras = () => {
           id: "1",
           nome: "Edifício Alpha",
           cliente: "Construtora XYZ Ltda",
-          endereco: "Av. Paulista, 1000 - São Paulo/SP",
+          endereco: "Avenida Paulista",
+          numero: "1000",
+          bairro: "Bela Vista",
+          cidade: "São Paulo",
+          estado: "SP",
+          cep: "01310-000",
           dataInicio: "2024-12-01",
           dataPrevisao: "2025-06-30",
           status: "ativa",
           progresso: 75,
-          responsavel: "João Silva"
+          responsavel: "João Silva",
+          etapas: [
+            {
+              id: "etapa-1",
+              nome: "Fundação",
+              responsavel: "João Silva",
+              dataInicio: "2024-12-01",
+              dataPrevisao: "2024-12-15",
+              progresso: 100,
+              status: "completed"
+            },
+            {
+              id: "etapa-2",
+              nome: "Estrutura",
+              responsavel: "Maria Santos",
+              dataInicio: "2024-12-16",
+              dataPrevisao: "2025-01-30",
+              progresso: 60,
+              status: "em-andamento"
+            }
+          ]
         },
         {
           id: "2",
           nome: "Residencial Beta",
           cliente: "Imobiliária ABC S.A.",
-          endereco: "Rua das Flores, 500 - Rio de Janeiro/RJ",
+          endereco: "Rua das Flores",
+          numero: "500",
+          bairro: "Copacabana",
+          cidade: "Rio de Janeiro",
+          estado: "RJ",
+          cep: "22070-000",
           dataInicio: "2024-11-15",
           dataPrevisao: "2025-08-15",
           status: "ativa",
           progresso: 45,
-          responsavel: "Maria Santos"
+          responsavel: "Maria Santos",
+          etapas: [
+            {
+              id: "etapa-3",
+              nome: "Terraplanagem",
+              responsavel: "Pedro Costa",
+              dataInicio: "2024-11-15",
+              dataPrevisao: "2024-12-01",
+              progresso: 100,
+              status: "completed"
+            },
+            {
+              id: "etapa-4",
+              nome: "Fundação",
+              responsavel: "Maria Santos",
+              dataInicio: "2024-12-02",
+              dataPrevisao: "2025-01-15",
+              progresso: 30,
+              status: "em-andamento"
+            }
+          ]
         },
         {
           id: "3",
           nome: "Comercial Gamma",
           cliente: "Empresa Delta Corp",
-          endereco: "Av. Central, 250 - Belo Horizonte/MG",
+          endereco: "Avenida Central",
+          numero: "250",
+          bairro: "Centro",
+          cidade: "Belo Horizonte",
+          estado: "MG",
+          cep: "30112-000",
           dataInicio: "2024-10-01",
           dataPrevisao: "2025-02-28",
           status: "ativa",
           progresso: 92,
-          responsavel: "Pedro Costa"
+          responsavel: "Pedro Costa",
+          etapas: [
+            {
+              id: "etapa-5",
+              nome: "Estrutura",
+              responsavel: "Pedro Costa",
+              dataInicio: "2024-10-01",
+              dataPrevisao: "2024-11-15",
+              progresso: 100,
+              status: "completed"
+            },
+            {
+              id: "etapa-6",
+              nome: "Alvenaria",
+              responsavel: "Ana Lima",
+              dataInicio: "2024-11-16",
+              dataPrevisao: "2024-12-30",
+              progresso: 100,
+              status: "completed"
+            },
+            {
+              id: "etapa-7",
+              nome: "Acabamento",
+              responsavel: "Pedro Costa",
+              dataInicio: "2025-01-01",
+              dataPrevisao: "2025-02-28",
+              progresso: 85,
+              status: "em-andamento"
+            }
+          ]
         },
       ];
       setObras(defaultObras);
@@ -82,11 +182,17 @@ const Obras = () => {
         nome: data.nome,
         cliente: data.cliente,
         endereco: data.endereco,
+        numero: data.numero,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep,
         responsavel: data.responsavel,
         status: data.status,
         dataInicio: data.dataInicio,
         dataPrevisao: data.dataPrevisaoFinal,
-        orcamento: parseFloat(data.orcamento),
+        orcamento: data.orcamento ? parseFloat(data.orcamento.replace(/\D/g, '')) / 100 : 0,
+        etapas: data.etapas,
       });
       setObras(updated);
       toast({
@@ -100,12 +206,18 @@ const Obras = () => {
         nome: data.nome,
         cliente: data.cliente,
         endereco: data.endereco,
+        numero: data.numero,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep,
         responsavel: data.responsavel,
         status: data.status,
         dataInicio: data.dataInicio,
         dataPrevisao: data.dataPrevisaoFinal,
-        orcamento: parseFloat(data.orcamento),
+        orcamento: data.orcamento ? parseFloat(data.orcamento.replace(/\D/g, '')) / 100 : 0,
         progresso: 0,
+        etapas: data.etapas,
       };
 
       const updated = addToStorage(STORAGE_KEYS.OBRAS, novaObra);
@@ -150,32 +262,37 @@ const Obras = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Cadastro de Obras</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Cadastro de Obras</h1>
           <p className="text-muted-foreground">Gerenciamento completo de obras e projetos</p>
         </div>
         <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingObra(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Obra
         </Button>
-        <ObrasForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingObra ? { 
+        <ObrasForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingObra ? {
           nome: editingObra.nome,
           cliente: editingObra.cliente || "",
           endereco: editingObra.endereco,
+          numero: editingObra.numero,
+          bairro: editingObra.bairro,
+          cidade: editingObra.cidade,
+          estado: editingObra.estado,
+          cep: editingObra.cep,
           responsavel: editingObra.responsavel,
           status: editingObra.status,
           dataInicio: editingObra.dataInicio,
           dataPrevisaoFinal: editingObra.dataPrevisao || "",
-          orcamento: editingObra.orcamento?.toString() || "",
-          etapas: [],
+          orcamento: editingObra.orcamento ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(editingObra.orcamento) : "",
+          etapas: editingObra.etapas || [],
           id: editingObra.id
         } : undefined} />
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Obras</CardTitle>
@@ -217,18 +334,18 @@ const Obras = () => {
       {/* Search */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Lista de Obras</CardTitle>
               <CardDescription>Todas as obras cadastradas</CardDescription>
             </div>
-            <div className="relative">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar obra..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9 w-full"
               />
             </div>
           </div>
@@ -240,39 +357,39 @@ const Obras = () => {
                 key={obra.id}
                 className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <Building2 className="h-6 w-6 text-primary" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-lg">{obra.nome}</h4>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-lg truncate">{obra.nome}</h4>
                         {getStatusBadge(obra.status)}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
                         Cliente: {obra.cliente}
                       </p>
-                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {obra.endereco}
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{obra.endereco}, {obra.numero} - {obra.bairro}, {obra.cidade}/{obra.estado} - {obra.cep}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(obra.dataInicio).toLocaleDateString('pt-BR')} - {new Date(obra.dataPrevisao).toLocaleDateString('pt-BR')}
+                          <Calendar className="h-3 w-3 shrink-0" />
+                          <span className="text-nowrap">{new Date(obra.dataInicio).toLocaleDateString('pt-BR')} - {new Date(obra.dataPrevisao).toLocaleDateString('pt-BR')}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
+                  <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)} className="text-xs sm:text-sm">
+                      <Edit className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)}>
-                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                      Excluir
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)} className="text-xs sm:text-sm">
+                      <Trash2 className="h-4 w-4 sm:mr-1 text-destructive" />
+                      <span className="hidden sm:inline">Excluir</span>
                     </Button>
                   </div>
                 </div>

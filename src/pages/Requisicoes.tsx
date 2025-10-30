@@ -13,11 +13,13 @@ import { Plus, Search, CheckCircle, Clock, XCircle, ShoppingCart, Trash2, Edit }
 import { useToast } from "@/hooks/use-toast";
 import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { currencyMask, parseCurrencyInput } from "@/lib/utils";
 
 const produtoSchema = z.object({
   numeroItem: z.string().min(1, "Número do item é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
   quantidade: z.string().min(1, "Quantidade é obrigatória"),
+  unidadeMedida: z.string().min(1, "Unidade de medida é obrigatória"),
   valor: z.string().min(1, "Valor é obrigatório"),
 });
 
@@ -37,6 +39,7 @@ interface Produto {
   numeroItem: string;
   descricao: string;
   quantidade: string;
+  unidadeMedida: string;
   valor: number;
 }
 
@@ -100,6 +103,25 @@ const Requisicoes = () => {
     "Acabamento",
   ];
 
+  const mockUnidadesMedida = [
+    "unidade",
+    "metro",
+    "metro²",
+    "metro³",
+    "quilograma",
+    "tonelada",
+    "litro",
+    "galão",
+    "saco",
+    "caixa",
+    "rolo",
+    "barra",
+    "peça",
+    "conjunto",
+    "dúzia",
+    "pacote",
+  ];
+
   useEffect(() => {
     const stored = getFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES);
     if (stored.length === 0) {
@@ -116,7 +138,8 @@ const Requisicoes = () => {
               id: "p1",
               numeroItem: "ITEM-001",
               descricao: "Cimento CP-II 50kg",
-              quantidade: "100 sacos",
+              quantidade: "100",
+              unidadeMedida: "saco",
               valor: 2500.00
             }
           ],
@@ -150,15 +173,16 @@ const Requisicoes = () => {
       numeroItem: "",
       descricao: "",
       quantidade: "",
+      unidadeMedida: "",
       valor: "",
     },
   });
 
   const adicionarAoCarrinho = (data: ProdutoFormData) => {
     if (editingProduct) {
-      setCarrinho(carrinho.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, ...data, valor: parseFloat(data.valor) }
+      setCarrinho(carrinho.map(p =>
+        p.id === editingProduct.id
+          ? { ...p, ...data, valor: parseCurrencyInput(data.valor) }
           : p
       ));
       setEditingProduct(null);
@@ -167,7 +191,7 @@ const Requisicoes = () => {
       const novoProduto: Produto = {
         id: Date.now().toString(),
         ...data,
-        valor: parseFloat(data.valor),
+        valor: parseCurrencyInput(data.valor),
       };
       setCarrinho([...carrinho, novoProduto]);
       toast({ title: "Produto adicionado ao carrinho!" });
@@ -181,7 +205,8 @@ const Requisicoes = () => {
       numeroItem: produto.numeroItem,
       descricao: produto.descricao,
       quantidade: produto.quantidade,
-      valor: produto.valor.toString(),
+      unidadeMedida: produto.unidadeMedida,
+      valor: currencyMask((produto.valor * 100).toString()),
     });
   };
 
@@ -412,7 +437,7 @@ const Requisicoes = () => {
                 {/* Form Adicionar Produto */}
                 <Form {...produtoForm}>
                   <form onSubmit={produtoForm.handleSubmit(adicionarAoCarrinho)} className="space-y-4 mb-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <FormField
                         control={produtoForm.control}
                         name="numeroItem"
@@ -433,8 +458,30 @@ const Requisicoes = () => {
                           <FormItem>
                             <FormLabel>Quantidade</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: 100 unidades" {...field} />
+                              <Input placeholder="Ex: 100" {...field} />
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={produtoForm.control}
+                        name="unidadeMedida"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unidade de Medida</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {mockUnidadesMedida.map(unidade => (
+                                  <SelectItem key={unidade} value={unidade}>{unidade}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -462,7 +509,15 @@ const Requisicoes = () => {
                         <FormItem>
                           <FormLabel>Valor Total (R$)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                            <Input
+                              type="text"
+                              placeholder="R$ 0,00"
+                              value={field.value}
+                              onChange={(e) => {
+                                const masked = currencyMask(e.target.value);
+                                field.onChange(masked);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -484,7 +539,7 @@ const Requisicoes = () => {
                         <div className="flex-1">
                           <div className="font-medium">{produto.numeroItem} - {produto.descricao}</div>
                           <div className="text-sm text-muted-foreground">
-                            {produto.quantidade} • R$ {produto.valor.toFixed(2)}
+                            {produto.quantidade} {produto.unidadeMedida} • {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.valor)}
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -508,7 +563,7 @@ const Requisicoes = () => {
                       </div>
                     ))}
                     <div className="text-right font-semibold text-lg pt-2">
-                      Total: R$ {carrinho.reduce((sum, p) => sum + p.valor, 0).toFixed(2)}
+                      Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(carrinho.reduce((sum, p) => sum + p.valor, 0))}
                     </div>
                   </div>
                 )}
@@ -617,7 +672,7 @@ const Requisicoes = () => {
                       <div><strong>Fornecedor:</strong> {req.fornecedor}</div>
                       <div><strong>Produtos:</strong> {req.produtos.length} itens</div>
                       <div className="font-semibold text-foreground">
-                        Valor Total: R$ {req.valorTotal.toFixed(2)}
+                        Valor Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(req.valorTotal)}
                       </div>
                     </div>
                   </div>

@@ -22,7 +22,9 @@ import {
   Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { STORAGE_KEYS, getFromStorage, addToStorage } from "@/lib/localStorage";
+import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage } from "@/lib/localStorage";
+import { PhotoUpload } from "@/components/PhotoUpload";
+import { VideoRenderer } from "@/components/VideoRenderer";
 
 const videoSchema = z.object({
   obraId: z.string().min(1, "Selecione uma obra"),
@@ -48,6 +50,9 @@ const Videos = () => {
   const { toast } = useToast();
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [renderDialogOpen, setRenderDialogOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
 
   const mockObras = getFromStorage(STORAGE_KEYS.OBRAS, [
     { id: "1", nome: "Edifício Alpha" },
@@ -103,15 +108,59 @@ const Videos = () => {
     setVideos(updated);
     setOpen(false);
     form.reset();
-    
+
     toast({
       title: "Vídeo criado!",
       description: "Agora você pode fazer upload de até 150 fotos. A automação será acionada quando você iniciar o vídeo.",
     });
   };
 
+  const handleOpenUpload = (video: VideoItem) => {
+    setSelectedVideo(video);
+    setUploadDialogOpen(true);
+  };
+
+  const handleUploadComplete = (photoCount: number) => {
+    if (selectedVideo) {
+      const updatedVideo = {
+        ...selectedVideo,
+        quantidadeFotos: photoCount,
+        status: "fila" as const
+      };
+
+      const updated = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updatedVideo);
+      setVideos(updated);
+
+      toast({
+        title: "Upload concluído!",
+        description: `${photoCount} fotos foram enviadas. O vídeo está pronto para renderização.`,
+      });
+    }
+  };
+
+  const handleOpenRender = (video: VideoItem) => {
+    setSelectedVideo(video);
+    setRenderDialogOpen(true);
+  };
+
+  const handleRenderComplete = (videoData: { duration: string; size: string; url: string }) => {
+    if (selectedVideo) {
+      const updatedVideo = {
+        ...selectedVideo,
+        status: "concluido" as const,
+        progresso: 100,
+        duracao: videoData.duration,
+        tamanho: videoData.size,
+        videoUrl: videoData.url
+      };
+
+      const updated = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updatedVideo);
+      setVideos(updated);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: any }> = {
+    const variants: Record<string, { label: string; className: string; icon: React.ElementType }> = {
       concluido: { 
         label: "Concluído", 
         className: "bg-green-100 text-green-700",
@@ -146,10 +195,10 @@ const Videos = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Módulo Vídeos</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Módulo Vídeos</h1>
           <p className="text-muted-foreground">Geração automática de vídeos arquitetônicos</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -232,7 +281,7 @@ const Videos = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Vídeos</CardTitle>
@@ -312,20 +361,20 @@ const Videos = () => {
         <CardContent>
           <div className="space-y-3">
             {videos.map((video) => (
-              <div 
+              <div
                 key={video.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
               >
-                <div className="flex items-start gap-4 flex-1">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <Video className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{video.obra}</h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                      <h4 className="font-semibold truncate">{video.obra}</h4>
                       {getStatusBadge(video.status)}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">{video.prompt}</p>
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{video.prompt}</p>
                     {video.status === "processando" && (
                       <div className="space-y-1 mb-2">
                         <div className="flex justify-between text-sm">
@@ -340,51 +389,56 @@ const Videos = () => {
                         </div>
                       </div>
                     )}
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground flex flex-wrap gap-1">
                       <span>Data: {new Date(video.dataCriacao).toLocaleDateString('pt-BR')}</span>
                       {video.quantidadeFotos !== undefined && (
                         <>
-                          <span className="mx-2">•</span>
+                          <span>•</span>
                           <span>Fotos: {video.quantidadeFotos}</span>
                         </>
                       )}
-                      <span className="mx-2">•</span>
+                      <span>•</span>
                       <span>Duração: {video.duracao}</span>
-                      <span className="mx-2">•</span>
+                      <span>•</span>
                       <span>Tamanho: {video.tamanho}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                   {video.status === "aguardando_fotos" && (
-                    <>
-                      <Button variant="outline" size="sm">
-                        <Upload className="h-4 w-4 mr-1" />
-                        Upload Fotos
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Iniciar Renderização
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenUpload(video)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Upload className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Upload Fotos</span>
+                    </Button>
                   )}
                   {video.status === "fila" && (
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenRender(video)}
+                      className="w-full sm:w-auto"
+                    >
                       Renderizar Vídeo
                     </Button>
                   )}
                   {video.status === "concluido" && (
                     <>
-                      <Button variant="outline" size="sm">
-                        <PlayCircle className="h-4 w-4 mr-1" />
-                        Assistir
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        <PlayCircle className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Assistir</span>
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-1" />
-                        Baixar
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        <Download className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Baixar</span>
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Share2 className="h-4 w-4 mr-1" />
-                        Compartilhar
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        <Share2 className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Compartilhar</span>
                       </Button>
                     </>
                   )}
@@ -394,6 +448,29 @@ const Videos = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      {selectedVideo && (
+        <>
+          <PhotoUpload
+            open={uploadDialogOpen}
+            onOpenChange={setUploadDialogOpen}
+            videoId={selectedVideo.id}
+            obraName={selectedVideo.obra}
+            onUploadComplete={handleUploadComplete}
+          />
+
+          <VideoRenderer
+            open={renderDialogOpen}
+            onOpenChange={setRenderDialogOpen}
+            videoId={selectedVideo.id}
+            obraName={selectedVideo.obra}
+            photoCount={selectedVideo.quantidadeFotos || 0}
+            prompt={selectedVideo.prompt}
+            onRenderComplete={handleRenderComplete}
+          />
+        </>
+      )}
     </div>
   );
 };

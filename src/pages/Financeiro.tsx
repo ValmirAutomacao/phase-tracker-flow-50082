@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { STORAGE_KEYS, getFromStorage, addToStorage } from "@/lib/localStorage";
+import { currencyMask, parseCurrencyInput } from "@/lib/utils";
 
 const financeiroSchema = z.object({
   descricao: z.string().min(1, "Descrição é obrigatória"),
@@ -127,7 +128,7 @@ const Financeiro = () => {
     const novaDespesa = {
       id: Date.now().toString(),
       fornecedor: data.cliente,
-      valor: parseFloat(data.valorDespesa),
+      valor: parseCurrencyInput(data.valorDespesa),
       categoria: data.categoria,
       obra: data.projeto || "Sem projeto",
       data: data.dataEmissao.toISOString().split('T')[0],
@@ -306,7 +307,15 @@ const Financeiro = () => {
                         <FormItem>
                           <FormLabel>Valor da Conta*</FormLabel>
                           <FormControl>
-                            <Input type="text" placeholder="R$ 0,00" {...field} />
+                            <Input
+                              type="text"
+                              placeholder="R$ 0,00"
+                              value={field.value}
+                              onChange={(e) => {
+                                const masked = currencyMask(e.target.value);
+                                field.onChange(masked);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -322,7 +331,15 @@ const Financeiro = () => {
                         <FormItem>
                           <FormLabel>Valor da Despesa (R$)*</FormLabel>
                           <FormControl>
-                            <Input type="text" placeholder="R$ 0,00" {...field} />
+                            <Input
+                              type="text"
+                              placeholder="R$ 0,00"
+                              value={field.value}
+                              onChange={(e) => {
+                                const masked = currencyMask(e.target.value);
+                                field.onChange(masked);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

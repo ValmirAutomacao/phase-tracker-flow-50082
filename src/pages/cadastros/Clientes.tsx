@@ -17,6 +17,11 @@ interface Cliente {
   email: string;
   telefone: string;
   endereco: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
   dataCadastro?: string;
 }
 
@@ -39,7 +44,12 @@ const Clientes = () => {
           documento: "123.456.789-00",
           email: "joao@email.com",
           telefone: "(11) 98765-4321",
-          endereco: "Rua A, 123",
+          endereco: "Rua das Flores",
+          numero: "123",
+          bairro: "Centro",
+          cidade: "São Paulo",
+          estado: "SP",
+          cep: "01000-000",
           dataCadastro: "2025-01-01"
         },
         {
@@ -49,7 +59,12 @@ const Clientes = () => {
           documento: "12.345.678/0001-00",
           email: "contato@abc.com.br",
           telefone: "(11) 3456-7890",
-          endereco: "Av. B, 456",
+          endereco: "Avenida Paulista",
+          numero: "456",
+          bairro: "Bela Vista",
+          cidade: "São Paulo",
+          estado: "SP",
+          cep: "01310-000",
           dataCadastro: "2025-01-02"
         }
       ];
@@ -216,7 +231,7 @@ const Clientes = () => {
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Endereço: {cliente.endereco}
+                        Endereço: {cliente.endereco}, {cliente.numero} - {cliente.bairro}, {cliente.cidade}/{cliente.estado} - {cliente.cep}
                       </p>
                     </div>
                   </div>

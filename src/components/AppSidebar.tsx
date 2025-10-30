@@ -84,14 +84,14 @@ const comprasItems = [
 export function AppSidebar() {
   return (
     <Sidebar className="border-r border-border">
-      <SidebarHeader className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+      <SidebarHeader className="border-b border-border px-4 md:px-6 py-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-lg">E</span>
           </div>
-          <div>
-            <h2 className="font-bold text-lg">EngFlow</h2>
-            <p className="text-xs text-muted-foreground">Gestão de Obras</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-lg truncate">EngFlow</h2>
+            <p className="text-xs text-muted-foreground truncate">Gestão de Obras</p>
           </div>
         </div>
       </SidebarHeader>

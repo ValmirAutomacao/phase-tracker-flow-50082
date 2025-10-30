@@ -30,9 +30,12 @@ const App = () => (
           <div className="min-h-screen flex w-full bg-background">
             <AppSidebar />
             <div className="flex-1 flex flex-col">
-              <header className="h-14 border-b border-border flex items-center px-4 bg-card">
-                <SidebarTrigger className="mr-4" />
-                <h1 className="text-lg font-semibold">EngFlow - Sistema de Gestão</h1>
+              <header className="h-14 border-b border-border flex items-center px-4 bg-card shrink-0">
+                <SidebarTrigger className="mr-2 md:mr-4" />
+                <h1 className="text-base md:text-lg font-semibold truncate">
+                  <span className="hidden sm:inline">EngFlow - Sistema de Gestão</span>
+                  <span className="sm:hidden">EngFlow</span>
+                </h1>
               </header>
               <main className="flex-1 overflow-auto">
                 <Routes>

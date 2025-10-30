@@ -1,64 +1,96 @@
 import React, { useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
-export default function GanttTimeline() {
+interface Etapa {
+  id: string;
+  nome: string;
+  responsavel: string;
+  dataInicio: string;
+  dataPrevisao: string;
+  progresso?: number;
+  status?: string;
+}
+
+interface Obra {
+  id: string;
+  nome: string;
+  etapas?: Etapa[];
+}
+
+interface GanttTimelineProps {
+  obra?: Obra;
+}
+
+export default function GanttTimeline({ obra }: GanttTimelineProps) {
   const [expanded, setExpanded] = React.useState(new Set(['proj-1']));
 
-  const tasks = [
-    {
-      id: 'proj-1',
-      name: 'Projeto Alpha',
-      type: 'project',
-      progress: null,
-      children: [
+  const calculateDaysBetween = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const calculateStartDay = (dataInicio: string, projectStart: string) => {
+    const projectStartDate = new Date(projectStart);
+    const taskStartDate = new Date(dataInicio);
+    const diffTime = taskStartDate.getTime() - projectStartDate.getTime();
+    return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+  };
+
+  const getProjectStartDate = (etapas: Etapa[]) => {
+    if (!etapas || etapas.length === 0) return new Date().toISOString().split('T')[0];
+    return etapas.reduce((earliest, etapa) => {
+      return etapa.dataInicio < earliest ? etapa.dataInicio : earliest;
+    }, etapas[0].dataInicio);
+  };
+
+  const tasks = useMemo(() => {
+    if (!obra || !obra.etapas || obra.etapas.length === 0) {
+      return [
         {
-          id: 'task-1',
-          name: 'Planejamento',
-          startDay: 0,
-          duration: 5,
-          progress: 100,
-          weight: 0.15,
-          dependsOn: [],
+          id: 'proj-1',
+          name: 'Projeto Exemplo',
+          type: 'project',
+          progress: null,
+          children: [
+            {
+              id: 'task-1',
+              name: 'Nenhuma etapa cadastrada',
+              startDay: 0,
+              duration: 1,
+              progress: 0,
+              weight: 1,
+              dependsOn: [],
+            },
+          ],
         },
-        {
-          id: 'task-2',
-          name: 'Design',
-          startDay: 5,
-          duration: 8,
-          progress: 75,
-          weight: 0.25,
-          dependsOn: ['task-1'],
-        },
-        {
-          id: 'task-3',
-          name: 'Desenvolvimento',
-          startDay: 13,
-          duration: 15,
-          progress: 45,
-          weight: 0.4,
-          dependsOn: ['task-2'],
-        },
-        {
-          id: 'task-4',
-          name: 'Testes',
-          startDay: 28,
-          duration: 6,
-          progress: 0,
-          weight: 0.15,
-          dependsOn: ['task-3'],
-        },
-        {
-          id: 'task-5',
-          name: 'Deploy',
-          startDay: 34,
-          duration: 2,
-          progress: 0,
-          weight: 0.05,
-          dependsOn: ['task-4'],
-        },
-      ],
-    },
-  ];
+      ];
+    }
+
+    const projectStart = getProjectStartDate(obra.etapas);
+    const weight = 1 / obra.etapas.length;
+
+    const children = obra.etapas.map((etapa, index) => ({
+      id: etapa.id || `task-${index + 1}`,
+      name: etapa.nome,
+      startDay: calculateStartDay(etapa.dataInicio, projectStart),
+      duration: calculateDaysBetween(etapa.dataInicio, etapa.dataPrevisao),
+      progress: etapa.progresso || 0,
+      weight: weight,
+      dependsOn: index > 0 ? [obra.etapas[index - 1].id || `task-${index}`] : [],
+    }));
+
+    return [
+      {
+        id: 'proj-1',
+        name: obra.nome,
+        type: 'project',
+        progress: null,
+        children: children,
+      },
+    ];
+  }, [obra]);
 
   const toggleExpand = (id) => {
     setExpanded((prev) => {
@@ -84,7 +116,11 @@ export default function GanttTimeline() {
   };
 
   const timelineWidth = 500;
-  const totalDays = 36;
+  const totalDays = useMemo(() => {
+    if (!tasks[0].children || tasks[0].children.length === 0) return 36;
+    const maxEndDay = Math.max(...tasks[0].children.map(task => task.startDay + task.duration));
+    return Math.max(maxEndDay + 5, 30); // Mínimo de 30 dias
+  }, [tasks]);
   const pixelsPerDay = timelineWidth / totalDays;
 
   const taskPositions = useMemo(() => {
@@ -96,7 +132,7 @@ export default function GanttTimeline() {
       };
     });
     return positions;
-  }, [pixelsPerDay]);
+  }, [pixelsPerDay, tasks]);
 
   const renderDependencyLines = () => {
     const children = tasks[0].children;
@@ -153,12 +189,12 @@ export default function GanttTimeline() {
   const projectProgress = calculateProjectProgress(tasks[0].children);
 
   return (
-    <div className="w-full p-6 bg-white rounded-lg border border-gray-200">
-      <h1 className="text-2xl font-bold mb-6">Gantt Timeline com Progresso Automático</h1>
+    <div className="w-full p-4 sm:p-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Gantt Timeline com Progresso Automático</h1>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Sidebar */}
-        <div className="w-64 border-r border-gray-200">
+        <div className="w-full lg:w-64 lg:border-r border-gray-200 lg:border-b-0 border-b pb-4 lg:pb-0">
           {tasks.map((project) => (
             <div key={project.id}>
               <div
@@ -198,9 +234,9 @@ export default function GanttTimeline() {
         </div>
 
         {/* Timeline */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-x-auto">
           {/* Header com escala */}
-          <div className="flex gap-1 mb-4 relative" style={{ width: timelineWidth }}>
+          <div className="flex gap-1 mb-4 relative min-w-0" style={{ minWidth: Math.max(timelineWidth, 300) }}>
             {Array.from({ length: Math.ceil(totalDays / 5) }).map((_, i) => (
               <div
                 key={i}
@@ -214,7 +250,7 @@ export default function GanttTimeline() {
 
           {/* SVG para dependências */}
           <svg
-            className="absolute top-16 left-80"
+            className="absolute top-16 left-0 lg:left-80 hidden lg:block"
             width={timelineWidth + 50}
             height={tasks[0].children.length * 50 + 100}
             style={{ pointerEvents: 'none' }}
@@ -223,7 +259,7 @@ export default function GanttTimeline() {
           </svg>
 
           {/* Barras de tarefas */}
-          <div className="relative" style={{ width: timelineWidth }}>
+          <div className="relative" style={{ minWidth: Math.max(timelineWidth, 300) }}>
             {expanded.has('proj-1') &&
               tasks[0].children.map((task, index) => (
                 <div key={task.id} className="mb-8">
@@ -260,7 +296,7 @@ export default function GanttTimeline() {
       </div>
 
       {/* Legenda */}
-      <div className="mt-8 flex gap-4 text-xs border-t pt-4">
+      <div className="mt-8 flex flex-wrap gap-4 text-xs border-t pt-4">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded" />
           <span>Completo (100%)</span>

@@ -17,6 +17,11 @@ const clienteSchema = z.object({
   email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
   endereco: z.string().min(1, "Endereço é obrigatório"),
+  numero: z.string().min(1, "Número é obrigatório"),
+  bairro: z.string().min(1, "Bairro é obrigatório"),
+  cidade: z.string().min(1, "Cidade é obrigatória"),
+  estado: z.string().min(1, "Estado é obrigatório"),
+  cep: z.string().min(1, "CEP é obrigatório"),
 });
 
 export type ClienteFormData = z.infer<typeof clienteSchema>;
@@ -38,6 +43,11 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
       email: "",
       telefone: "",
       endereco: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      cep: "",
     },
   });
 
@@ -52,6 +62,11 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
         email: "",
         telefone: "",
         endereco: "",
+        numero: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+        cep: "",
       });
     }
   }, [editData, form]);
@@ -71,9 +86,9 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
 
   const formatDocumento = (value: string, tipo: "fisica" | "juridica" | undefined) => {
     if (!tipo) return value;
-    
+
     const numbers = value.replace(/\D/g, "");
-    
+
     if (tipo === "fisica") {
       // CPF: 000.000.000-00
       return numbers
@@ -90,6 +105,13 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
         .replace(/(\d{3})(\d)/, "$1/$2")
         .replace(/(\d{4})(\d{1,2})/, "$1-$2");
     }
+  };
+
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers
+      .slice(0, 8)
+      .replace(/(\d{5})(\d)/, "$1-$2");
   };
 
   return (
@@ -202,19 +224,135 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="endereco"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Endereço Completo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Rua, Número, Bairro, Cidade - UF" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Endereço</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="endereco"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logradouro (Rua/Avenida)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Rua das Flores" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="numero"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: 123" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="bairro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bairro</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Centro" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cep"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="00000-000"
+                          value={field.value}
+                          onChange={(e) => {
+                            const formatted = formatCEP(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: São Paulo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="estado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estado</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="AC">Acre</SelectItem>
+                          <SelectItem value="AL">Alagoas</SelectItem>
+                          <SelectItem value="AP">Amapá</SelectItem>
+                          <SelectItem value="AM">Amazonas</SelectItem>
+                          <SelectItem value="BA">Bahia</SelectItem>
+                          <SelectItem value="CE">Ceará</SelectItem>
+                          <SelectItem value="DF">Distrito Federal</SelectItem>
+                          <SelectItem value="ES">Espírito Santo</SelectItem>
+                          <SelectItem value="GO">Goiás</SelectItem>
+                          <SelectItem value="MA">Maranhão</SelectItem>
+                          <SelectItem value="MT">Mato Grosso</SelectItem>
+                          <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
+                          <SelectItem value="MG">Minas Gerais</SelectItem>
+                          <SelectItem value="PA">Pará</SelectItem>
+                          <SelectItem value="PB">Paraíba</SelectItem>
+                          <SelectItem value="PR">Paraná</SelectItem>
+                          <SelectItem value="PE">Pernambuco</SelectItem>
+                          <SelectItem value="PI">Piauí</SelectItem>
+                          <SelectItem value="RJ">Rio de Janeiro</SelectItem>
+                          <SelectItem value="RN">Rio Grande do Norte</SelectItem>
+                          <SelectItem value="RS">Rio Grande do Sul</SelectItem>
+                          <SelectItem value="RO">Rondônia</SelectItem>
+                          <SelectItem value="RR">Roraima</SelectItem>
+                          <SelectItem value="SC">Santa Catarina</SelectItem>
+                          <SelectItem value="SP">São Paulo</SelectItem>
+                          <SelectItem value="SE">Sergipe</SelectItem>
+                          <SelectItem value="TO">Tocantins</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -1,53 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import GanttTimeline from "@/components/GanttTimeline";
-import { 
-  FolderKanban, 
-  Calendar, 
-  Users, 
+import { STORAGE_KEYS, getFromStorage } from "@/lib/localStorage";
+import {
+  FolderKanban,
+  Calendar,
+  Users,
   Clock,
   CheckCircle2,
   AlertTriangle
 } from "lucide-react";
 
 const Projetos = () => {
-  const [selectedProject, setSelectedProject] = useState("alpha");
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [obras, setObras] = useState([]);
 
-  const projects = [
-    {
-      id: "alpha",
-      nome: "Edifício Alpha",
-      progresso: 75,
-      status: "em-dia",
-      prazo: "45 dias",
-      responsavel: "João Silva",
-      etapas: 12,
-      concluidas: 9
-    },
-    {
-      id: "beta",
-      nome: "Residencial Beta",
-      progresso: 45,
-      status: "atraso",
-      prazo: "67 dias",
-      responsavel: "Maria Santos",
-      etapas: 10,
-      concluidas: 4
-    },
-    {
-      id: "gamma",
-      nome: "Comercial Gamma",
-      progresso: 92,
-      status: "em-dia",
-      prazo: "12 dias",
-      responsavel: "Pedro Costa",
-      etapas: 8,
-      concluidas: 7
+  useEffect(() => {
+    const stored = getFromStorage(STORAGE_KEYS.OBRAS);
+    setObras(stored);
+    if (stored.length > 0 && !selectedProject) {
+      setSelectedProject(stored[0].id);
     }
-  ];
+  }, []);
+
+  const calculateProjectProgress = (etapas) => {
+    if (!etapas || etapas.length === 0) return 0;
+    const totalWeight = etapas.length;
+    const completedWeight = etapas.filter(e => e.status === "completed" || e.progresso === 100).length;
+    return Math.round((completedWeight / totalWeight) * 100);
+  };
+
+  const calculateRemainingDays = (dataPrevisao) => {
+    if (!dataPrevisao) return "N/A";
+    const hoje = new Date();
+    const previsao = new Date(dataPrevisao);
+    const diffTime = previsao - hoje;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? `${diffDays} dias` : "Atrasado";
+  };
+
+  const getProjectStatus = (dataPrevisao, progresso) => {
+    if (progresso === 100) return "concluido";
+    if (!dataPrevisao) return "em-dia";
+
+    const hoje = new Date();
+    const previsao = new Date(dataPrevisao);
+    const diffDays = Math.ceil((previsao - hoje) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return "atraso";
+    if (diffDays < 7) return "atencao";
+    return "em-dia";
+  };
 
   const etapas = [
     { nome: "Fundação", progresso: 100, status: "concluido", inicio: "01/12/2024", fim: "15/12/2024" },
@@ -61,11 +67,14 @@ const Projetos = () => {
     const variants: Record<string, { label: string; className: string }> = {
       "em-dia": { label: "Em Dia", className: "bg-green-100 text-green-700" },
       "atraso": { label: "Atrasado", className: "bg-red-100 text-red-700" },
+      "atencao": { label: "Atenção", className: "bg-orange-100 text-orange-700" },
       "concluido": { label: "Concluído", className: "bg-blue-100 text-blue-700" },
+      "ativa": { label: "Ativa", className: "bg-green-100 text-green-700" },
+      "planejamento": { label: "Planejamento", className: "bg-yellow-100 text-yellow-700" },
       "em-andamento": { label: "Em Andamento", className: "bg-yellow-100 text-yellow-700" },
       "pendente": { label: "Pendente", className: "bg-gray-100 text-gray-700" },
     };
-    
+
     return (
       <Badge className={variants[status]?.className || ""}>
         {variants[status]?.label || status}
@@ -84,50 +93,61 @@ const Projetos = () => {
 
       {/* Projects Overview */}
       <div className="grid gap-4 md:grid-cols-3">
-        {projects.map((project) => (
-          <Card 
-            key={project.id}
-            className={`cursor-pointer transition-all hover:shadow-lg ${
-              selectedProject === project.id ? "ring-2 ring-primary" : ""
-            }`}
-            onClick={() => setSelectedProject(project.id)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{project.nome}</CardTitle>
-                {getStatusBadge(project.status)}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Progresso</span>
-                  <span className="font-semibold">{project.progresso}%</span>
+        {obras.map((obra) => {
+          const progresso = obra.progresso || calculateProjectProgress(obra.etapas);
+          const status = getProjectStatus(obra.dataPrevisao, progresso);
+          const prazoRestante = calculateRemainingDays(obra.dataPrevisao);
+          const etapasCount = obra.etapas ? obra.etapas.length : 0;
+          const etapasConcluidas = obra.etapas ? obra.etapas.filter(e => e.status === "completed" || e.progresso === 100).length : 0;
+
+          return (
+            <Card
+              key={obra.id}
+              className={`cursor-pointer transition-all hover:shadow-lg ${
+                selectedProject === obra.id ? "ring-2 ring-primary" : ""
+              }`}
+              onClick={() => setSelectedProject(obra.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">{obra.nome}</CardTitle>
+                  {getStatusBadge(obra.status || status)}
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all" 
-                    style={{ width: `${project.progresso}%` }}
-                  />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Progresso</span>
+                    <span className="font-semibold">{progresso}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${progresso}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {project.prazo}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {prazoRestante}
+                  </div>
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {etapasConcluidas}/{etapasCount}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {project.concluidas}/{project.etapas}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  {obra.responsavel}
                 </div>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Users className="h-3 w-3" />
-                {project.responsavel}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="text-xs text-muted-foreground">
+                  Cliente: {obra.cliente}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Project Details */}
@@ -142,10 +162,14 @@ const Projetos = () => {
           <Card>
             <CardHeader>
               <CardTitle>Timeline do Projeto</CardTitle>
-              <CardDescription>Visualização Gantt com dependências e progresso</CardDescription>
+              <CardDescription>
+                {selectedProject
+                  ? `Visualização Gantt da obra: ${obras.find(o => o.id === selectedProject)?.nome || 'Selecionada'}`
+                  : 'Selecione uma obra para visualizar o timeline'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <GanttTimeline />
+              <GanttTimeline obra={obras.find(o => o.id === selectedProject)} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -154,44 +178,56 @@ const Projetos = () => {
           <Card>
             <CardHeader>
               <CardTitle>Etapas do Projeto</CardTitle>
-              <CardDescription>Status detalhado de cada etapa</CardDescription>
+              <CardDescription>
+                {selectedProject
+                  ? `Status detalhado das etapas da obra: ${obras.find(o => o.id === selectedProject)?.nome || 'Selecionada'}`
+                  : 'Selecione uma obra para visualizar as etapas'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {etapas.map((etapa, index) => (
-                  <div key={index} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <span className="font-bold text-primary">{index + 1}</span>
+                {selectedProject && obras.find(o => o.id === selectedProject)?.etapas ?
+                  obras.find(o => o.id === selectedProject).etapas.map((etapa, index) => (
+                    <div key={etapa.id || index} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <span className="font-bold text-primary">{index + 1}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">{etapa.nome}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(etapa.dataInicio).toLocaleDateString('pt-BR')} - {new Date(etapa.dataPrevisao).toLocaleDateString('pt-BR')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Responsável: {etapa.responsavel}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold">{etapa.nome}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {etapa.inicio} - {etapa.fim}
-                          </p>
+                        {getStatusBadge(etapa.status || "em-andamento")}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Progresso</span>
+                          <span className="font-semibold">{etapa.progresso || 0}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              (etapa.progresso || 0) === 100 ? 'bg-green-500' :
+                              (etapa.progresso || 0) >= 50 ? 'bg-blue-500' :
+                              (etapa.progresso || 0) > 0 ? 'bg-yellow-500' : 'bg-gray-300'
+                            }`}
+                            style={{ width: `${etapa.progresso || 0}%` }}
+                          />
                         </div>
                       </div>
-                      {getStatusBadge(etapa.status)}
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Progresso</span>
-                        <span className="font-semibold">{etapa.progresso}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all ${
-                            etapa.progresso === 100 ? 'bg-green-500' :
-                            etapa.progresso >= 50 ? 'bg-blue-500' :
-                            etapa.progresso > 0 ? 'bg-yellow-500' : 'bg-gray-300'
-                          }`}
-                          style={{ width: `${etapa.progresso}%` }}
-                        />
-                      </div>
+                  )) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {selectedProject ? 'Nenhuma etapa cadastrada para esta obra.' : 'Selecione uma obra para visualizar as etapas.'}
                     </div>
-                  </div>
-                ))}
+                  )}
               </div>
             </CardContent>
           </Card>
