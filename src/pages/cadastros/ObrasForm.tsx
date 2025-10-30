@@ -1,0 +1,348 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Trash2 } from "lucide-react";
+import { useFieldArray } from "react-hook-form";
+
+const etapaSchema = z.object({
+  nome: z.string().min(1, "Nome da etapa é obrigatório"),
+  responsavel: z.string().min(1, "Selecione um responsável"),
+  dataInicio: z.string().min(1, "Data de início é obrigatória"),
+  dataPrevisao: z.string().min(1, "Data de previsão é obrigatória"),
+});
+
+const obraSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  cliente: z.string().min(1, "Selecione um cliente"),
+  endereco: z.string().min(1, "Endereço é obrigatório"),
+  responsavel: z.string().min(1, "Selecione um responsável"),
+  status: z.string().min(1, "Selecione um status"),
+  dataInicio: z.string().min(1, "Data de início é obrigatória"),
+  dataPrevisaoFinal: z.string().min(1, "Data de previsão final é obrigatória"),
+  orcamento: z.string().min(1, "Orçamento é obrigatório"),
+  etapas: z.array(etapaSchema).min(1, "Adicione pelo menos uma etapa"),
+});
+
+export type ObraFormData = z.infer<typeof obraSchema>;
+
+interface ObrasFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: ObraFormData) => void;
+}
+
+export function ObrasForm({ open, onOpenChange, onSubmit }: ObrasFormProps) {
+  const mockClientes = [
+    "João Silva",
+    "Construtora ABC Ltda",
+    "Maria Santos",
+    "Incorporadora XYZ S.A.",
+  ];
+
+  const mockResponsaveis = [
+    "João Silva",
+    "Ana Lima",
+    "Pedro Costa",
+    "Maria Santos",
+  ];
+
+  const form = useForm<ObraFormData>({
+    resolver: zodResolver(obraSchema),
+    defaultValues: {
+      nome: "",
+      cliente: "",
+      endereco: "",
+      responsavel: "",
+      status: "",
+      dataInicio: "",
+      dataPrevisaoFinal: "",
+      orcamento: "",
+      etapas: [],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "etapas",
+  });
+
+  const handleSubmit = (data: ObraFormData) => {
+    onSubmit(data);
+    form.reset();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Nova Obra</DialogTitle>
+          <DialogDescription>
+            Cadastre uma nova obra no sistema
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome da Obra</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Edifício Exemplo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="cliente"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o cliente" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {mockClientes.map(cliente => (
+                        <SelectItem key={cliente} value={cliente}>{cliente}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endereco"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Endereço</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Rua Exemplo, 123" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="responsavel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Responsável</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {mockResponsaveis.map(resp => (
+                          <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="planejamento">Planejamento</SelectItem>
+                        <SelectItem value="em-andamento">Em Andamento</SelectItem>
+                        <SelectItem value="concluida">Concluída</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="dataInicio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Início</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dataPrevisaoFinal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Previsão Final</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="orcamento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orçamento (R$)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Etapas Section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Etapas da Obra</CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ nome: "", responsavel: "", dataInicio: "", dataPrevisao: "" })}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Etapa
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fields.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma etapa adicionada. Clique em "Adicionar Etapa" para começar.
+                  </p>
+                )}
+                {fields.map((field, index) => (
+                  <div key={field.id} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-sm">Etapa {index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name={`etapas.${index}.nome`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome da Etapa</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Fundação" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`etapas.${index}.responsavel`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Responsável</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {mockResponsaveis.map(resp => (
+                                <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name={`etapas.${index}.dataInicio`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data de Início</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`etapas.${index}.dataPrevisao`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data de Previsão</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Cadastrar</Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
