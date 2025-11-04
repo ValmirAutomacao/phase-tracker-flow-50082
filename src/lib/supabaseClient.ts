@@ -1,25 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Tipagem das variáveis de ambiente do Vite
-interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string
-  readonly VITE_SUPABASE_ANON_KEY: string
-}
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-if (!supabaseUrl) {
-  throw new Error('VITE_SUPABASE_URL é obrigatória')
-}
-
-if (!supabaseAnonKey) {
-  throw new Error('VITE_SUPABASE_ANON_KEY é obrigatória')
-}
+const SUPABASE_URL = "https://ibnrtvrxogkksldvxici.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnJ0dnJ4b2dra3NsZHZ4aWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NDkxMTQsImV4cCI6MjA3NzMyNTExNH0.VcedR4bpqo__fVsnrdYLc09sZVONZovtsQT4kM4r0u0"
 
 /**
  * Cliente Supabase configurado para o EngFlow
  * Usado para operações de banco de dados, autenticação e storage
- * durante a migração localStorage → Supabase
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
