@@ -53,8 +53,8 @@ const Obras = () => {
   const [open, setOpen] = useState(false);
 
   // Hooks Supabase para substituir localStorage
-  const { data: obras = [], isLoading, error } = useOptimizedSupabaseQuery<Obra>('OBRAS');
-  const { add, update, delete: deleteObra } = useSupabaseCRUD<Obra>('OBRAS');
+  const { data: obras = [], isLoading, error } = useOptimizedSupabaseQuery<any>('OBRAS');
+  const { add, update, delete: deleteObra } = useSupabaseCRUD<any>('OBRAS');
 
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

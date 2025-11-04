@@ -22,11 +22,11 @@ const Projetos = () => {
     const stored = getFromStorage(STORAGE_KEYS.OBRAS);
     setObras(stored);
     if (stored.length > 0 && !selectedProject) {
-      setSelectedProject(stored[0].id);
+      setSelectedProject((stored[0] as any).id);
     }
   }, []);
 
-  const calculateProjectProgress = (etapas) => {
+  const calculateProjectProgress = (etapas: any) => {
     if (!etapas || etapas.length === 0) return 0;
     const totalWeight = etapas.length;
     const completedWeight = etapas.filter(e => e.status === "completed" || e.progresso === 100).length;
@@ -37,7 +37,7 @@ const Projetos = () => {
     if (!dataPrevisao) return "N/A";
     const hoje = new Date();
     const previsao = new Date(dataPrevisao);
-    const diffTime = previsao - hoje;
+    const diffTime = (previsao as any) - (hoje as any);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? `${diffDays} dias` : "Atrasado";
   };
@@ -48,7 +48,7 @@ const Projetos = () => {
 
     const hoje = new Date();
     const previsao = new Date(dataPrevisao);
-    const diffDays = Math.ceil((previsao - hoje) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(((previsao as any) - (hoje as any)) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return "atraso";
     if (diffDays < 7) return "atencao";

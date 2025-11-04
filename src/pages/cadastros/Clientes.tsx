@@ -37,8 +37,8 @@ const Clientes = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Hooks Supabase para substituir localStorage
-  const { data: clientes = [], isLoading, error } = useOptimizedSupabaseQuery<Cliente>('CLIENTES');
-  const { add, update, delete: deleteCliente } = useSupabaseCRUD<Cliente>('CLIENTES');
+  const { data: clientes = [], isLoading, error } = useOptimizedSupabaseQuery<any>('CLIENTES');
+  const { add, update, delete: deleteCliente } = useSupabaseCRUD<any>('CLIENTES');
 
   const onSubmit = (data: ClienteFormData) => {
     if (editingCliente) {

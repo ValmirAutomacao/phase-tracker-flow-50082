@@ -90,14 +90,14 @@ const Requisicoes = () => {
   const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([]);
 
   // Hooks Supabase para substituir localStorage
-  const { data: requisicoes = [], isLoading, error } = useOptimizedSupabaseQuery<RequisicaoItem>('REQUISICOES');
-  const { add, update, delete: deleteRequisicao } = useSupabaseCRUD<RequisicaoItem>('REQUISICOES');
+  const { data: requisicoes = [], isLoading, error } = useOptimizedSupabaseQuery<any>('REQUISICOES');
+  const { add, update, delete: deleteRequisicao } = useSupabaseCRUD<any>('REQUISICOES');
 
   // Query para obras (para dropdown)
-  const { data: obras = [] } = useOptimizedSupabaseQuery<Obra>('OBRAS');
+  const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
 
   // Query para funcionários (para dropdown)
-  const { data: funcionarios = [] } = useOptimizedSupabaseQuery<Funcionario>('FUNCIONARIOS');
+  const { data: funcionarios = [] } = useOptimizedSupabaseQuery<any>('FUNCIONARIOS');
 
   const handleDelete = () => {
     if (deleteId) {
@@ -210,7 +210,7 @@ const Requisicoes = () => {
     };
 
     update.mutate(
-      { id, data: updatedRequisicao },
+      { id, updates: updatedRequisicao as any },
       {
         onSuccess: () => {
           const statusLabels = {

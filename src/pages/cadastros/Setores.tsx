@@ -30,8 +30,8 @@ const Setores = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Hooks Supabase para substituir localStorage
-  const { data: setores = [], isLoading, error } = useOptimizedSupabaseQuery<Setor>('SETORES');
-  const { add, update, delete: deleteSetor } = useSupabaseCRUD<Setor>('SETORES');
+  const { data: setores = [], isLoading, error } = useOptimizedSupabaseQuery<any>('SETORES');
+  const { add, update, delete: deleteSetor } = useSupabaseCRUD<any>('SETORES');
 
   // Filtro de busca memoizado para performance
   const filteredSetores = useMemo(() => {
@@ -47,11 +47,11 @@ const Setores = () => {
 
   const onSubmit = (data: SetorFormData) => {
     if (editingSetor) {
-      const updates = {
+      const updates: any = {
         nome: data.nome,
         descricao: data.descricao,
         responsavel: data.responsavel,
-        status: data.status || "ativo",
+        status: (data as any).status || "ativo",
       };
 
       update.mutate(

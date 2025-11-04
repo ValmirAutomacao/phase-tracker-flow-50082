@@ -75,11 +75,11 @@ const Videos = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
 
   // Hooks Supabase para substituir localStorage
-  const { data: videos = [], isLoading, error } = useOptimizedSupabaseQuery<VideoItem>('VIDEOS');
-  const { add, update, delete: deleteVideo } = useSupabaseCRUD<VideoItem>('VIDEOS');
+  const { data: videos = [], isLoading, error } = useOptimizedSupabaseQuery<any>('VIDEOS');
+  const { add, update, delete: deleteVideo } = useSupabaseCRUD<any>('VIDEOS');
 
   // Query para obras (para dropdown)
-  const { data: obras = [] } = useOptimizedSupabaseQuery<Obra>('OBRAS');
+  const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
@@ -137,7 +137,7 @@ const Videos = () => {
       };
 
       update.mutate(
-        { id: selectedVideo.id, data: updatedVideo },
+        { id: selectedVideo.id, updates: updatedVideo as any },
         {
           onSuccess: () => {
             toast({
@@ -174,7 +174,7 @@ const Videos = () => {
       };
 
       update.mutate(
-        { id: selectedVideo.id, data: updatedVideo },
+        { id: selectedVideo.id, updates: updatedVideo as any },
         {
           onSuccess: () => {
             toast({

@@ -281,11 +281,11 @@ const DespesasDetalhes = () => {
     };
     
     const variant = variants[status];
-    const Icon = variant.icon;
+    const IconComponent = variant.icon;
     
     return (
-      <Badge className={variant.className}>
-        <Icon className="h-3 w-3 mr-1" />
+      <Badge className={variant.className as any}>
+        <IconComponent className="h-3 w-3 mr-1" as any />
         {variant.label}
       </Badge>
     );

@@ -20,7 +20,7 @@ type TableName = typeof TABLE_MAP[StorageKey]
 // Interface genérica para entidades que têm ID
 interface BaseEntity {
   id: string
-  [key: string]: unknown
+  [key: string]: any
 }
 
 /**
@@ -75,7 +75,7 @@ export class SupabaseService {
       throw ErrorHandler.mapSupabaseError(error)
     }
 
-    return (data || []) as T[]
+    return (data || []) as unknown as T[]
   }
 
   /**
@@ -101,7 +101,7 @@ export class SupabaseService {
       if (data.length > 0) {
         const { error: insertError } = await supabase
           .from(tableName)
-          .insert(data as TablesInsert<TableName>[])
+          .insert(data as unknown as TablesInsert<TableName>[])
 
         if (insertError) {
           console.error(`Error inserting data to ${tableName}:`, insertError)
@@ -124,7 +124,7 @@ export class SupabaseService {
 
       const { data, error } = await supabase
         .from(tableName)
-        .insert(item as TablesInsert<TableName>)
+        .insert(item as unknown as TablesInsert<TableName>)
         .select()
         .single()
 

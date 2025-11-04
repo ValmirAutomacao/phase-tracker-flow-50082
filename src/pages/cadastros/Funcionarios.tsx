@@ -79,12 +79,12 @@ const Funcionarios = () => {
   const [selectedSetor, setSelectedSetor] = useState<string>("");
 
   // Hooks Supabase para substituir localStorage
-  const { data: funcionarios = [], isLoading, error } = useOptimizedSupabaseQuery<Funcionario>('FUNCIONARIOS');
-  const { add, update, delete: deleteFuncionario } = useSupabaseCRUD<Funcionario>('FUNCIONARIOS');
+  const { data: funcionarios = [], isLoading, error } = useOptimizedSupabaseQuery<any>('FUNCIONARIOS');
+  const { add, update, delete: deleteFuncionario } = useSupabaseCRUD<any>('FUNCIONARIOS');
 
   // Hooks para carregar dados hierárquicos
-  const { data: funcoes = [] } = useOptimizedSupabaseQuery<Funcao>('FUNCOES');
-  const { data: setores = [] } = useOptimizedSupabaseQuery<Setor>('SETORES');
+  const { data: funcoes = [] } = useOptimizedSupabaseQuery<any>('FUNCOES');
+  const { data: setores = [] } = useOptimizedSupabaseQuery<any>('SETORES');
 
   const form = useForm<FuncionarioFormData>({
     resolver: zodResolver(funcionarioSchema),

@@ -46,7 +46,7 @@ export function useSupabaseAdd<T extends BaseEntity>(
         return itemWithId
       }
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Invalidação inteligente do cache
       queryClient.invalidateQueries({ queryKey: ['supabase', storageKey] })
 
@@ -56,11 +56,11 @@ export function useSupabaseAdd<T extends BaseEntity>(
         return [data, ...oldData]
       })
 
-      options?.onSuccess?.(data, item as any, undefined as any)
+      options?.onSuccess?.(data, variables, undefined as any)
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error(`Erro ao adicionar ${key}:`, error)
-      options?.onError?.(error, item as any, undefined as any)
+      options?.onError?.(error, variables, undefined as any)
     },
     ...options,
   })
@@ -81,41 +81,41 @@ export function useSupabaseUpdate<T extends BaseEntity>(
       // Fallback para localStorage
       if (FallbackStrategy.shouldUseFallback()) {
         console.info(`🔄 Usando fallback localStorage para atualizar em ${storageKey}`)
-        const items = updateInStorage<T>(storageKey, id, updates)
+        const items = updateInStorage<T>(storageKey, id, updates as any)
         const updatedItem = items.find(item => item.id === id)
         if (!updatedItem) throw new Error(`Item ${id} não encontrado`)
         return updatedItem
       }
 
       try {
-        return await supabaseService.updateInSupabase<T>(storageKey, id, updates)
+        return await supabaseService.updateInSupabase<T>(storageKey, id, updates as any)
       } catch (error) {
         console.warn(`⚠️ Erro ao atualizar ${storageKey}/${id}, usando fallback:`, error)
         FallbackStrategy.enableFallback()
-        const items = updateInStorage<T>(storageKey, id, updates)
+        const items = updateInStorage<T>(storageKey, id, updates as any)
         const updatedItem = items.find(item => item.id === id)
         if (!updatedItem) throw new Error(`Item ${id} não encontrado`)
         return updatedItem
       }
     },
-    onSuccess: (data, { id }) => {
+    onSuccess: (data, variables) => {
       // Invalidação do cache
       queryClient.invalidateQueries({ queryKey: ['supabase', storageKey] })
 
       // Atualização otimista dos dados em cache
       queryClient.setQueryData<T[]>(['supabase', storageKey], (oldData) => {
         if (!oldData) return [data]
-        return oldData.map(item => item.id === id ? data : item)
+        return oldData.map(item => item.id === variables.id ? data : item)
       })
 
       // Atualiza cache do item específico
-      queryClient.setQueryData(['supabase', storageKey, 'byId', id], data)
+      queryClient.setQueryData(['supabase', storageKey, 'byId', variables.id], data)
 
-      options?.onSuccess?.(data, { id, updates } as any, undefined as any)
+      options?.onSuccess?.(data, variables, undefined as any)
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error(`Erro ao atualizar ${key}:`, error)
-      options?.onError?.(error, { id, updates } as any, undefined as any)
+      options?.onError?.(error, variables, undefined as any)
     },
     ...options,
   })
@@ -153,7 +153,7 @@ export function useSupabaseDelete(
       queryClient.invalidateQueries({ queryKey: ['supabase', storageKey] })
 
       // Remoção otimista do cache
-      queryClient.setQueryData<T[]>(['supabase', storageKey], (oldData) => {
+      queryClient.setQueryData<BaseEntity[]>(['supabase', storageKey], (oldData) => {
         if (!oldData) return []
         return oldData.filter(item => item.id !== id)
       })
@@ -163,9 +163,9 @@ export function useSupabaseDelete(
 
       options?.onSuccess?.(undefined as any, id, undefined as any)
     },
-    onError: (error) => {
+    onError: (error, id) => {
       console.error(`Erro ao deletar ${key}:`, error)
-      options?.onError?.(error, id as any, undefined as any)
+      options?.onError?.(error, id, undefined as any)
     },
     ...options,
   })
@@ -199,18 +199,18 @@ export function useSupabaseSave<T extends BaseEntity>(
         saveToStorage(storageKey, data)
       }
     },
-    onSuccess: (_, data) => {
+    onSuccess: (_, variables) => {
       // Atualização completa do cache
-      queryClient.setQueryData(['supabase', storageKey], data)
+      queryClient.setQueryData(['supabase', storageKey], variables)
 
       // Invalidação de queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['supabase', storageKey] })
 
-      options?.onSuccess?.(undefined as any, data, undefined as any)
+      options?.onSuccess?.(undefined as any, variables, undefined as any)
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error(`Erro ao salvar ${key}:`, error)
-      options?.onError?.(error, data as any, undefined as any)
+      options?.onError?.(error, variables, undefined as any)
     },
     ...options,
   })

@@ -36,11 +36,11 @@ const Funcoes = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Hooks Supabase para substituir localStorage
-  const { data: funcoes = [], isLoading, error } = useOptimizedSupabaseQuery<Funcao>('FUNCOES');
-  const { add, update, delete: deleteFuncao } = useSupabaseCRUD<Funcao>('FUNCOES');
+  const { data: funcoes = [], isLoading, error } = useOptimizedSupabaseQuery<any>('FUNCOES');
+  const { add, update, delete: deleteFuncao } = useSupabaseCRUD<any>('FUNCOES');
 
   // Hook para carregar setores para dropdown
-  const { data: setores = [] } = useOptimizedSupabaseQuery<{id: string; nome: string}>('SETORES');
+  const { data: setores = [] } = useOptimizedSupabaseQuery<any>('SETORES');
 
   // Filtro de busca memoizado para performance
   const filteredFuncoes = useMemo(() => {
@@ -170,7 +170,7 @@ const Funcoes = () => {
           open={open}
           onOpenChange={setOpen}
           onSubmit={onSubmit}
-          editData={editingFuncao ? { ...editingFuncao } : undefined}
+          editData={editingFuncao ? { ...editingFuncao } as any : undefined}
           setores={setores}
         />
       </div>

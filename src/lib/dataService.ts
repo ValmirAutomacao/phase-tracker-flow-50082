@@ -71,7 +71,7 @@ class LocalStorageDataService implements DataServiceInterface {
 
   async update<T extends BaseEntity>(key: string, id: string, updates: Partial<Omit<T, 'id' | 'created_at'>>): Promise<T> {
     try {
-      const items = updateInStorage<T>(key, id, updates)
+      const items = updateInStorage<T>(key, id, updates as any)
       const updatedItem = items.find(item => item.id === id)
       if (!updatedItem) {
         throw new Error(`Item com ID ${id} não encontrado`)
@@ -282,7 +282,7 @@ class FeatureFlagManager {
 /**
  * Factory para obter o service de dados baseado na feature flag
  */
-export class DataServiceFactory {
+class DataServiceFactoryClass {
   private static localStorageService = new LocalStorageDataService()
   private static supabaseService = new SupabaseDataService()
   private static featureFlags = FeatureFlagManager.getInstance()
@@ -326,5 +326,5 @@ export class DataServiceFactory {
 }
 
 // Export dos principais elementos
-export { FeatureFlagManager, DataServiceFactory }
+export { FeatureFlagManager, DataServiceFactoryClass as DataServiceFactory }
 export type { DataServiceInterface }

@@ -54,7 +54,7 @@ interface ObrasFormProps {
 
 export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormProps) {
   // Buscar clientes reais do Supabase
-  const { data: clientes = [] } = useOptimizedSupabaseQuery<Cliente>('CLIENTES');
+  const { data: clientes = [] } = useOptimizedSupabaseQuery<any>('CLIENTES');
 
   const mockResponsaveis = [
     "João Silva",

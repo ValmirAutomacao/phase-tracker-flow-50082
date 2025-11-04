@@ -118,13 +118,13 @@ const Financeiro = () => {
   const [selectedItens, setSelectedItens] = useState<string[]>([]);
 
   // Hooks Supabase para substituir localStorage
-  const { data: despesas = [], isLoading, error } = useOptimizedSupabaseQuery<Despesa>('DESPESAS');
-  const { add, update, delete: deleteDespesa } = useSupabaseCRUD<Despesa>('DESPESAS');
+  const { data: despesas = [], isLoading, error } = useOptimizedSupabaseQuery<any>('DESPESAS');
+  const { add, update, delete: deleteDespesa } = useSupabaseCRUD<any>('DESPESAS');
   const { update: updateRequisicao } = useSupabaseCRUD<any>('REQUISICOES');
 
   // Hooks para carregar dados de relacionamento
-  const { data: clientes = [] } = useOptimizedSupabaseQuery<Cliente>('CLIENTES');
-  const { data: todasObras = [] } = useOptimizedSupabaseQuery<Obra>('OBRAS');
+  const { data: clientes = [] } = useOptimizedSupabaseQuery<any>('CLIENTES');
+  const { data: todasObras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
 
   // Hook para carregar requisições aprovadas
   const { data: todasRequisicoes = [] } = useOptimizedSupabaseQuery<any>('REQUISICOES');
@@ -258,7 +258,7 @@ const Financeiro = () => {
           try {
             await updateRequisicao.mutateAsync({
               id: requisicaoAtual.id,
-              itens_produtos: itensAtualizados
+              updates: { itens_produtos: itensAtualizados } as any
             });
           } catch (error) {
             console.error('Erro ao atualizar itens da requisição:', error);
@@ -302,7 +302,7 @@ const Financeiro = () => {
       acc[categoria] = (acc[categoria] || 0) + (despesa.valor || 0);
       return acc;
     }, {} as Record<string, number>);
-    return Object.entries(categorias).sort(([,a], [,b]) => b - a);
+    return Object.entries(categorias).sort(([,a], [,b]) => (b as number) - (a as number));
   }, [filteredDespesas]);
 
   const relatoriosPorCliente = useMemo(() => {
@@ -311,7 +311,7 @@ const Financeiro = () => {
       acc[cliente] = (acc[cliente] || 0) + (despesa.valor || 0);
       return acc;
     }, {} as Record<string, number>);
-    return Object.entries(clientes).sort(([,a], [,b]) => b - a);
+    return Object.entries(clientes).sort(([,a], [,b]) => (b as number) - (a as number));
   }, [filteredDespesas]);
 
   // Função para resetar todos os filtros
@@ -373,11 +373,11 @@ const Financeiro = () => {
     };
     
     const variant = variants[status];
-    const Icon = variant.icon;
+    const IconComponent = variant.icon;
     
     return (
-      <Badge className={variant.className}>
-        <Icon className="h-3 w-3 mr-1" />
+      <Badge className={variant.className as any}>
+        <IconComponent className="h-3 w-3 mr-1" as any />
         {variant.label}
       </Badge>
     );
@@ -827,7 +827,7 @@ const Financeiro = () => {
                   <div key={categoria} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{categoria}</span>
                     <span className="font-medium">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor as number)}
                     </span>
                   </div>
                 ))
@@ -850,7 +850,7 @@ const Financeiro = () => {
                   <div key={cliente} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{cliente}</span>
                     <span className="font-medium">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor as number)}
                     </span>
                   </div>
                 ))
