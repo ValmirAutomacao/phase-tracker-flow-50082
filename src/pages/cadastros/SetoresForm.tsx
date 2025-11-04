@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const setorSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
-  responsavel: z.string().min(1, "Selecione um responsável"),
+  responsavel: z.string().optional(),
+  status: z.string().optional(),
 });
 
 export type SetorFormData = z.infer<typeof setorSchema>;

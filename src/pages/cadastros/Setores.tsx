@@ -153,7 +153,7 @@ const Setores = () => {
           <Plus className="h-4 w-4 mr-2" />
           Novo Setor
         </Button>
-        <SetoresForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingSetor ? { ...editingSetor } : undefined} />
+        <SetoresForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingSetor ? { ...editingSetor } as any : undefined} />
       </div>
 
       {/* Stats */}

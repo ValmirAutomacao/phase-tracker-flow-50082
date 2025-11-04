@@ -354,7 +354,7 @@ const Financeiro = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: React.ComponentType }> = {
+    const variants: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
       validado: { 
         label: "Validado", 
         className: "bg-green-100 text-green-700 hover:bg-green-100",
@@ -377,7 +377,7 @@ const Financeiro = () => {
     
     return (
       <Badge className={variant.className as any}>
-        <IconComponent className="h-3 w-3 mr-1" as any />
+        <IconComponent className="h-3 w-3 mr-1" />
         {variant.label}
       </Badge>
     );
