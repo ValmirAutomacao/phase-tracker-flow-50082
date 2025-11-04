@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { User, Users, Building2, Plus, Search, Edit, Mail, Phone, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ClientesForm, ClienteFormData } from "./ClientesForm";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Cliente {
@@ -23,81 +25,66 @@ interface Cliente {
   estado: string;
   cep: string;
   dataCadastro?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Clientes = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = getFromStorage<Cliente>(STORAGE_KEYS.CLIENTES);
-    if (stored.length === 0) {
-      const defaultClientes: Cliente[] = [
-        {
-          id: "1",
-          nome: "João Silva",
-          tipo: "fisica",
-          documento: "123.456.789-00",
-          email: "joao@email.com",
-          telefone: "(11) 98765-4321",
-          endereco: "Rua das Flores",
-          numero: "123",
-          bairro: "Centro",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01000-000",
-          dataCadastro: "2025-01-01"
-        },
-        {
-          id: "2",
-          nome: "Construtora ABC Ltda",
-          tipo: "juridica",
-          documento: "12.345.678/0001-00",
-          email: "contato@abc.com.br",
-          telefone: "(11) 3456-7890",
-          endereco: "Avenida Paulista",
-          numero: "456",
-          bairro: "Bela Vista",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01310-000",
-          dataCadastro: "2025-01-02"
-        }
-      ];
-      setClientes(defaultClientes);
-      localStorage.setItem(STORAGE_KEYS.CLIENTES, JSON.stringify(defaultClientes));
-    } else {
-      setClientes(stored);
-    }
-  }, []);
+  // Hooks Supabase para substituir localStorage
+  const { data: clientes = [], isLoading, error } = useOptimizedSupabaseQuery<Cliente>('CLIENTES');
+  const { add, update, delete: deleteCliente } = useSupabaseCRUD<Cliente>('CLIENTES');
 
   const onSubmit = (data: ClienteFormData) => {
     if (editingCliente) {
-      const updated = updateInStorage<Cliente>(STORAGE_KEYS.CLIENTES, editingCliente.id, data);
-      setClientes(updated);
-      toast({
-        title: "Cliente atualizado!",
-        description: `${data.nome} foi atualizado com sucesso.`,
-      });
+      update.mutate(
+        { id: editingCliente.id, updates: data },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Cliente atualizado!",
+              description: `${data.nome} foi atualizado com sucesso.`,
+            });
+            setOpen(false);
+            setEditingCliente(null);
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao atualizar",
+              description: error.message || "Ocorreu um erro ao atualizar o cliente.",
+              variant: "destructive",
+            });
+          }
+        }
+      );
     } else {
-      const novoCliente: Cliente = {
-        id: Date.now().toString(),
+      const novoCliente = {
         ...data,
         dataCadastro: new Date().toISOString().split('T')[0],
       };
-      const updated = addToStorage(STORAGE_KEYS.CLIENTES, novoCliente);
-      setClientes(updated);
-      toast({
-        title: "Cliente cadastrado!",
-        description: `${data.nome} foi adicionado com sucesso.`,
+      add.mutate(novoCliente, {
+        onSuccess: () => {
+          toast({
+            title: "Cliente cadastrado!",
+            description: `${data.nome} foi adicionado com sucesso.`,
+          });
+          setOpen(false);
+          setEditingCliente(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao cadastrar",
+            description: error.message || "Ocorreu um erro ao cadastrar o cliente.",
+            variant: "destructive",
+          });
+        }
       });
     }
-    setOpen(false);
-    setEditingCliente(null);
   };
 
   const handleEdit = (cliente: Cliente) => {
@@ -107,13 +94,22 @@ const Clientes = () => {
 
   const handleDelete = () => {
     if (deleteId) {
-      const updated = deleteFromStorage<Cliente>(STORAGE_KEYS.CLIENTES, deleteId);
-      setClientes(updated);
-      toast({
-        title: "Cliente excluído!",
-        description: "O cliente foi removido com sucesso.",
+      deleteCliente.mutate(deleteId, {
+        onSuccess: () => {
+          toast({
+            title: "Cliente excluído!",
+            description: "O cliente foi removido com sucesso.",
+          });
+          setDeleteId(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao excluir",
+            description: error.message || "Ocorreu um erro ao excluir o cliente.",
+            variant: "destructive",
+          });
+        }
       });
-      setDeleteId(null);
     }
   };
 
@@ -202,7 +198,60 @@ const Clientes = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredClientes.map((cliente) => (
+            {isLoading ? (
+              // Loading skeletons
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <Skeleton className="h-12 w-12 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-6 w-32" />
+                          <Skeleton className="h-5 w-20" />
+                        </div>
+                        <Skeleton className="h-4 w-48" />
+                        <div className="flex gap-4">
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-4 w-64" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              // Error state
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Erro ao carregar clientes: {error.message}</p>
+                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : filteredClientes.length === 0 ? (
+              // Empty state
+              <div className="text-center py-8">
+                <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {searchTerm ? "Nenhum cliente encontrado para a pesquisa." : "Nenhum cliente cadastrado ainda."}
+                </p>
+                {!searchTerm && (
+                  <Button
+                    className="mt-4"
+                    onClick={() => { setEditingCliente(null); setOpen(true); }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar primeiro cliente
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredClientes.map((cliente) => (
               <div 
                 key={cliente.id}
                 className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -247,7 +296,7 @@ const Clientes = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </CardContent>
       </Card>

@@ -7,24 +7,28 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
+import {
   ArrowLeft,
   Edit,
   FileText,
-  Plus,
   CheckCircle,
   Clock,
   AlertCircle,
   Trash2,
+  Plus,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const despesaSchema = z.object({
+  requisicao_id: z.string().optional(),
   fornecedor: z.string().min(1, "Fornecedor é obrigatório"),
   cnpj: z.string().min(1, "CNPJ é obrigatório"),
   data: z.string().min(1, "Data é obrigatória"),
@@ -38,12 +42,21 @@ const despesaSchema = z.object({
   responsavel: z.string().min(1, "Responsável é obrigatório"),
   status: z.string().min(1, "Status é obrigatório"),
   imagemComprovante: z.string().optional(),
+  observacoes: z.string().optional(),
+  itens_relacionados: z.array(z.object({
+    id: z.string(),
+    nome: z.string(),
+    quantidade: z.number(),
+    valor_unitario: z.number().optional(),
+    comprado: z.boolean(),
+  })).optional(),
 });
 
 type DespesaFormData = z.infer<typeof despesaSchema>;
 
 interface Despesa {
   id: string;
+  requisicao_id?: string;
   fornecedor: string;
   cnpj: string;
   data: string;
@@ -57,6 +70,29 @@ interface Despesa {
   status: string;
   responsavel: string;
   imagemComprovante?: string;
+  observacoes?: string;
+  itens_relacionados?: Array<{
+    id: string;
+    nome: string;
+    quantidade: number;
+    valor_unitario?: number;
+    comprado: boolean;
+  }>;
+}
+
+interface Requisicao {
+  id: string;
+  titulo: string;
+  obra_id: string;
+  funcionario_solicitante_id: string;
+  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
+  itens_produtos?: Array<{
+    id: string;
+    nome: string;
+    quantidade: number;
+    valor_unitario?: number;
+    comprado: boolean;
+  }>;
 }
 
 const DespesasDetalhes = () => {
@@ -64,22 +100,29 @@ const DespesasDetalhes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const obraId = searchParams.get("obra");
-  
-  const [openCreate, setOpenCreate] = useState(false);
+
   const [openEdit, setOpenEdit] = useState(false);
+  const [openNew, setOpenNew] = useState(false);
   const [selectedDespesa, setSelectedDespesa] = useState<Despesa | null>(null);
+  const [selectedRequisicao, setSelectedRequisicao] = useState<string>("");
 
   const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = getFromStorage<Despesa>(STORAGE_KEYS.DESPESAS);
-    setDespesas(stored);
-  }, []);
+    const storedDespesas = getFromStorage<Despesa>(STORAGE_KEYS.DESPESAS);
+    const storedRequisicoes = getFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES);
+    setDespesas(storedDespesas);
+    setRequisicoes(storedRequisicoes.filter(req =>
+      obraId ? req.obra_id === obraId : true
+    ));
+  }, [obraId]);
 
   const form = useForm<DespesaFormData>({
     resolver: zodResolver(despesaSchema),
     defaultValues: {
+      requisicao_id: "",
       fornecedor: "",
       cnpj: "",
       data: "",
@@ -93,12 +136,18 @@ const DespesasDetalhes = () => {
       responsavel: "",
       status: "pendente",
       imagemComprovante: "",
+      observacoes: "",
+      itens_relacionados: [],
     },
   });
 
+
   const handleCreate = (data: DespesaFormData) => {
-    const novaDespesa: any = {
-      id: Date.now().toString(),
+    const requisicaoSelecionada = requisicoes.find(r => r.id === data.requisicao_id);
+
+    const novaDespesa: Despesa = {
+      id: crypto.randomUUID(),
+      requisicao_id: data.requisicao_id,
       fornecedor: data.fornecedor,
       cnpj: data.cnpj,
       data: data.data,
@@ -112,15 +161,19 @@ const DespesasDetalhes = () => {
       status: data.status,
       responsavel: data.responsavel,
       imagemComprovante: data.imagemComprovante,
+      observacoes: data.observacoes,
+      itens_relacionados: requisicaoSelecionada?.itens_produtos || [],
     };
 
-    const updated = addToStorage(STORAGE_KEYS.DESPESAS, novaDespesa);
+    const updated = addToStorage<Despesa>(STORAGE_KEYS.DESPESAS, novaDespesa);
     setDespesas(updated);
-    setOpenCreate(false);
+    setOpenNew(false);
     form.reset();
+    setSelectedRequisicao("");
+
     toast({
-      title: "Despesa cadastrada!",
-      description: "A despesa foi adicionada com sucesso.",
+      title: "Nova despesa criada!",
+      description: "A despesa foi registrada com sucesso.",
     });
   };
 
@@ -128,6 +181,7 @@ const DespesasDetalhes = () => {
     if (!selectedDespesa) return;
 
     const updated = updateInStorage<Despesa>(STORAGE_KEYS.DESPESAS, selectedDespesa.id.toString(), {
+      requisicao_id: data.requisicao_id,
       fornecedor: data.fornecedor,
       cnpj: data.cnpj,
       data: data.data,
@@ -141,6 +195,8 @@ const DespesasDetalhes = () => {
       status: data.status,
       responsavel: data.responsavel,
       imagemComprovante: data.imagemComprovante,
+      observacoes: data.observacoes,
+      itens_relacionados: data.itens_relacionados,
     });
 
     setDespesas(updated);
@@ -168,6 +224,7 @@ const DespesasDetalhes = () => {
   const openEditDialog = (despesa: Despesa) => {
     setSelectedDespesa(despesa);
     form.reset({
+      requisicao_id: despesa.requisicao_id || "",
       fornecedor: despesa.fornecedor,
       cnpj: despesa.cnpj,
       data: despesa.data,
@@ -181,12 +238,31 @@ const DespesasDetalhes = () => {
       responsavel: despesa.responsavel,
       status: despesa.status,
       imagemComprovante: despesa.imagemComprovante,
+      observacoes: despesa.observacoes || "",
+      itens_relacionados: despesa.itens_relacionados || [],
     });
     setOpenEdit(true);
   };
 
+  const openNewDialog = () => {
+    form.reset();
+    setSelectedRequisicao("");
+    setOpenNew(true);
+  };
+
+  const handleRequisicaoChange = (requisicaoId: string) => {
+    setSelectedRequisicao(requisicaoId);
+    const requisicao = requisicoes.find(r => r.id === requisicaoId);
+
+    if (requisicao) {
+      form.setValue('requisicao_id', requisicaoId);
+      form.setValue('categoria', 'Material'); // Categoria padrão para requisições
+      form.setValue('itens_relacionados', requisicao.itens_produtos || []);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: any }> = {
+    const variants: Record<string, { label: string; className: string; icon: React.ComponentType }> = {
       validado: { 
         label: "Validado", 
         className: "bg-green-100 text-green-700 hover:bg-green-100",
@@ -220,53 +296,62 @@ const DespesasDetalhes = () => {
   const despesasPendentes = despesas.filter(d => d.status === "pendente").reduce((acc, d) => acc + (d.valorParcela * d.quantidadeParcelas), 0);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Despesas - {obraId || "Edifício Alpha"}</h1>
-            <p className="text-muted-foreground">Gerenciamento de despesas da obra</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Despesas - {obraId || "Geral"}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gerenciamento de despesas da obra</p>
           </div>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => setOpenCreate(true)}>
+        <Button onClick={openNewDialog} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Nova Despesa
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Total de Despesas
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDespesas)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">{despesas.length} despesas registradas</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Validadas</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Validadas
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-xl sm:text-2xl font-bold text-green-600">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasValidadas)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">despesas aprovadas</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              Pendentes
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
+            <div className="text-xl sm:text-2xl font-bold text-yellow-600">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasPendentes)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">aguardando validação</p>
@@ -282,61 +367,136 @@ const DespesasDetalhes = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {despesas.map((despesa) => (
-              <div 
-                key={despesa.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start gap-4 flex-1">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">{despesa.fornecedor}</h4>
-                      {getStatusBadge(despesa.status)}
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>CNPJ: {despesa.cnpj} • Bandeira: {despesa.bandeira}</p>
-                      <p>{despesa.formaPagamento} - {despesa.quantidadeParcelas}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela)}</p>
-                      <p>Categoria: {despesa.categoria} • Responsável: {despesa.responsavel}</p>
-                      <p>Data: {new Date(despesa.data).toLocaleDateString('pt-BR')} às {despesa.hora}</p>
-                    </div>
-                  </div>
-                </div>
-                  <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground mb-1">Total</div>
-                    <div className="text-xl font-bold">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela * despesa.quantidadeParcelas)}
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(despesa)}>
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDeleteId(despesa.id.toString())}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+            {despesas.length === 0 ? (
+              <div className="text-center py-8">
+                <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <p className="text-muted-foreground">Nenhuma despesa registrada ainda</p>
+                <p className="text-sm text-muted-foreground">Clique em "Nova Despesa" para começar</p>
               </div>
-            ))}
+            ) : (
+              despesas.map((despesa) => {
+                const requisicaoRelacionada = requisicoes.find(r => r.id === despesa.requisicao_id);
+
+                return (
+                  <div
+                    key={despesa.id}
+                    className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
+                  >
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                          <h4 className="font-semibold truncate">{despesa.fornecedor}</h4>
+                          <div className="flex gap-2">
+                            {getStatusBadge(despesa.status)}
+                            {requisicaoRelacionada && (
+                              <Badge variant="outline" className="text-xs">
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Requisição
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Informações da requisição relacionada */}
+                        {requisicaoRelacionada && (
+                          <div className="mb-2 p-2 bg-blue-50 rounded text-sm">
+                            <p className="font-medium text-blue-900">
+                              Requisição: {requisicaoRelacionada.titulo}
+                            </p>
+                            {despesa.itens_relacionados && despesa.itens_relacionados.length > 0 && (
+                              <p className="text-blue-700 text-xs">
+                                {despesa.itens_relacionados.length} itens relacionados
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div className="flex flex-wrap gap-4">
+                            <span>CNPJ: {despesa.cnpj}</span>
+                            <span>Bandeira: {despesa.bandeira}</span>
+                          </div>
+                          <p>{despesa.formaPagamento} - {despesa.quantidadeParcelas}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela)}</p>
+                          <div className="flex flex-wrap gap-4">
+                            <span>Categoria: {despesa.categoria}</span>
+                            <span>Responsável: {despesa.responsavel}</span>
+                          </div>
+                          <p>Data: {new Date(despesa.data).toLocaleDateString('pt-BR')} às {despesa.hora}</p>
+                          {despesa.observacoes && (
+                            <p className="text-xs bg-gray-50 p-2 rounded mt-2">{despesa.observacoes}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground mb-1">Total</div>
+                        <div className="text-xl font-bold">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela * despesa.quantidadeParcelas)}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="outline" size="sm" onClick={() => openEditDialog(despesa)} className="flex-1 sm:flex-none">
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setDeleteId(despesa.id.toString())} className="shrink-0">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
-      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent className="max-w-2xl">
+
+      {/* New Expense Dialog */}
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nova Despesa</DialogTitle>
             <DialogDescription>
-              Cadastre uma nova despesa para esta obra
+              Registre uma nova despesa, opcionalmente vinculada a uma requisição
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleCreate)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Seleção de Requisição */}
+              <FormField
+                control={form.control}
+                name="requisicao_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requisição (Opcional)</FormLabel>
+                    <Select onValueChange={handleRequisicaoChange} value={selectedRequisicao}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma requisição para vincular" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {requisicoes.map(req => (
+                          <SelectItem key={req.id} value={req.id}>
+                            {req.titulo} ({req.status})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Resto do formulário aqui será adicionado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="fornecedor"
@@ -365,7 +525,7 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="data"
@@ -394,14 +554,14 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="formaPagamento"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -412,6 +572,8 @@ const DespesasDetalhes = () => {
                           <SelectItem value="Crédito parcelado">Crédito parcelado</SelectItem>
                           <SelectItem value="Débito">Débito</SelectItem>
                           <SelectItem value="PIX">PIX</SelectItem>
+                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                          <SelectItem value="Transferência">Transferência</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -424,7 +586,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -436,7 +598,7 @@ const DespesasDetalhes = () => {
                           <SelectItem value="Elo">Elo</SelectItem>
                           <SelectItem value="American Express">American Express</SelectItem>
                           <SelectItem value="Hipercard">Hipercard</SelectItem>
-                          <SelectItem value="Outros">Outros</SelectItem>
+                          <SelectItem value="N/A">Não se aplica</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -445,14 +607,14 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="tipoParcela"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -480,9 +642,6 @@ const DespesasDetalhes = () => {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="valorParcela"
@@ -496,6 +655,9 @@ const DespesasDetalhes = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="categoria"
@@ -503,15 +665,12 @@ const DespesasDetalhes = () => {
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Material" {...field} />
+                        <Input placeholder="Ex: Material, Equipamento" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="responsavel"
@@ -531,7 +690,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -551,6 +710,20 @@ const DespesasDetalhes = () => {
 
               <FormField
                 control={form.control}
+                name="observacoes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Informações adicionais sobre a despesa..." rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="imagemComprovante"
                 render={({ field }) => (
                   <FormItem>
@@ -563,11 +736,11 @@ const DespesasDetalhes = () => {
                 )}
               />
 
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Cadastrar</Button>
+                <Button type="submit">Criar Despesa</Button>
               </div>
             </form>
           </Form>
@@ -576,7 +749,7 @@ const DespesasDetalhes = () => {
 
       {/* Edit Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Despesa</DialogTitle>
             <DialogDescription>
@@ -585,7 +758,8 @@ const DespesasDetalhes = () => {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleEdit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Mesmo layout do formulário de criação */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="fornecedor"
@@ -614,7 +788,7 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="data"
@@ -643,14 +817,14 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="formaPagamento"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -661,6 +835,8 @@ const DespesasDetalhes = () => {
                           <SelectItem value="Crédito parcelado">Crédito parcelado</SelectItem>
                           <SelectItem value="Débito">Débito</SelectItem>
                           <SelectItem value="PIX">PIX</SelectItem>
+                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                          <SelectItem value="Transferência">Transferência</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -673,7 +849,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -685,7 +861,7 @@ const DespesasDetalhes = () => {
                           <SelectItem value="Elo">Elo</SelectItem>
                           <SelectItem value="American Express">American Express</SelectItem>
                           <SelectItem value="Hipercard">Hipercard</SelectItem>
-                          <SelectItem value="Outros">Outros</SelectItem>
+                          <SelectItem value="N/A">Não se aplica</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -694,14 +870,14 @@ const DespesasDetalhes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="tipoParcela"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -729,9 +905,6 @@ const DespesasDetalhes = () => {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="valorParcela"
@@ -745,6 +918,9 @@ const DespesasDetalhes = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="categoria"
@@ -752,15 +928,12 @@ const DespesasDetalhes = () => {
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Material" {...field} />
+                        <Input placeholder="Ex: Material, Equipamento" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="responsavel"
@@ -780,7 +953,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -800,6 +973,20 @@ const DespesasDetalhes = () => {
 
               <FormField
                 control={form.control}
+                name="observacoes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Informações adicionais sobre a despesa..." rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="imagemComprovante"
                 render={({ field }) => (
                   <FormItem>
@@ -812,7 +999,7 @@ const DespesasDetalhes = () => {
                 )}
               />
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
                   Cancelar
                 </Button>

@@ -7,23 +7,33 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import "@/styles/responsive.css";
 
 const funcaoSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
+  setor_id: z.string().min(1, "Selecione um setor"),
+  nivel: z.string().min(1, "Selecione um nível"),
   permissoes: z.array(z.string()).min(1, "Selecione pelo menos uma permissão"),
 });
 
 export type FuncaoFormData = z.infer<typeof funcaoSchema>;
+
+interface Setor {
+  id: string;
+  nome: string;
+}
 
 interface FuncoesFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: FuncaoFormData) => void;
   editData?: FuncaoFormData & { id: string };
+  setores?: Setor[];
 }
 
-export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesFormProps) {
+export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = [] }: FuncoesFormProps) {
   const permissoesDisponiveis = [
     { id: "visualizar_obras", label: "Visualizar Obras" },
     { id: "editar_obras", label: "Editar Obras" },
@@ -33,11 +43,19 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesF
     { id: "editar_financeiro", label: "Editar Financeiro" },
   ];
 
+  const niveisDisponiveis = [
+    { id: "Gestão", label: "Gestão" },
+    { id: "Técnico", label: "Técnico" },
+    { id: "Operacional", label: "Operacional" },
+  ];
+
   const form = useForm<FuncaoFormData>({
     resolver: zodResolver(funcaoSchema),
     defaultValues: {
       nome: "",
       descricao: "",
+      setor_id: "",
+      nivel: "",
       permissoes: [],
     },
   });
@@ -49,6 +67,8 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesF
       form.reset({
         nome: "",
         descricao: "",
+        setor_id: "",
+        nivel: "",
         permissoes: [],
       });
     }
@@ -61,7 +81,7 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl dialog-content-mobile">
         <DialogHeader>
           <DialogTitle>{editData ? "Editar Função" : "Nova Função"}</DialogTitle>
           <DialogDescription>
@@ -97,6 +117,54 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesF
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4 mobile-stack">
+              <FormField
+                control={form.control}
+                name="setor_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Setor</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o setor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {setores.map(setor => (
+                          <SelectItem key={setor.id} value={setor.id}>{setor.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nivel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nível</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o nível" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {niveisDisponiveis.map(nivel => (
+                          <SelectItem key={nivel.id} value={nivel.id}>{nivel.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -147,7 +215,7 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData }: FuncoesF
               )}
             />
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

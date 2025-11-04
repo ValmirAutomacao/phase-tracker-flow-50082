@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,15 +13,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Users, Plus, Search, Edit, Mail, Phone, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const funcionarioSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
-  funcao: z.string().min(1, "Selecione uma função"),
-  setor: z.string().min(1, "Selecione um setor"),
+  funcao_id: z.string().min(1, "Selecione uma função"),
   senha: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
 });
 
@@ -31,12 +32,41 @@ interface Funcionario {
   nome: string;
   email: string;
   telefone: string;
-  funcao: string;
-  setor: string;
-  status: string;
-  dataAdmissao: string;
-  foto?: string;
+  funcao_id: string; // FK para funções
   senha?: string;
+  foto?: string;
+  status?: string;
+  dataAdmissao?: string;
+  observacoes?: string;
+  // Campos de relacionamento
+  funcao?: {
+    id: string;
+    nome: string;
+    nivel?: string;
+    setor_id: string;
+    setor?: {
+      id: string;
+      nome: string;
+    };
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Funcao {
+  id: string;
+  nome: string;
+  setor_id: string;
+  nivel?: string;
+  setor?: {
+    id: string;
+    nome: string;
+  };
+}
+
+interface Setor {
+  id: string;
+  nome: string;
 }
 
 const Funcionarios = () => {
@@ -44,51 +74,17 @@ const Funcionarios = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string>("");
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedSetor, setSelectedSetor] = useState<string>("");
 
-  const mockFuncoes = getFromStorage(STORAGE_KEYS.FUNCOES, [
-    { id: "1", nome: "Gerente de Obras" },
-    { id: "2", nome: "Engenheiro Civil" },
-  ]).map(f => f.nome);
+  // Hooks Supabase para substituir localStorage
+  const { data: funcionarios = [], isLoading, error } = useOptimizedSupabaseQuery<Funcionario>('FUNCIONARIOS');
+  const { add, update, delete: deleteFuncionario } = useSupabaseCRUD<Funcionario>('FUNCIONARIOS');
 
-  const mockSetores = getFromStorage(STORAGE_KEYS.SETORES, [
-    { id: "1", nome: "Gestão" },
-    { id: "2", nome: "Operacional" },
-  ]).map(s => s.nome);
-
-  useEffect(() => {
-    const stored = getFromStorage<Funcionario>(STORAGE_KEYS.FUNCIONARIOS);
-    if (stored.length === 0) {
-      const defaultFuncionarios: Funcionario[] = [
-        {
-          id: "1",
-          nome: "João Silva",
-          email: "joao.silva@engflow.com",
-          telefone: "(11) 98765-4321",
-          funcao: "Gerente de Obras",
-          setor: "Gestão",
-          status: "ativo",
-          dataAdmissao: "2023-01-15"
-        },
-        {
-          id: "2",
-          nome: "Maria Santos",
-          email: "maria.santos@engflow.com",
-          telefone: "(21) 99876-5432",
-          funcao: "Engenheira Civil",
-          setor: "Engenharia",
-          status: "ativo",
-          dataAdmissao: "2023-03-20"
-        },
-      ];
-      setFuncionarios(defaultFuncionarios);
-      localStorage.setItem(STORAGE_KEYS.FUNCIONARIOS, JSON.stringify(defaultFuncionarios));
-    } else {
-      setFuncionarios(stored);
-    }
-  }, []);
+  // Hooks para carregar dados hierárquicos
+  const { data: funcoes = [] } = useOptimizedSupabaseQuery<Funcao>('FUNCOES');
+  const { data: setores = [] } = useOptimizedSupabaseQuery<Setor>('SETORES');
 
   const form = useForm<FuncionarioFormData>({
     resolver: zodResolver(funcionarioSchema),
@@ -96,20 +92,43 @@ const Funcionarios = () => {
       nome: "",
       email: "",
       telefone: "",
-      funcao: "",
-      setor: "",
+      funcao_id: "",
       senha: "",
     },
   });
 
+  // Filtrar funções por setor selecionado
+  const funcoesFiltradas = useMemo(() => {
+    if (!selectedSetor) return funcoes;
+    return funcoes.filter(funcao => funcao.setor_id === selectedSetor);
+  }, [funcoes, selectedSetor]);
+
+  // Filtro de busca memoizado para performance
+  const filteredFuncionarios = useMemo(() => {
+    if (!searchTerm.trim()) return funcionarios;
+
+    const searchLower = searchTerm.toLowerCase();
+    return funcionarios.filter(funcionario =>
+      funcionario.nome.toLowerCase().includes(searchLower) ||
+      funcionario.email.toLowerCase().includes(searchLower) ||
+      (funcionario.funcao?.nome && funcionario.funcao.nome.toLowerCase().includes(searchLower)) ||
+      (funcionario.funcao?.setor?.nome && funcionario.funcao.setor.nome.toLowerCase().includes(searchLower))
+    );
+  }, [funcionarios, searchTerm]);
+
   useEffect(() => {
     if (editingFuncionario) {
+      // Encontrar o setor da função atual para mostrar no dropdown
+      const funcaoAtual = funcoes.find(f => f.id === editingFuncionario.funcao_id);
+      if (funcaoAtual) {
+        setSelectedSetor(funcaoAtual.setor_id);
+      }
+
       form.reset({
         nome: editingFuncionario.nome,
         email: editingFuncionario.email,
         telefone: editingFuncionario.telefone,
-        funcao: editingFuncionario.funcao,
-        setor: editingFuncionario.setor,
+        funcao_id: editingFuncionario.funcao_id,
         senha: editingFuncionario.senha || "",
       });
       setFotoPreview(editingFuncionario.foto || "");
@@ -118,13 +137,13 @@ const Funcionarios = () => {
         nome: "",
         email: "",
         telefone: "",
-        funcao: "",
-        setor: "",
+        funcao_id: "",
         senha: "",
       });
       setFotoPreview("");
+      setSelectedSetor("");
     }
-  }, [editingFuncionario, form]);
+  }, [editingFuncionario, form, funcoes]);
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,34 +158,69 @@ const Funcionarios = () => {
 
   const onSubmit = (data: FuncionarioFormData) => {
     if (editingFuncionario) {
-      const updated = updateInStorage<Funcionario>(STORAGE_KEYS.FUNCIONARIOS, editingFuncionario.id, {
-        ...data,
-        foto: fotoPreview,
-      });
-      setFuncionarios(updated as Funcionario[]);
-      toast({
-        title: "Funcionário atualizado!",
-        description: `${data.nome} foi atualizado com sucesso.`,
-      });
-    } else {
-      const novoFuncionario: Funcionario = {
-        id: Date.now().toString(),
-        ...data,
-        status: "ativo",
-        dataAdmissao: new Date().toISOString().split('T')[0],
+      const updates = {
+        nome: data.nome,
+        email: data.email,
+        telefone: data.telefone,
+        funcao_id: data.funcao_id,
+        senha: data.senha,
         foto: fotoPreview,
       };
-      const updated = addToStorage(STORAGE_KEYS.FUNCIONARIOS, novoFuncionario);
-      setFuncionarios(updated);
-      toast({
-        title: "Funcionário cadastrado!",
-        description: `${data.nome} foi adicionado com sucesso.`,
+
+      update.mutate(
+        { id: editingFuncionario.id, updates },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Funcionário atualizado!",
+              description: `${data.nome} foi atualizado com sucesso.`,
+            });
+            setOpen(false);
+            setEditingFuncionario(null);
+            setFotoPreview("");
+            setSelectedSetor("");
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao atualizar",
+              description: error.message || "Ocorreu um erro ao atualizar o funcionário.",
+              variant: "destructive",
+            });
+          }
+        }
+      );
+    } else {
+      const novoFuncionario = {
+        nome: data.nome,
+        email: data.email,
+        telefone: data.telefone,
+        funcao_id: data.funcao_id,
+        senha: data.senha,
+        foto: fotoPreview,
+        status: "ativo",
+        dataAdmissao: new Date().toISOString().split('T')[0],
+      };
+
+      add.mutate(novoFuncionario, {
+        onSuccess: () => {
+          toast({
+            title: "Funcionário cadastrado!",
+            description: `${data.nome} foi adicionado com sucesso.`,
+          });
+          setOpen(false);
+          form.reset();
+          setFotoPreview("");
+          setSelectedSetor("");
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao cadastrar",
+            description: error.message || "Ocorreu um erro ao cadastrar o funcionário.",
+            variant: "destructive",
+          });
+        }
       });
     }
-    setOpen(false);
-    form.reset();
-    setFotoPreview("");
-    setEditingFuncionario(null);
   };
 
   const handleEdit = (funcionario: Funcionario) => {
@@ -176,28 +230,49 @@ const Funcionarios = () => {
 
   const handleDelete = () => {
     if (deleteId) {
-      const updated = deleteFromStorage<Funcionario>(STORAGE_KEYS.FUNCIONARIOS, deleteId);
-      setFuncionarios(updated as Funcionario[]);
-      toast({
-        title: "Funcionário excluído!",
-        description: "O funcionário foi removido com sucesso.",
+      deleteFuncionario.mutate(deleteId, {
+        onSuccess: () => {
+          toast({
+            title: "Funcionário excluído!",
+            description: "O funcionário foi removido com sucesso.",
+          });
+          setDeleteId(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao excluir",
+            description: error.message || "Ocorreu um erro ao excluir o funcionário.",
+            variant: "destructive",
+          });
+        }
       });
-      setDeleteId(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // Status badge memoizado para performance
+  const getStatusBadge = useCallback((status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
       ativo: { label: "Ativo", className: "bg-green-100 text-green-700" },
       inativo: { label: "Inativo", className: "bg-gray-100 text-gray-700" },
       ferias: { label: "Férias", className: "bg-blue-100 text-blue-700" },
     };
-    
+
     return (
       <Badge className={variants[status]?.className || ""}>
         {variants[status]?.label || status}
       </Badge>
     );
+  }, []);
+
+  // Função para limpar formulário quando fechar dialog
+  const handleDialogChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setEditingFuncionario(null);
+      setFotoPreview("");
+      setSelectedSetor("");
+      form.reset();
+    }
   };
 
   return (
@@ -207,13 +282,7 @@ const Funcionarios = () => {
           <h1 className="text-3xl font-bold">Cadastro de Funcionários</h1>
           <p className="text-muted-foreground">Gerenciamento de colaboradores</p>
         </div>
-        <Dialog open={open} onOpenChange={(isOpen) => {
-          setOpen(isOpen);
-          if (!isOpen) {
-            setEditingFuncionario(null);
-            setFotoPreview("");
-          }
-        }}>
+        <Dialog open={open} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-primary to-accent">
               <Plus className="h-4 w-4 mr-2" />
@@ -297,43 +366,43 @@ const Funcionarios = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <FormItem>
+                    <FormLabel>Setor</FormLabel>
+                    <Select value={selectedSetor} onValueChange={setSelectedSetor}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o setor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {setores.map(setor => (
+                          <SelectItem key={setor.id} value={setor.id}>{setor.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
                   <FormField
                     control={form.control}
-                    name="funcao"
+                    name="funcao_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Função</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedSetor}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione a função" />
+                              <SelectValue placeholder={selectedSetor ? "Selecione a função" : "Primeiro selecione o setor"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockFuncoes.map(funcao => (
-                              <SelectItem key={funcao} value={funcao}>{funcao}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="setor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Setor</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o setor" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {mockSetores.map(setor => (
-                              <SelectItem key={setor} value={setor}>{setor}</SelectItem>
+                            {funcoesFiltradas.map(funcao => (
+                              <SelectItem key={funcao.id} value={funcao.id}>
+                                {funcao.nome}
+                                {funcao.nivel && ` (${funcao.nivel})`}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -376,7 +445,7 @@ const Funcionarios = () => {
             <CardTitle className="text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">{funcionarios.length}</div>
             <p className="text-xs text-muted-foreground mt-1">funcionários cadastrados</p>
           </CardContent>
         </Card>
@@ -385,26 +454,38 @@ const Funcionarios = () => {
             <CardTitle className="text-sm font-medium">Ativos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">4</div>
+            <div className="text-2xl font-bold text-green-600">
+              {useMemo(() => funcionarios.filter(f => f.status === 'ativo').length, [funcionarios])}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">trabalhando atualmente</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Por Setor</CardTitle>
+            <CardTitle className="text-sm font-medium">Funções</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground mt-1">setores diferentes</p>
+            <div className="text-2xl font-bold">
+              {useMemo(() => {
+                const funcoesUnicas = new Set(funcionarios.map(f => f.funcao?.nome).filter(Boolean));
+                return funcoesUnicas.size;
+              }, [funcionarios])}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">funções diferentes</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Este Mês</CardTitle>
+            <CardTitle className="text-sm font-medium">Setores</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">0</div>
-            <p className="text-xs text-muted-foreground mt-1">novos colaboradores</p>
+            <div className="text-2xl font-bold">
+              {useMemo(() => {
+                const setoresUnicos = new Set(funcionarios.map(f => f.funcao?.setor?.nome).filter(Boolean));
+                return setoresUnicos.size;
+              }, [funcionarios])}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">setores diferentes</p>
           </CardContent>
         </Card>
       </div>
@@ -430,50 +511,115 @@ const Funcionarios = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {funcionarios.map((funcionario) => (
-              <div 
-                key={funcionario.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={funcionario.foto} />
-                    <AvatarFallback>
-                      <Users className="h-6 w-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">{funcionario.nome}</h4>
-                      {getStatusBadge(funcionario.status)}
+            {isLoading ? (
+              // Loading skeletons
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-4 flex-1">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-6 w-32" />
+                          <Skeleton className="h-5 w-16" />
+                        </div>
+                        <Skeleton className="h-4 w-48" />
+                        <div className="flex gap-4">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-5 w-20" />
+                          <Skeleton className="h-5 w-16" />
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {funcionario.funcao} • {funcionario.setor}
-                    </p>
-                    <div className="flex gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {funcionario.email}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {funcionario.telefone}
-                      </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(funcionario)}>
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDeleteId(funcionario.id)}>
-                    <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                    Excluir
-                  </Button>
-                </div>
+              ))
+            ) : error ? (
+              // Error state
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Erro ao carregar funcionários: {error.message}</p>
+                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+                  Tentar novamente
+                </Button>
               </div>
-            ))}
+            ) : filteredFuncionarios.length === 0 ? (
+              // Empty state
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {searchTerm ? "Nenhum funcionário encontrado para a pesquisa." : "Nenhum funcionário cadastrado ainda."}
+                </p>
+                {!searchTerm && (
+                  <Button
+                    className="mt-4"
+                    onClick={() => setOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar primeiro funcionário
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredFuncionarios.map((funcionario) => (
+                <div
+                  key={funcionario.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={funcionario.foto} />
+                      <AvatarFallback>
+                        <Users className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold">{funcionario.nome}</h4>
+                        {getStatusBadge(funcionario.status || "ativo")}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {funcionario.funcao?.nome || 'Função não definida'} • {funcionario.funcao?.setor?.nome || 'Setor não definido'}
+                      </p>
+                      {funcionario.funcao?.nivel && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {funcionario.funcao.nivel}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="flex gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {funcionario.email}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {funcionario.telefone}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(funcionario)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(funcionario.id)}>
+                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

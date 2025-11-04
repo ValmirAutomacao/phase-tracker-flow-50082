@@ -1,0 +1,294 @@
+/* Sistema de Responsividade Verdadeira - EngFlow */
+
+/* Viewport meta configuração automática */
+:root {
+  /* Breakpoints padrões */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Base responsiva para todos os elementos */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Melhorias para dispositivos móveis (320px - 768px) */
+@media (max-width: 768px) {
+  /* FORMULÁRIOS - Sempre em coluna única */
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5,
+  .grid-cols-6 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* DIALOGS E MODAIS - Ocupam quase toda a tela */
+  [data-radix-dialog-content],
+  .dialog-content,
+  [role="dialog"] {
+    max-width: 95vw !important;
+    max-height: 95vh !important;
+    margin: 2.5vh auto !important;
+    overflow-y: auto !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* FORMULÁRIOS - Campos e espaçamentos otimizados */
+  .space-y-4 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 1.5rem !important;
+  }
+
+  /* BOTÕES DE AÇÃO - Sempre visíveis e acessíveis */
+  .form-actions,
+  .dialog-footer,
+  [class*="DialogFooter"],
+  [class*="dialog-footer"] {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: white !important;
+    padding: 1rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin: 0 -1rem -1rem -1rem !important;
+    border-radius: 0 0 0.5rem 0.5rem !important;
+    z-index: 10 !important;
+  }
+
+  /* BOTÕES - Stack vertical em mobile */
+  .flex.gap-2,
+  .flex.gap-3,
+  .flex.gap-4 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .flex.gap-2 > *,
+  .flex.gap-3 > *,
+  .flex.gap-4 > * {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* CARDS - Responsivos com margens adequadas */
+  .card,
+  [class*="Card"] {
+    margin: 0.5rem !important;
+    border-radius: 0.75rem !important;
+  }
+
+  /* TEXTOS E TIPOGRAFIA */
+  .text-3xl {
+    font-size: 1.875rem !important; /* 30px */
+  }
+
+  .text-2xl {
+    font-size: 1.5rem !important; /* 24px */
+  }
+
+  /* PADDING E MARGENS - Reduzidos para mobile */
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-6 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  /* SCROLLING - Barras sempre visíveis quando necessário */
+  .overflow-y-auto {
+    scrollbar-width: thin !important;
+    scrollbar-color: #cbd5e1 #f1f5f9 !important;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 8px !important;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f5f9 !important;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1 !important;
+    border-radius: 4px !important;
+  }
+}
+
+/* Tablets (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* GRIDS - Otimização para tablets */
+  .grid-cols-4,
+  .grid-cols-5,
+  .grid-cols-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* DIALOGS - Tamanho intermediário */
+  [data-radix-dialog-content],
+  .dialog-content,
+  [role="dialog"] {
+    max-width: 85vw !important;
+    max-height: 90vh !important;
+  }
+
+  /* CARDS - Espaçamento otimizado */
+  .p-6 {
+    padding: 1.25rem !important;
+  }
+
+  /* BOTÕES - Flex horizontal mantido */
+  .flex.gap-2,
+  .flex.gap-3,
+  .flex.gap-4 {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+/* Desktop pequeno (1024px - 1280px) */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  .grid-cols-6 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .grid-cols-5 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Desktop grande (1280px+) */
+@media (min-width: 1280px) {
+  /* Mantém layouts originais */
+  .dialog-content,
+  [data-radix-dialog-content],
+  [role="dialog"] {
+    max-width: 80vw !important;
+    max-height: 85vh !important;
+  }
+}
+
+/* Utilitários responsivos específicos */
+.responsive-container {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Classes utilitárias para diferentes breakpoints */
+.mobile-only {
+  display: block;
+}
+
+.tablet-up {
+  display: none;
+}
+
+.desktop-up {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+
+  .tablet-up {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-up {
+    display: block;
+  }
+}
+
+/* Melhorias específicas para formulários longos */
+.form-container {
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  padding-bottom: 4rem; /* Espaço para botões sticky */
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    max-height: calc(100vh - 4rem);
+    padding-bottom: 6rem; /* Mais espaço para botões em mobile */
+  }
+}
+
+/* Scrollbar personalizada para todas as resoluções */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}

@@ -11,6 +11,13 @@ import { Plus, Trash2 } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { useEffect } from "react";
 import { currencyMask, parseCurrencyInput } from "@/lib/utils";
+import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import "@/styles/responsive.css";
+
+interface Cliente {
+  id: string;
+  nome: string;
+}
 
 const etapaSchema = z.object({
   nome: z.string().min(1, "Nome da etapa é obrigatório"),
@@ -46,12 +53,8 @@ interface ObrasFormProps {
 }
 
 export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormProps) {
-  const mockClientes = [
-    "João Silva",
-    "Construtora ABC Ltda",
-    "Maria Santos",
-    "Incorporadora XYZ S.A.",
-  ];
+  // Buscar clientes reais do Supabase
+  const { data: clientes = [] } = useOptimizedSupabaseQuery<Cliente>('CLIENTES');
 
   const mockResponsaveis = [
     "João Silva",
@@ -122,7 +125,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl dialog-content-mobile">
         <DialogHeader>
           <DialogTitle>{editData ? "Editar Obra" : "Nova Obra"}</DialogTitle>
           <DialogDescription>
@@ -158,8 +161,10 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {mockClientes.map(cliente => (
-                        <SelectItem key={cliente} value={cliente}>{cliente}</SelectItem>
+                      {clientes.map(cliente => (
+                        <SelectItem key={cliente.id} value={cliente.id}>
+                          {cliente.nome}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -170,7 +175,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Endereço da Obra</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="endereco"
@@ -199,7 +204,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="bairro"
@@ -235,7 +240,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="cidade"
@@ -298,7 +303,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mobile-stack">
               <FormField
                 control={form.control}
                 name="responsavel"
@@ -345,7 +350,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 mobile-stack">
               <FormField
                 control={form.control}
                 name="dataInicio"
@@ -468,7 +473,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 mobile-stack">
                       <FormField
                         control={form.control}
                         name={`etapas.${index}.dataInicio`}
@@ -501,7 +506,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
               </CardContent>
             </Card>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

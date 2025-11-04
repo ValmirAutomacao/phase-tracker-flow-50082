@@ -1,3 +1,9 @@
+/* Importar sistema de responsividade verdadeira */
+@import './styles/responsive.css';
+
+/* Importar melhorias de UX e interface visual */
+@import './styles/ux-improvements.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect } from "react";
+import "@/styles/responsive.css";
 
 const clienteSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -116,7 +117,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl dialog-content-mobile">
         <DialogHeader>
           <DialogTitle>{editData ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
           <DialogDescription>
@@ -161,7 +162,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mobile-stack">
               <FormField
                 control={form.control}
                 name="documento"
@@ -226,7 +227,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Endereço</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="endereco"
@@ -255,7 +256,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="bairro"
@@ -291,7 +292,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mobile-stack">
                 <FormField
                   control={form.control}
                   name="cidade"
@@ -354,7 +355,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

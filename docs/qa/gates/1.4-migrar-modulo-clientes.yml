@@ -1,0 +1,64 @@
+# <!-- Powered by BMAD™ Core -->
+schema: 1
+story: "1.4"
+story_title: "Migrar módulo CLIENTES"
+gate: CONCERNS
+status_reason: "Implementação sólida com import incorreto que foi corrigido durante review, mas alguns aspectos de test coverage e NFRs precisam de atenção"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-11-02T12:40:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "IMP-001"
+    severity: medium
+    finding: "Import incorreto do hook useSupabaseCRUD estava causando build failure"
+    suggested_action: "Corrigido durante review - verificar processo de QA da development"
+  - id: "TEST-001"
+    severity: medium
+    finding: "Testes mockam implementação mas não validam integração real com Supabase"
+    suggested_action: "Adicionar testes de integração com banco real"
+  - id: "NFR-001"
+    severity: low
+    finding: "Performance benchmarks são simulados, não reais"
+    suggested_action: "Implementar testes de performance com dados reais"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 2, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor: ["IMP-001", "TEST-001"]
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Fallback strategy implementado corretamente com error handling adequado"
+  performance:
+    status: CONCERNS
+    notes: "Cache implementado mas benchmarks são simulados - precisam validação real"
+  reliability:
+    status: PASS
+    notes: "Sistema de fallback robusto para localStorage em caso de falha Supabase"
+  maintainability:
+    status: PASS
+    notes: "Código bem estruturado com separação clara de responsabilidades"
+
+quality_score: 80
+expires: "2025-11-16T00:00:00Z"
+
+recommendations:
+  immediate:
+    - action: "Revisar processo de QA development para evitar import errors"
+      refs: ["src/pages/cadastros/Clientes.tsx:10-11"]
+  future:
+    - action: "Implementar testes de integração com Supabase real"
+      refs: ["src/__tests__/modules/clientes-migração.test.ts"]
+    - action: "Adicionar benchmarks de performance reais"
+      refs: ["src/__tests__/modules/clientes-migração.test.ts:229-248"]

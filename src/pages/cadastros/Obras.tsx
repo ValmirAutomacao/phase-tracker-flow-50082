@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Plus, Search, Edit, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObrasForm, ObraFormData } from "./ObrasForm";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-interface Etapa {
+interface EtapaObra {
   id?: string;
   nome: string;
   responsavel: string;
@@ -21,213 +23,129 @@ interface Etapa {
 
 interface Obra {
   id: string;
+  cliente_id: string;
   nome: string;
-  cliente?: string;
-  endereco: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  dataInicio: string;
-  dataPrevisao?: string;
-  status: string;
-  progresso: number;
-  responsavel: string;
-  orcamento?: number;
-  etapas?: Etapa[];
+  etapas: EtapaObra[]; // JSONB
+  progresso: number; // 0-100
+  orcamento: number;
+  status: 'planejamento' | 'execucao' | 'concluida';
+  data_inicio: Date | string;
+  data_fim?: Date | string;
+  // Campos de endereço para manter compatibilidade
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  // Campos opcionais para compatibilidade
+  cliente?: string; // Nome do cliente (denormalizado)
+  responsavel?: string;
+  dataInicio?: string; // Para compatibilidade
+  dataPrevisao?: string; // Para compatibilidade
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Obras = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
-  const [obras, setObras] = useState<Obra[]>([]);
 
-  useEffect(() => {
-    const stored = getFromStorage<Obra>(STORAGE_KEYS.OBRAS);
-    if (stored.length === 0) {
-      const defaultObras: Obra[] = [
-        {
-          id: "1",
-          nome: "Edifício Alpha",
-          cliente: "Construtora XYZ Ltda",
-          endereco: "Avenida Paulista",
-          numero: "1000",
-          bairro: "Bela Vista",
-          cidade: "São Paulo",
-          estado: "SP",
-          cep: "01310-000",
-          dataInicio: "2024-12-01",
-          dataPrevisao: "2025-06-30",
-          status: "ativa",
-          progresso: 75,
-          responsavel: "João Silva",
-          etapas: [
-            {
-              id: "etapa-1",
-              nome: "Fundação",
-              responsavel: "João Silva",
-              dataInicio: "2024-12-01",
-              dataPrevisao: "2024-12-15",
-              progresso: 100,
-              status: "completed"
-            },
-            {
-              id: "etapa-2",
-              nome: "Estrutura",
-              responsavel: "Maria Santos",
-              dataInicio: "2024-12-16",
-              dataPrevisao: "2025-01-30",
-              progresso: 60,
-              status: "em-andamento"
-            }
-          ]
-        },
-        {
-          id: "2",
-          nome: "Residencial Beta",
-          cliente: "Imobiliária ABC S.A.",
-          endereco: "Rua das Flores",
-          numero: "500",
-          bairro: "Copacabana",
-          cidade: "Rio de Janeiro",
-          estado: "RJ",
-          cep: "22070-000",
-          dataInicio: "2024-11-15",
-          dataPrevisao: "2025-08-15",
-          status: "ativa",
-          progresso: 45,
-          responsavel: "Maria Santos",
-          etapas: [
-            {
-              id: "etapa-3",
-              nome: "Terraplanagem",
-              responsavel: "Pedro Costa",
-              dataInicio: "2024-11-15",
-              dataPrevisao: "2024-12-01",
-              progresso: 100,
-              status: "completed"
-            },
-            {
-              id: "etapa-4",
-              nome: "Fundação",
-              responsavel: "Maria Santos",
-              dataInicio: "2024-12-02",
-              dataPrevisao: "2025-01-15",
-              progresso: 30,
-              status: "em-andamento"
-            }
-          ]
-        },
-        {
-          id: "3",
-          nome: "Comercial Gamma",
-          cliente: "Empresa Delta Corp",
-          endereco: "Avenida Central",
-          numero: "250",
-          bairro: "Centro",
-          cidade: "Belo Horizonte",
-          estado: "MG",
-          cep: "30112-000",
-          dataInicio: "2024-10-01",
-          dataPrevisao: "2025-02-28",
-          status: "ativa",
-          progresso: 92,
-          responsavel: "Pedro Costa",
-          etapas: [
-            {
-              id: "etapa-5",
-              nome: "Estrutura",
-              responsavel: "Pedro Costa",
-              dataInicio: "2024-10-01",
-              dataPrevisao: "2024-11-15",
-              progresso: 100,
-              status: "completed"
-            },
-            {
-              id: "etapa-6",
-              nome: "Alvenaria",
-              responsavel: "Ana Lima",
-              dataInicio: "2024-11-16",
-              dataPrevisao: "2024-12-30",
-              progresso: 100,
-              status: "completed"
-            },
-            {
-              id: "etapa-7",
-              nome: "Acabamento",
-              responsavel: "Pedro Costa",
-              dataInicio: "2025-01-01",
-              dataPrevisao: "2025-02-28",
-              progresso: 85,
-              status: "em-andamento"
-            }
-          ]
-        },
-      ];
-      setObras(defaultObras);
-      localStorage.setItem(STORAGE_KEYS.OBRAS, JSON.stringify(defaultObras));
-    } else {
-      setObras(stored);
-    }
-  }, []);
+  // Hooks Supabase para substituir localStorage
+  const { data: obras = [], isLoading, error } = useOptimizedSupabaseQuery<Obra>('OBRAS');
+  const { add, update, delete: deleteObra } = useSupabaseCRUD<Obra>('OBRAS');
 
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Filtro de busca memoizado para performance
+  const filteredObras = useMemo(() => {
+    if (!searchTerm.trim()) return obras;
+
+    const searchLower = searchTerm.toLowerCase();
+    return obras.filter(obra =>
+      obra.nome.toLowerCase().includes(searchLower) ||
+      (obra.cliente && obra.cliente.toLowerCase().includes(searchLower)) ||
+      (obra.endereco && obra.endereco.toLowerCase().includes(searchLower))
+    );
+  }, [obras, searchTerm]);
+
+  // Função helper para transformar dados do formulário para o formato da obra
+  const transformFormDataToObra = useCallback((data: ObraFormData, isUpdate = false) => {
+    const baseObra = {
+      nome: data.nome,
+      cliente_id: data.cliente, // Assumindo que data.cliente contém o ID
+      endereco: data.endereco,
+      numero: data.numero,
+      bairro: data.bairro,
+      cidade: data.cidade,
+      estado: data.estado,
+      cep: data.cep,
+      responsavel: data.responsavel,
+      status: data.status as 'planejamento' | 'execucao' | 'concluida',
+      data_inicio: data.dataInicio,
+      data_fim: data.dataPrevisaoFinal,
+      orcamento: data.orcamento ? parseFloat(data.orcamento.replace(/\D/g, '')) / 100 : 0,
+      etapas: data.etapas,
+      // Manter campos de compatibilidade
+      cliente: data.cliente,
+      dataInicio: data.dataInicio,
+      dataPrevisao: data.dataPrevisaoFinal,
+    };
+
+    // Adicionar progresso apenas para novas obras
+    if (!isUpdate) {
+      return { ...baseObra, progresso: 0 };
+    }
+
+    return baseObra;
+  }, []);
+
   const onSubmit = (data: ObraFormData) => {
     if (editingObra) {
-      const updated = updateInStorage<Obra>(STORAGE_KEYS.OBRAS, editingObra.id, {
-        nome: data.nome,
-        cliente: data.cliente,
-        endereco: data.endereco,
-        numero: data.numero,
-        bairro: data.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-        cep: data.cep,
-        responsavel: data.responsavel,
-        status: data.status,
-        dataInicio: data.dataInicio,
-        dataPrevisao: data.dataPrevisaoFinal,
-        orcamento: data.orcamento ? parseFloat(data.orcamento.replace(/\D/g, '')) / 100 : 0,
-        etapas: data.etapas,
-      });
-      setObras(updated);
-      toast({
-        title: "Obra atualizada!",
-        description: `${data.nome} foi atualizada com sucesso.`,
-      });
-      setEditingObra(null);
-    } else {
-      const novaObra: Obra = {
-        id: Date.now().toString(),
-        nome: data.nome,
-        cliente: data.cliente,
-        endereco: data.endereco,
-        numero: data.numero,
-        bairro: data.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-        cep: data.cep,
-        responsavel: data.responsavel,
-        status: data.status,
-        dataInicio: data.dataInicio,
-        dataPrevisao: data.dataPrevisaoFinal,
-        orcamento: data.orcamento ? parseFloat(data.orcamento.replace(/\D/g, '')) / 100 : 0,
-        progresso: 0,
-        etapas: data.etapas,
-      };
+      const updates = transformFormDataToObra(data, true);
 
-      const updated = addToStorage(STORAGE_KEYS.OBRAS, novaObra);
-      setObras(updated);
-      toast({
-        title: "Obra cadastrada!",
-        description: `${data.nome} foi adicionada com sucesso com ${data.etapas.length} etapa(s).`,
+      update.mutate(
+        { id: editingObra.id, updates },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Obra atualizada!",
+              description: `${data.nome} foi atualizada com sucesso.`,
+            });
+            setOpen(false);
+            setEditingObra(null);
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao atualizar",
+              description: error.message || "Ocorreu um erro ao atualizar a obra.",
+              variant: "destructive",
+            });
+          }
+        }
+      );
+    } else {
+      const novaObra = transformFormDataToObra(data, false);
+
+      add.mutate(novaObra, {
+        onSuccess: () => {
+          toast({
+            title: "Obra cadastrada!",
+            description: `${data.nome} foi adicionada com sucesso com ${data.etapas.length} etapa(s).`,
+          });
+          setOpen(false);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao cadastrar",
+            description: error.message || "Ocorreu um erro ao cadastrar a obra.",
+            variant: "destructive",
+          });
+        }
       });
     }
-    setOpen(false);
   };
 
   const handleEdit = (obra: Obra) => {
@@ -237,29 +155,42 @@ const Obras = () => {
 
   const handleDelete = () => {
     if (deleteId) {
-      const updated = deleteFromStorage<Obra>(STORAGE_KEYS.OBRAS, deleteId);
-      setObras(updated);
-      toast({
-        title: "Obra excluída!",
-        description: "A obra foi removida com sucesso.",
+      deleteObra.mutate(deleteId, {
+        onSuccess: () => {
+          toast({
+            title: "Obra excluída!",
+            description: "A obra foi removida com sucesso.",
+          });
+          setDeleteId(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao excluir",
+            description: error.message || "Ocorreu um erro ao excluir a obra.",
+            variant: "destructive",
+          });
+        }
       });
-      setDeleteId(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // Status badge memoizado para performance
+  const getStatusBadge = useCallback((status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
-      ativa: { label: "Ativa", className: "bg-green-100 text-green-700" },
+      planejamento: { label: "Planejamento", className: "bg-yellow-100 text-yellow-700" },
+      execucao: { label: "Execução", className: "bg-green-100 text-green-700" },
       concluida: { label: "Concluída", className: "bg-blue-100 text-blue-700" },
-      pausada: { label: "Pausada", className: "bg-yellow-100 text-yellow-700" },
+      // Manter compatibilidade com status antigos
+      ativa: { label: "Execução", className: "bg-green-100 text-green-700" },
+      pausada: { label: "Pausada", className: "bg-gray-100 text-gray-700" },
     };
-    
+
     return (
       <Badge className={variants[status]?.className || ""}>
         {variants[status]?.label || status}
       </Badge>
     );
-  };
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -298,16 +229,18 @@ const Obras = () => {
             <CardTitle className="text-sm font-medium">Total de Obras</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{obras.length}</div>
             <p className="text-xs text-muted-foreground mt-1">cadastradas no sistema</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Obras Ativas</CardTitle>
+            <CardTitle className="text-sm font-medium">Em Execução</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">3</div>
+            <div className="text-2xl font-bold text-green-600">
+              {obras.filter(o => o.status === 'execucao' || o.status === 'ativa').length}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">em andamento</p>
           </CardContent>
         </Card>
@@ -316,8 +249,10 @@ const Obras = () => {
             <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">1</div>
-            <p className="text-xs text-muted-foreground mt-1">este ano</p>
+            <div className="text-2xl font-bold text-blue-600">
+              {obras.filter(o => o.status === 'concluida').length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">finalizadas</p>
           </CardContent>
         </Card>
         <Card>
@@ -325,8 +260,14 @@ const Obras = () => {
             <CardTitle className="text-sm font-medium">Progresso Médio</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78%</div>
-            <p className="text-xs text-muted-foreground mt-1">de todas as obras ativas</p>
+            <div className="text-2xl font-bold">
+              {useMemo(() =>
+                obras.length > 0
+                  ? Math.round(obras.reduce((acc, obra) => acc + obra.progresso, 0) / obras.length)
+                  : 0
+              , [obras])}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">de todas as obras</p>
           </CardContent>
         </Card>
       </div>
@@ -352,7 +293,64 @@ const Obras = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {obras.map((obra) => (
+            {isLoading ? (
+              // Loading skeletons
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="p-4 border rounded-lg">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 mb-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <Skeleton className="h-12 w-12 rounded-lg" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-col gap-2">
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-5 w-24" />
+                        </div>
+                        <Skeleton className="h-4 w-32" />
+                        <div className="flex flex-col gap-2">
+                          <Skeleton className="h-4 w-64" />
+                          <Skeleton className="h-4 w-40" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              // Error state
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Erro ao carregar obras: {error.message}</p>
+                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : filteredObras.length === 0 ? (
+              // Empty state
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {searchTerm ? "Nenhuma obra encontrada para a pesquisa." : "Nenhuma obra cadastrada ainda."}
+                </p>
+                {!searchTerm && (
+                  <Button
+                    className="mt-4"
+                    onClick={() => { setEditingObra(null); setOpen(true); }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar primeira obra
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredObras.map((obra) => (
               <div 
                 key={obra.id}
                 className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -411,7 +409,7 @@ const Obras = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </CardContent>
       </Card>

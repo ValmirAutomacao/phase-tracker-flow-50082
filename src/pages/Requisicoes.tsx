@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,282 +6,262 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Search, CheckCircle, Clock, XCircle, ShoppingCart, Trash2, Edit } from "lucide-react";
+import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, Trash2, User, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
+import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { currencyMask, parseCurrencyInput } from "@/lib/utils";
+import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
 
-const produtoSchema = z.object({
-  numeroItem: z.string().min(1, "Número do item é obrigatório"),
-  descricao: z.string().min(1, "Descrição é obrigatória"),
-  quantidade: z.string().min(1, "Quantidade é obrigatória"),
-  unidadeMedida: z.string().min(1, "Unidade de medida é obrigatória"),
-  valor: z.string().min(1, "Valor é obrigatório"),
-});
+// Interface para Obra (para relacionamento)
+interface Obra {
+  id: string;
+  nome: string;
+}
+
+// Interface para Funcionário (para relacionamento)
+interface Funcionario {
+  id: string;
+  nome: string;
+}
+
+// Interface para Requisição compatível com Supabase
+interface RequisicaoItem {
+  id: string;
+  obra_id: string; // FK para obras
+  funcionario_solicitante_id: string; // FK para funcionarios
+  titulo: string;
+  descricao?: string;
+  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  data_vencimento?: string;
+  funcionario_responsavel_id?: string; // FK para funcionarios
+  observacoes?: string;
+  anexos?: Record<string, unknown>; // jsonb
+  created_at?: string;
+  updated_at?: string;
+  // Campos de relacionamento
+  obra?: {
+    id: string;
+    nome: string;
+  };
+  funcionario_solicitante?: {
+    id: string;
+    nome: string;
+  };
+  funcionario_responsavel?: {
+    id: string;
+    nome: string;
+  };
+  // Campo para produtos/itens da requisição
+  itens_produtos?: Array<{
+    id: string;
+    nome: string;
+    quantidade: number;
+    valor_unitario: number;
+    comprado: boolean;
+  }>;
+}
 
 const requisicaoSchema = z.object({
-  obraId: z.string().min(1, "Selecione uma obra"),
-  compradorId: z.string().min(1, "Selecione um comprador"),
-  fornecedor: z.string().min(1, "Fornecedor é obrigatório"),
-  setorCompra: z.string().min(1, "Selecione um setor"),
-  engenheiroId: z.string().min(1, "Selecione um engenheiro"),
+  obra_id: z.string().min(1, "Selecione uma obra"),
+  funcionario_solicitante_id: z.string().min(1, "Selecione um funcionário solicitante"),
+  titulo: z.string().min(10, "O título deve ter no mínimo 10 caracteres"),
+  descricao: z.string().optional(),
+  prioridade: z.enum(["baixa", "media", "alta", "urgente"]),
+  data_vencimento: z.string().optional(),
+  funcionario_responsavel_id: z.string().optional(),
+  observacoes: z.string().optional(),
 });
 
-type ProdutoFormData = z.infer<typeof produtoSchema>;
 type RequisicaoFormData = z.infer<typeof requisicaoSchema>;
-
-interface Produto {
-  id: string;
-  numeroItem: string;
-  descricao: string;
-  quantidade: string;
-  unidadeMedida: string;
-  valor: number;
-}
-
-interface Requisicao {
-  id: string;
-  numero: string;
-  obra: string;
-  comprador: string;
-  fornecedor: string;
-  setor: string;
-  produtos: Produto[];
-  valorTotal: number;
-  engenheiro: string;
-  status: "aguardando" | "aprovada" | "rejeitada";
-  dataCriacao: string;
-}
 
 const Requisicoes = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
-  const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
-  const [carrinho, setCarrinho] = useState<Produto[]>([]);
-  const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [prioridadeFilter, setPrioridadeFilter] = useState<string>("all");
+  const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([]);
+
+  // Hooks Supabase para substituir localStorage
+  const { data: requisicoes = [], isLoading, error } = useOptimizedSupabaseQuery<RequisicaoItem>('REQUISICOES');
+  const { add, update, delete: deleteRequisicao } = useSupabaseCRUD<RequisicaoItem>('REQUISICOES');
+
+  // Query para obras (para dropdown)
+  const { data: obras = [] } = useOptimizedSupabaseQuery<Obra>('OBRAS');
+
+  // Query para funcionários (para dropdown)
+  const { data: funcionarios = [] } = useOptimizedSupabaseQuery<Funcionario>('FUNCIONARIOS');
 
   const handleDelete = () => {
     if (deleteId) {
-      const updated = deleteFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES, deleteId);
-      setRequisicoes(updated);
-      toast({
-        title: "Requisição excluída!",
-        description: "A requisição foi removida com sucesso.",
+      deleteRequisicao.mutate(deleteId, {
+        onSuccess: () => {
+          toast({
+            title: "Requisição excluída!",
+            description: "A requisição foi removida com sucesso.",
+          });
+          setDeleteId(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao excluir requisição",
+            description: error.message || "Tente novamente em alguns instantes.",
+            variant: "destructive",
+          });
+        },
       });
-      setDeleteId(null);
     }
   };
 
-  const mockObras = getFromStorage(STORAGE_KEYS.OBRAS, [
-    { id: "1", nome: "Edifício Alpha" },
-    { id: "2", nome: "Residencial Beta" },
-    { id: "3", nome: "Comercial Gamma" },
-  ]);
+  // Filtros avançados com memoização para performance
+  const filteredRequisicoes = useMemo(() => {
+    return requisicoes.filter(req => {
+      // Fallback seguro para evitar erros de propriedades undefined/null
+      const titulo = req.titulo || '';
+      const descricao = req.descricao || '';
+      const obraNome = req.obra?.nome || '';
+      const funcionarioNome = req.funcionario_solicitante?.nome || '';
 
-  const mockCompradores = getFromStorage(STORAGE_KEYS.FUNCIONARIOS, [
-    { id: "1", nome: "Maria Santos" },
-    { id: "2", nome: "Pedro Costa" },
-    { id: "3", nome: "Carlos Mendes" },
-  ]);
+      const matchesSearch = titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           obraNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           funcionarioNome.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const mockEngenheiros = [
-    { id: "1", nome: "João Silva" },
-    { id: "2", nome: "Ana Lima" },
-  ];
+      const matchesStatus = statusFilter === "all" || req.status === statusFilter;
+      const matchesPrioridade = prioridadeFilter === "all" || req.prioridade === prioridadeFilter;
 
-  const mockSetores = [
-    "Material de Construção",
-    "Ferramentas",
-    "Material Elétrico",
-    "Hidráulica",
-    "Acabamento",
-  ];
-
-  const mockUnidadesMedida = [
-    "unidade",
-    "metro",
-    "metro²",
-    "metro³",
-    "quilograma",
-    "tonelada",
-    "litro",
-    "galão",
-    "saco",
-    "caixa",
-    "rolo",
-    "barra",
-    "peça",
-    "conjunto",
-    "dúzia",
-    "pacote",
-  ];
-
-  useEffect(() => {
-    const stored = getFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES);
-    if (stored.length === 0) {
-      const defaultRequisicoes: Requisicao[] = [
-        {
-          id: "1",
-          numero: "REQ-2025-001",
-          obra: "Edifício Alpha",
-          comprador: "Maria Santos",
-          fornecedor: "Construtora XYZ",
-          setor: "Material de Construção",
-          produtos: [
-            {
-              id: "p1",
-              numeroItem: "ITEM-001",
-              descricao: "Cimento CP-II 50kg",
-              quantidade: "100",
-              unidadeMedida: "saco",
-              valor: 2500.00
-            }
-          ],
-          valorTotal: 2500.00,
-          engenheiro: "João Silva",
-          status: "aguardando",
-          dataCriacao: "2025-01-15"
-        },
-      ];
-      setRequisicoes(defaultRequisicoes);
-      localStorage.setItem(STORAGE_KEYS.REQUISICOES, JSON.stringify(defaultRequisicoes));
-    } else {
-      setRequisicoes(stored);
-    }
-  }, []);
+      return matchesSearch && matchesStatus && matchesPrioridade;
+    });
+  }, [requisicoes, searchTerm, statusFilter, prioridadeFilter]);
 
   const form = useForm<RequisicaoFormData>({
     resolver: zodResolver(requisicaoSchema),
     defaultValues: {
-      obraId: "",
-      compradorId: "",
-      fornecedor: "",
-      setorCompra: "",
-      engenheiroId: "",
-    },
-  });
-
-  const produtoForm = useForm<ProdutoFormData>({
-    resolver: zodResolver(produtoSchema),
-    defaultValues: {
-      numeroItem: "",
+      obra_id: "",
+      funcionario_solicitante_id: "",
+      titulo: "",
       descricao: "",
-      quantidade: "",
-      unidadeMedida: "",
-      valor: "",
+      prioridade: "media",
+      data_vencimento: "",
+      funcionario_responsavel_id: "",
+      observacoes: "",
     },
   });
-
-  const adicionarAoCarrinho = (data: ProdutoFormData) => {
-    if (editingProduct) {
-      setCarrinho(carrinho.map(p =>
-        p.id === editingProduct.id
-          ? { ...p, ...data, valor: parseCurrencyInput(data.valor) }
-          : p
-      ));
-      setEditingProduct(null);
-      toast({ title: "Produto atualizado no carrinho!" });
-    } else {
-      const novoProduto: Produto = {
-        id: Date.now().toString(),
-        ...data,
-        valor: parseCurrencyInput(data.valor),
-      };
-      setCarrinho([...carrinho, novoProduto]);
-      toast({ title: "Produto adicionado ao carrinho!" });
-    }
-    produtoForm.reset();
-  };
-
-  const editarProduto = (produto: Produto) => {
-    setEditingProduct(produto);
-    produtoForm.reset({
-      numeroItem: produto.numeroItem,
-      descricao: produto.descricao,
-      quantidade: produto.quantidade,
-      unidadeMedida: produto.unidadeMedida,
-      valor: currencyMask((produto.valor * 100).toString()),
-    });
-  };
-
-  const removerDoCarrinho = (id: string) => {
-    setCarrinho(carrinho.filter(p => p.id !== id));
-    toast({ title: "Produto removido do carrinho" });
-  };
 
   const onSubmit = (data: RequisicaoFormData) => {
-    if (carrinho.length === 0) {
+    // Validação: requisição deve ter pelo menos 1 item
+    if (itensCarrinho.length === 0) {
       toast({
-        title: "Carrinho vazio",
-        description: "Adicione pelo menos um produto à requisição",
+        title: "Erro de validação",
+        description: "Adicione pelo menos um item ao carrinho antes de criar a requisição.",
         variant: "destructive",
       });
       return;
     }
 
-    const valorTotal = carrinho.reduce((sum, p) => sum + p.valor, 0);
-    const novaRequisicao: Requisicao = {
-      id: Date.now().toString(),
-      numero: `REQ-2025-${String(requisicoes.length + 1).padStart(3, '0')}`,
-      obra: mockObras.find(o => o.id === data.obraId)?.nome || "",
-      comprador: mockCompradores.find(c => c.id === data.compradorId)?.nome || "",
-      fornecedor: data.fornecedor,
-      setor: data.setorCompra,
-      produtos: [...carrinho],
-      valorTotal,
-      engenheiro: mockEngenheiros.find(e => e.id === data.engenheiroId)?.nome || "",
-      status: "aguardando",
-      dataCriacao: new Date().toISOString().split('T')[0],
+    const novaRequisicao = {
+      obra_id: data.obra_id,
+      funcionario_solicitante_id: data.funcionario_solicitante_id,
+      titulo: data.titulo,
+      descricao: data.descricao || null,
+      status: "pendente" as const,
+      prioridade: data.prioridade,
+      data_vencimento: data.data_vencimento || null,
+      funcionario_responsavel_id: data.funcionario_responsavel_id || null,
+      observacoes: data.observacoes || null,
+      anexos: null,
+      itens_produtos: itensCarrinho,
     };
 
-    const updated = addToStorage(STORAGE_KEYS.REQUISICOES, novaRequisicao);
-    setRequisicoes(updated);
-    setCarrinho([]);
-    setOpen(false);
-    form.reset();
-    toast({
-      title: "Requisição criada!",
-      description: `Requisição ${novaRequisicao.numero} criada com sucesso.`,
+    add.mutate(novaRequisicao, {
+      onSuccess: () => {
+        toast({
+          title: "Requisição criada!",
+          description: "A requisição foi criada com sucesso e está aguardando aprovação.",
+        });
+        setOpen(false);
+        form.reset();
+        setItensCarrinho([]); // Limpar carrinho após sucesso
+      },
+      onError: (error) => {
+        toast({
+          title: "Erro ao criar requisição",
+          description: error.message || "Tente novamente em alguns instantes.",
+          variant: "destructive",
+        });
+      },
     });
   };
 
-  const handleStatusChange = (id: string, novoStatus: "aprovada" | "rejeitada") => {
-    const updated = updateInStorage<Requisicao>(STORAGE_KEYS.REQUISICOES, id, { status: novoStatus });
-    setRequisicoes(updated);
-    toast({
-      title: novoStatus === "aprovada" ? "Requisição aprovada!" : "Requisição rejeitada!",
-      description: `Status atualizado com sucesso.`,
-    });
+  const handleStatusChange = (id: string, novoStatus: RequisicaoItem['status']) => {
+    const requisicao = requisicoes.find(r => r.id === id);
+    if (!requisicao) return;
+
+    const updatedRequisicao = {
+      ...requisicao,
+      status: novoStatus,
+    };
+
+    update.mutate(
+      { id, data: updatedRequisicao },
+      {
+        onSuccess: () => {
+          const statusLabels = {
+            pendente: "pendente",
+            em_andamento: "em andamento",
+            concluida: "concluída",
+            cancelada: "cancelada"
+          };
+          toast({
+            title: `Requisição ${statusLabels[novoStatus]}!`,
+            description: "Status atualizado com sucesso.",
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao atualizar status",
+            description: error.message || "Tente novamente em alguns instantes.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: any }> = {
-      aguardando: { 
-        label: "Aguardando", 
+    const variants: Record<string, { label: string; className: string; icon: React.ElementType }> = {
+      pendente: {
+        label: "Pendente",
         className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
         icon: Clock
       },
-      aprovada: { 
-        label: "Aprovada", 
+      em_andamento: {
+        label: "Em Andamento",
+        className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
+        icon: AlertTriangle
+      },
+      concluida: {
+        label: "Concluída",
         className: "bg-green-100 text-green-700 hover:bg-green-100",
         icon: CheckCircle
       },
-      rejeitada: { 
-        label: "Rejeitada", 
+      cancelada: {
+        label: "Cancelada",
         className: "bg-red-100 text-red-700 hover:bg-red-100",
         icon: XCircle
       },
     };
-    
-    const variant = variants[status];
+
+    const variant = variants[status] || variants.pendente;
     const Icon = variant.icon;
-    
+
     return (
       <Badge className={variant.className}>
         <Icon className="h-3 w-3 mr-1" />
@@ -290,12 +270,41 @@ const Requisicoes = () => {
     );
   };
 
+  const getPrioridadeBadge = (prioridade: string) => {
+    const variants: Record<string, { label: string; className: string }> = {
+      baixa: {
+        label: "Baixa",
+        className: "bg-gray-100 text-gray-700"
+      },
+      media: {
+        label: "Média",
+        className: "bg-blue-100 text-blue-700"
+      },
+      alta: {
+        label: "Alta",
+        className: "bg-orange-100 text-orange-700"
+      },
+      urgente: {
+        label: "Urgente",
+        className: "bg-red-100 text-red-700"
+      },
+    };
+
+    const variant = variants[prioridade] || variants.media;
+
+    return (
+      <Badge variant="secondary" className={variant.className}>
+        {variant.label}
+      </Badge>
+    );
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Requisições de Compras</h1>
-          <p className="text-muted-foreground">Gerenciamento de requisições e aprovações</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Requisições & Tickets</h1>
+          <p className="text-muted-foreground">Sistema de solicitações e acompanhamento de tarefas</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -306,408 +315,436 @@ const Requisicoes = () => {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nova Requisição de Compra</DialogTitle>
+              <DialogTitle>Nova Requisição</DialogTitle>
               <DialogDescription>
-                Preencha os dados da requisição e adicione produtos ao carrinho.
+                Crie uma nova solicitação ou ticket. Preencha os dados obrigatórios e opcionais conforme necessário.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-6">
-              {/* Dados da Requisição */}
-              <Form {...form}>
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Dados da Requisição</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="obraId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Obra</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione a obra" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockObras.map(obra => (
-                                <SelectItem key={obra.id} value={obra.id}>{obra.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="compradorId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Comprador</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o comprador" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockCompradores.map(comprador => (
-                                <SelectItem key={comprador.id} value={comprador.id}>{comprador.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
 
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="obra_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Obra *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a obra" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {obras.map(obra => (
+                            <SelectItem key={obra.id} value={obra.id}>{obra.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="funcionario_solicitante_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Funcionário Solicitante *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o funcionário" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {funcionarios.map(funcionario => (
+                            <SelectItem key={funcionario.id} value={funcionario.id}>{funcionario.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="titulo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Título da Requisição *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ex: Solicitação de materiais para acabamento do 3º andar"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descricao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva detalhadamente a solicitação..."
+                          rows={4}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="fornecedor"
+                    name="prioridade"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fornecedor</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nome do fornecedor" {...field} />
-                        </FormControl>
+                        <FormLabel>Prioridade *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a prioridade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="urgente">Urgente</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="setorCompra"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Setor da Compra</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o setor" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockSetores.map(setor => (
-                                <SelectItem key={setor} value={setor}>{setor}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="engenheiroId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Engenheiro Responsável</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o engenheiro" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockEngenheiros.map(eng => (
-                                <SelectItem key={eng.id} value={eng.id}>{eng.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="data_vencimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Vencimento</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </Form>
 
-              {/* Carrinho de Produtos */}
-              <div className="border-t pt-6">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
-                  Carrinho de Produtos ({carrinho.length})
-                </h3>
+                <FormField
+                  control={form.control}
+                  name="funcionario_responsavel_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Funcionário Responsável</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o responsável (opcional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {funcionarios.map(funcionario => (
+                            <SelectItem key={funcionario.id} value={funcionario.id}>{funcionario.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                {/* Form Adicionar Produto */}
-                <Form {...produtoForm}>
-                  <form onSubmit={produtoForm.handleSubmit(adicionarAoCarrinho)} className="space-y-4 mb-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={produtoForm.control}
-                        name="numeroItem"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número do Item</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: ITEM-001" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={produtoForm.control}
-                        name="quantidade"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantidade</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: 100" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={produtoForm.control}
-                        name="unidadeMedida"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Unidade de Medida</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {mockUnidadesMedida.map(unidade => (
-                                  <SelectItem key={unidade} value={unidade}>{unidade}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                <FormField
+                  control={form.control}
+                  name="observacoes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Observações</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Observações adicionais..."
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                    <FormField
-                      control={produtoForm.control}
-                      name="descricao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Descrição</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Descrição detalhada do item" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                {/* Carrinho de Itens */}
+                <div className="pt-4">
+                  <CarrinhoItens
+                    itens={itensCarrinho}
+                    onItensChange={setItensCarrinho}
+                  />
+                </div>
 
-                    <FormField
-                      control={produtoForm.control}
-                      name="valor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Total (R$)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="R$ 0,00"
-                              value={field.value}
-                              onChange={(e) => {
-                                const masked = currencyMask(e.target.value);
-                                field.onChange(masked);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button type="submit" variant="outline" className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      {editingProduct ? "Atualizar Produto" : "Adicionar ao Carrinho"}
-                    </Button>
-                  </form>
-                </Form>
-
-                {/* Lista do Carrinho */}
-                {carrinho.length > 0 && (
-                  <div className="space-y-2">
-                    {carrinho.map((produto) => (
-                      <div key={produto.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
-                        <div className="flex-1">
-                          <div className="font-medium">{produto.numeroItem} - {produto.descricao}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {produto.quantidade} {produto.unidadeMedida} • {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.valor)}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => editarProduto(produto)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => removerDoCarrinho(produto.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="text-right font-semibold text-lg pt-2">
-                      Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(carrinho.reduce((sum, p) => sum + p.valor, 0))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 border-t pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={form.handleSubmit(onSubmit)}>
-                  Criar Requisição
-                </Button>
-              </div>
-            </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Criar Requisição</Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Requisições</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{requisicoes.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">requisições</p>
+            <p className="text-xs text-muted-foreground mt-1">solicitações cadastradas</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Aguardando</CardTitle>
+            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {requisicoes.filter(r => r.status === "aguardando").length}
+              {requisicoes.filter(r => r.status === "pendente").length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">pendentes de aprovação</p>
+            <p className="text-xs text-muted-foreground mt-1">aguardando análise</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
+            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {requisicoes.filter(r => r.status === "em_andamento").length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">em execução</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {requisicoes.filter(r => r.status === "aprovada").length}
+              {requisicoes.filter(r => r.status === "concluida").length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">aprovadas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {requisicoes.filter(r => r.status === "rejeitada").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">recusadas</p>
+            <p className="text-xs text-muted-foreground mt-1">finalizadas</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* List */}
+      {/* Filtros Avançados */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Lista de Requisições</CardTitle>
-              <CardDescription>Todas as requisições de compra</CardDescription>
-            </div>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Busque e filtre requisições por critérios específicos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar requisição..."
+                placeholder="Buscar por título, descrição, obra..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9"
               />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="concluida">Concluída</SelectItem>
+                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Prioridades</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de Requisições */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Requisições</CardTitle>
+          <CardDescription>
+            {filteredRequisicoes.length} de {requisicoes.length} requisições
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {requisicoes.filter(req => 
-              req.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              req.obra.toLowerCase().includes(searchTerm.toLowerCase())
-            ).map((req) => (
-              <div 
-                key={req.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start gap-4 flex-1">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{req.numero}</h4>
-                      {getStatusBadge(req.status)}
+            {isLoading ? (
+              // Loading skeletons
+              Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg gap-4"
+                >
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="h-12 w-12 rounded-lg bg-muted animate-pulse shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-4 bg-muted rounded animate-pulse" />
+                      <div className="h-3 bg-muted rounded w-3/4 animate-pulse" />
+                      <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
                     </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div><strong>Obra:</strong> {req.obra}</div>
-                      <div><strong>Comprador:</strong> {req.comprador}</div>
-                      <div><strong>Fornecedor:</strong> {req.fornecedor}</div>
-                      <div><strong>Produtos:</strong> {req.produtos.length} itens</div>
-                      <div className="font-semibold text-foreground">
-                        Valor Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(req.valorTotal)}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Erro ao carregar requisições: {error.message}</p>
+              </div>
+            ) : filteredRequisicoes.length === 0 ? (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {requisicoes.length === 0
+                    ? "Nenhuma requisição cadastrada ainda."
+                    : "Nenhuma requisição encontrada com os filtros aplicados."
+                  }
+                </p>
+              </div>
+            ) : (
+              filteredRequisicoes.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
+                >
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                        <h4 className="font-semibold truncate">{req.titulo}</h4>
+                        <div className="flex gap-2">
+                          {getStatusBadge(req.status)}
+                          {getPrioridadeBadge(req.prioridade)}
+                        </div>
+                      </div>
+                      {req.descricao && (
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{req.descricao}</p>
+                      )}
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center gap-1">
+                            <Building className="h-3 w-3" />
+                            <span><strong>Obra:</strong> {req.obra?.nome || 'Obra não encontrada'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span><strong>Solicitante:</strong> {req.funcionario_solicitante?.nome || 'Funcionário não encontrado'}</span>
+                          </div>
+                        </div>
+                        {req.funcionario_responsavel && (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span><strong>Responsável:</strong> {req.funcionario_responsavel.nome}</span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <span>Criada: {new Date(req.created_at || Date.now()).toLocaleDateString('pt-BR')}</span>
+                          {req.data_vencimento && (
+                            <span>Vencimento: {new Date(req.data_vencimento).toLocaleDateString('pt-BR')}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    {req.status === "pendente" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusChange(req.id, "em_andamento")}
+                          className="text-blue-600 hover:text-blue-700 w-full sm:w-auto"
+                        >
+                          Iniciar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusChange(req.id, "cancelada")}
+                          className="text-red-600 hover:text-red-700 w-full sm:w-auto"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+                    {req.status === "em_andamento" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusChange(req.id, "concluida")}
+                          className="text-green-600 hover:text-green-700 w-full sm:w-auto"
+                        >
+                          Concluir
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusChange(req.id, "cancelada")}
+                          className="text-red-600 hover:text-red-700 w-full sm:w-auto"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteId(req.id)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {req.status === "aguardando" && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleStatusChange(req.id, "aprovada")}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        Aprovar
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleStatusChange(req.id, "rejeitada")}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setDeleteId(req.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
