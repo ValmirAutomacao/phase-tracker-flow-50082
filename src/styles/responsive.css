@@ -36,8 +36,8 @@ body {
   .dialog-content,
   [role="dialog"] {
     max-width: 95vw !important;
-    max-height: 85vh !important;
-    margin: auto !important;
+    max-height: 90vh !important;
+    margin: 1rem auto !important;
     display: flex !important;
     flex-direction: column !important;
     border-radius: 0.5rem !important;
@@ -50,8 +50,8 @@ body {
     overflow-x: hidden !important;
     flex: 1 1 auto !important;
     padding: 0.75rem 1rem !important;
-    max-height: calc(85vh - 180px) !important;
-    min-height: 200px !important;
+    max-height: calc(90vh - 220px) !important;
+    min-height: 150px !important;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
   }
@@ -110,14 +110,14 @@ body {
     left: 0 !important;
     right: 0 !important;
     background: white !important;
-    padding: 0.875rem 1rem !important;
+    padding: 1rem !important;
     border-top: 1px solid #e2e8f0 !important;
     margin: 0 !important;
     margin-top: auto !important;
     border-radius: 0 0 0.5rem 0.5rem !important;
-    z-index: 20 !important;
+    z-index: 30 !important;
     flex-shrink: 0 !important;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1) !important;
   }
 
   /* Dark mode para botões de ação */
@@ -234,12 +234,12 @@ body {
   .dialog-content,
   [role="dialog"] {
     max-width: 85vw !important;
-    max-height: 88vh !important;
+    max-height: 90vh !important;
   }
 
   .dialog-form-container {
-    max-height: calc(85vh - 180px) !important;
-    padding: 0.875rem 1rem !important;
+    max-height: calc(90vh - 220px) !important;
+    padding: 1rem 1.5rem !important;
   }
 
   /* CARDS - Espaçamento otimizado */
@@ -278,12 +278,13 @@ body {
   .dialog-content,
   [data-radix-dialog-content],
   [role="dialog"] {
-    max-width: 80vw !important;
-    max-height: 88vh !important;
+    max-width: 75vw !important;
+    max-height: 90vh !important;
   }
 
   .dialog-form-container {
-    max-height: calc(88vh - 180px) !important;
+    max-height: calc(90vh - 220px) !important;
+    padding: 1rem 1.5rem !important;
   }
 }
 
