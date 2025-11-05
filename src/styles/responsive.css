@@ -36,10 +36,57 @@ body {
   .dialog-content,
   [role="dialog"] {
     max-width: 95vw !important;
-    max-height: 95vh !important;
-    margin: 2.5vh auto !important;
-    overflow-y: auto !important;
+    max-height: 90vh !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-radius: 0.5rem !important;
+  }
+
+  /* Container do formulário com scroll */
+  .dialog-form-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    padding: 1rem !important;
+    max-height: calc(90vh - 140px) !important;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .dialog-form-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dialog-form-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .dialog-form-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .dialog-form-container::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  /* Dark mode para container do formulário */
+  .dark .dialog-form-container {
+    scrollbar-color: #475569 #1e293b;
+  }
+
+  .dark .dialog-form-container::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+
+  .dark .dialog-form-container::-webkit-scrollbar-thumb {
+    background-color: #475569;
+  }
+
+  .dark .dialog-form-container::-webkit-scrollbar-thumb:hover {
+    background-color: #64748b;
   }
 
   /* FORMULÁRIOS - Campos e espaçamentos otimizados */
@@ -61,9 +108,25 @@ body {
     background: white !important;
     padding: 1rem !important;
     border-top: 1px solid #e2e8f0 !important;
-    margin: 0 -1rem -1rem -1rem !important;
+    margin: 0 !important;
+    margin-top: auto !important;
     border-radius: 0 0 0.5rem 0.5rem !important;
     z-index: 10 !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Dark mode para botões de ação */
+  .dark .form-actions,
+  .dark .dialog-footer,
+  .dark [class*="DialogFooter"],
+  .dark [class*="dialog-footer"] {
+    background: hsl(210 25% 12%) !important;
+    border-top-color: hsl(210 25% 20%) !important;
+  }
+
+  /* Grid em coluna única no mobile */
+  .mobile-stack {
+    grid-template-columns: 1fr !important;
   }
 
   /* BOTÕES - Stack vertical em mobile */
@@ -154,7 +217,11 @@ body {
   .dialog-content,
   [role="dialog"] {
     max-width: 85vw !important;
-    max-height: 90vh !important;
+    max-height: 88vh !important;
+  }
+
+  .dialog-form-container {
+    max-height: calc(88vh - 140px) !important;
   }
 
   /* CARDS - Espaçamento otimizado */
@@ -168,6 +235,11 @@ body {
   .flex.gap-4 {
     flex-direction: row !important;
     flex-wrap: wrap !important;
+  }
+  
+  /* Form actions mantém layout horizontal */
+  .form-actions {
+    flex-direction: row !important;
   }
 }
 

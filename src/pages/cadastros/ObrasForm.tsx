@@ -133,7 +133,8 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+            <div className="dialog-form-container space-y-4">
             <FormField
               control={form.control}
               name="nome"
@@ -505,6 +506,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                 ))}
               </CardContent>
             </Card>
+            </div>
 
             <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

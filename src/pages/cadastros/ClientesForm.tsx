@@ -125,7 +125,8 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+            <div className="dialog-form-container space-y-4">
             <FormField
               control={form.control}
               name="tipo"
@@ -353,6 +354,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
                   )}
                 />
               </div>
+            </div>
             </div>
 
             <div className="flex justify-end gap-3 form-actions mobile-stack">

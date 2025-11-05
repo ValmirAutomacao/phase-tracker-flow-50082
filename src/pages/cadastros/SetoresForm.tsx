@@ -7,6 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import "@/styles/responsive.css";
 
 const setorSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -60,7 +61,7 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl dialog-content-mobile">
         <DialogHeader>
           <DialogTitle>{editData ? "Editar Setor" : "Novo Setor"}</DialogTitle>
           <DialogDescription>
@@ -68,7 +69,8 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+            <div className="dialog-form-container space-y-4">
             <FormField
               control={form.control}
               name="nome"
@@ -119,8 +121,9 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
                 </FormItem>
               )}
             />
+            </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

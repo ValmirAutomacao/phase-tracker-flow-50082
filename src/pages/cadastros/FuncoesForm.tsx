@@ -89,7 +89,8 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+            <div className="dialog-form-container space-y-4">
             <FormField
               control={form.control}
               name="nome"
@@ -214,6 +215,7 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
                 </FormItem>
               )}
             />
+            </div>
 
             <div className="flex justify-end gap-3 form-actions mobile-stack">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
