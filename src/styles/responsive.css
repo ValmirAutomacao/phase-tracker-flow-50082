@@ -374,3 +374,81 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
 }
+
+/* Utilitários adicionais de responsividade (documentação anexada) */
+/* Grids: 1 coluna no mobile → 2 colunas em tablet/desktop */
+.grid-responsive-2 {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .grid-responsive-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+/* Grids: 1 → 2 → 3 colunas */
+.grid-responsive-3 {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Botões de ação empilhados no mobile */
+.mobile-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+}
+@media (min-width: 640px) {
+  .mobile-action-buttons {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Texto responsivo */
+.text-responsive {
+  font-size: clamp(0.875rem, 0.8rem + 0.5vw, 1rem);
+  line-height: 1.5;
+}
+
+/* Truncamento adaptativo */
+.text-truncate-responsive {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .text-truncate-responsive {
+    white-space: normal;
+  }
+}
+
+/* Itens de lista adaptáveis */
+.list-item-responsive {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+@media (min-width: 640px) {
+  .list-item-responsive {
+    flex-wrap: nowrap;
+  }
+}

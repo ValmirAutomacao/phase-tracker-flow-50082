@@ -62,93 +62,99 @@ const Dashboard = () => {
       description="Visão geral do sistema EngFlow"
     >
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="row g-3 g-sm-4">
         {stats.map((stat) => (
-          <StatsCard key={stat.title} {...stat} />
+          <div key={stat.title} className="col-12 col-sm-6 col-lg-3">
+            <StatsCard {...stat} />
+          </div>
         ))}
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        {/* Recent Activity */}
-        <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse-slow" />
-              Atividades Recentes
-            </CardTitle>
-            <CardDescription>Últimas atualizações do sistema</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors duration-200"
-                >
-                  {activity.type === "success" ? (
-                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center shrink-0">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+      <div className="row g-4 g-sm-6">
+        <div className="col-12 col-lg-6">
+          {/* Recent Activity */}
+          <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse-slow" />
+                Atividades Recentes
+              </CardTitle>
+              <CardDescription>Últimas atualizações do sistema</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {recentActivities.map((activity, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors duration-200"
+                  >
+                    {activity.type === "success" ? (
+                      <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center shrink-0">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
                     </div>
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Ongoing Projects */}
-        <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle>Obras em Andamento</CardTitle>
-            <CardDescription>Status dos projetos ativos</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {ongoingProjects.map((project, index) => (
-                <div key={index} className="space-y-3 p-3 rounded-lg hover:bg-muted/50 transition-colors duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">{project.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <span className="inline-flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3" />
-                          {project.daysLeft} dias restantes
-                        </span>
-                      </p>
+        <div className="col-12 col-lg-6">
+          {/* Ongoing Projects */}
+          <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle>Obras em Andamento</CardTitle>
+              <CardDescription>Status dos projetos ativos</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {ongoingProjects.map((project, index) => (
+                  <div key={index} className="space-y-3 p-3 rounded-lg hover:bg-muted/50 transition-colors duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">{project.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="inline-flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            {project.daysLeft} dias restantes
+                          </span>
+                        </p>
+                      </div>
+                      <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
+                        project.status === "Em dia" 
+                          ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400" 
+                          : "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400"
+                      }`}>
+                        {project.status}
+                      </span>
                     </div>
-                    <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
-                      project.status === "Em dia" 
-                        ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400" 
-                        : "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400"
-                    }`}>
-                      {project.status}
-                    </span>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Progresso</span>
+                        <span className="font-semibold">{project.progress}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500 ease-out" 
+                          style={{ width: `${project.progress}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Progresso</span>
-                      <span className="font-semibold">{project.progress}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500 ease-out" 
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </PageContainer>
   );

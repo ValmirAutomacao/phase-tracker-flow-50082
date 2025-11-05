@@ -1,3 +1,6 @@
+/* Importar Bootstrap grid (apenas sistema de grid) */
+@import "bootstrap/dist/css/bootstrap-grid.min.css";
+
 /* Importar sistema de responsividade verdadeira */
 @import './styles/responsive.css';
 

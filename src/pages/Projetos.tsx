@@ -90,7 +90,7 @@ const Projetos = () => {
     >
 
       {/* Projects Overview */}
-      <div className="grid gap-4 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="row g-3 g-sm-4">
         {obras.map((obra) => {
           const progresso = obra.progresso || calculateProjectProgress(obra.etapas);
           const status = getProjectStatus(obra.dataPrevisao, progresso);
@@ -99,51 +99,50 @@ const Projetos = () => {
           const etapasConcluidas = obra.etapas ? obra.etapas.filter(e => e.status === "completed" || e.progresso === 100).length : 0;
 
           return (
-            <Card
-              key={obra.id}
-              className={`cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:scale-[1.02] ${
-                selectedProject === obra.id ? "ring-2 ring-primary shadow-glow" : "shadow-card"
-              }`}
-              onClick={() => setSelectedProject(obra.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{obra.nome}</CardTitle>
-                  {getStatusBadge(obra.status || status)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Progresso</span>
-                    <span className="font-semibold">{progresso}%</span>
+            <div key={obra.id} className="col-12 col-md-6 col-lg-4">
+              <Card
+                className={`${selectedProject === obra.id ? "ring-2 ring-primary shadow-glow" : "shadow-card"} cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:scale-[1.02]`}
+                onClick={() => setSelectedProject(obra.id)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{obra.nome}</CardTitle>
+                    {getStatusBadge(obra.status || status)}
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${progresso}%` }}
-                    />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>Progresso</span>
+                      <span className="font-semibold">{progresso}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${progresso}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {prazoRestante}
+                  <div className="row g-2 text-sm">
+                    <div className="col-6 flex items-center gap-1 text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {prazoRestante}
+                    </div>
+                    <div className="col-6 flex items-center gap-1 text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {etapasConcluidas}/{etapasCount}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {etapasConcluidas}/{etapasCount}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Users className="h-3 w-3" />
+                    {obra.responsavel}
                   </div>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="h-3 w-3" />
-                  {obra.responsavel}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Cliente: {obra.cliente}
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="text-xs text-muted-foreground">
+                    Cliente: {obra.cliente}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           );
         })}
       </div>

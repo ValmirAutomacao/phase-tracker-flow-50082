@@ -18,7 +18,7 @@ export const PageContainer = ({
 }: PageContainerProps) => {
   return (
     <div className={cn("min-h-full bg-gradient-to-br from-background to-muted/20", className)}>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
+      <div className="container-fluid p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
         {(title || description || actions) && (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
