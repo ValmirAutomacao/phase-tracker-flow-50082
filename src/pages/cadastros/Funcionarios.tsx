@@ -290,8 +290,8 @@ const Funcionarios = () => {
               Novo Funcionário
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl dialog-content-mobile">
-            <DialogHeader>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
               <DialogTitle>{editingFuncionario ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
               <DialogDescription>
                 {editingFuncionario ? "Atualize as informações do funcionário" : "Adicione um novo funcionário ao sistema"}
@@ -430,7 +430,7 @@ const Funcionarios = () => {
 
                 </div>
                 
-                <div className="flex justify-end gap-3 form-actions mobile-stack">
+                <div className="form-actions">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>

@@ -244,8 +244,8 @@ const Videos = () => {
               Novo Vídeo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl dialog-content-mobile">
-            <DialogHeader>
+            <DialogContent className="dialog-content-mobile">
+              <DialogHeader className="dialog-header">
               <DialogTitle>Novo Vídeo</DialogTitle>
               <DialogDescription>
                 Selecione a obra e adicione um prompt para o vídeo. Após criar, você poderá fazer upload das fotos (até 150).
@@ -307,7 +307,7 @@ const Videos = () => {
 
                 </div>
                 
-                <div className="flex justify-end gap-3 form-actions mobile-stack">
+                <div className="form-actions">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>

@@ -81,8 +81,8 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl dialog-content-mobile">
-        <DialogHeader>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
           <DialogTitle>{editData ? "Editar Função" : "Nova Função"}</DialogTitle>
           <DialogDescription>
             {editData ? "Atualize a função e suas permissões" : "Crie uma nova função e defina suas permissões"}
@@ -217,7 +217,7 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
             />
             </div>
 
-            <div className="flex justify-end gap-3 form-actions mobile-stack">
+            <div className="form-actions">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

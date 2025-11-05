@@ -117,8 +117,8 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl dialog-content-mobile">
-        <DialogHeader>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
           <DialogTitle>{editData ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
           <DialogDescription>
             {editData ? "Atualize as informações do cliente" : "Cadastre um novo cliente no sistema"}
@@ -357,7 +357,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
             </div>
             </div>
 
-            <div className="flex justify-end gap-3 form-actions mobile-stack">
+            <div className="form-actions">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

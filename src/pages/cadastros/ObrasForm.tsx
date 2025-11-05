@@ -125,8 +125,8 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl dialog-content-mobile">
-        <DialogHeader>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
           <DialogTitle>{editData ? "Editar Obra" : "Nova Obra"}</DialogTitle>
           <DialogDescription>
             {editData ? "Atualize as informações da obra" : "Cadastre uma nova obra no sistema"}
@@ -508,7 +508,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
             </Card>
             </div>
 
-            <div className="flex justify-end gap-3 form-actions mobile-stack">
+            <div className="form-actions">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

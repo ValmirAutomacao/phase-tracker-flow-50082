@@ -429,8 +429,8 @@ const Financeiro = () => {
                 Nova Despesa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl dialog-content-mobile">
-              <DialogHeader>
+            <DialogContent className="dialog-content-mobile">
+              <DialogHeader className="dialog-header">
                 <DialogTitle>Registrar Despesa Financeira</DialogTitle>
                 <DialogDescription>
                   Vincule uma despesa a uma requisição de compra
@@ -775,7 +775,7 @@ const Financeiro = () => {
 
                   </div>
                   
-                  <div className="flex justify-end gap-3 form-actions mobile-stack">
+                  <div className="form-actions">
                     <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                       Cancelar
                     </Button>

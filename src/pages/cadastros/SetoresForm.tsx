@@ -61,8 +61,8 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl dialog-content-mobile">
-        <DialogHeader>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
           <DialogTitle>{editData ? "Editar Setor" : "Novo Setor"}</DialogTitle>
           <DialogDescription>
             {editData ? "Atualize as informações do setor" : "Cadastre um novo setor no sistema"}
@@ -123,7 +123,7 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
             />
             </div>
 
-            <div className="flex justify-end gap-3 form-actions mobile-stack">
+            <div className="form-actions">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

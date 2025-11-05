@@ -460,15 +460,16 @@ const DespesasDetalhes = () => {
 
       {/* New Expense Dialog */}
       <Dialog open={openNew} onOpenChange={setOpenNew}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="dialog-content-mobile">
+          <DialogHeader className="dialog-header">
             <DialogTitle>Nova Despesa</DialogTitle>
             <DialogDescription>
               Registre uma nova despesa, opcionalmente vinculada a uma requisição
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreate)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleCreate)} className="flex flex-col h-full">
+              <div className="dialog-form-container space-y-4">
               {/* Seleção de Requisição */}
               <FormField
                 control={form.control}
@@ -735,8 +736,9 @@ const DespesasDetalhes = () => {
                   </FormItem>
                 )}
               />
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="form-actions">
                 <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>
                   Cancelar
                 </Button>
@@ -749,15 +751,16 @@ const DespesasDetalhes = () => {
 
       {/* Edit Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="dialog-content-mobile">
+          <DialogHeader className="dialog-header">
             <DialogTitle>Editar Despesa</DialogTitle>
             <DialogDescription>
               Atualize as informações da despesa
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEdit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleEdit)} className="flex flex-col h-full">
+              <div className="dialog-form-container space-y-4">
               {/* Mesmo layout do formulário de criação */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -998,8 +1001,9 @@ const DespesasDetalhes = () => {
                   </FormItem>
                 )}
               />
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="form-actions">
                 <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
                   Cancelar
                 </Button>

@@ -36,11 +36,10 @@ body {
   .dialog-content,
   .dialog-content-mobile,
   [role="dialog"] {
-    max-width: 96vw !important;
-    width: 96vw !important;
-    height: auto !important;
-    max-height: 92vh !important;
-    margin: 0.5rem auto !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
+    max-height: 88vh !important;
+    margin: 1rem auto !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
@@ -48,13 +47,12 @@ body {
     overflow: hidden !important;
   }
 
-  /* Container do formulário com scroll - NOVA ABORDAGEM */
+  /* Container do formulário com scroll */
   .dialog-form-container {
-    flex: 1 1 0% !important;
+    flex: 1 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     padding: 1rem !important;
-    min-height: 0 !important;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
   }
@@ -109,19 +107,15 @@ body {
   [class*="DialogFooter"],
   [class*="dialog-footer"] {
     flex-shrink: 0 !important;
-    position: sticky !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
     background: white !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.875rem 1rem !important;
     border-top: 1px solid #e5e7eb !important;
     margin: 0 !important;
     border-radius: 0 0 0.75rem 0.75rem !important;
     z-index: 50 !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06) !important;
     display: flex !important;
-    gap: 0.75rem !important;
+    gap: 0.625rem !important;
     align-items: center !important;
     justify-content: flex-end !important;
   }
@@ -133,7 +127,7 @@ body {
   .dark [class*="dialog-footer"] {
     background: hsl(222 47% 11%) !important;
     border-top-color: hsl(217 33% 17%) !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* Grid em coluna única no mobile */
@@ -157,10 +151,9 @@ body {
   }
 
   /* Form actions - botões responsivos */
-  .form-actions > * {
-    flex: 1 !important;
-    min-width: 80px !important;
-    max-width: 150px !important;
+  .form-actions > button {
+    min-width: 90px !important;
+    white-space: nowrap !important;
   }
 
   /* CARDS - Responsivos com margens adequadas */
@@ -183,8 +176,8 @@ body {
   [class*="DialogHeader"],
   .dialog-header {
     flex-shrink: 0 !important;
-    padding: 1rem 1.25rem !important;
-    border-bottom: 1px solid #f3f4f6 !important;
+    padding: 1rem !important;
+    border-bottom: 1px solid #e5e7eb !important;
   }
 
   .dark [class*="DialogHeader"],
@@ -239,7 +232,8 @@ body {
   .dialog-content,
   .dialog-content-mobile,
   [role="dialog"] {
-    max-width: 90vw !important;
+    max-width: 85vw !important;
+    width: 85vw !important;
     max-height: 90vh !important;
   }
 
@@ -266,12 +260,13 @@ body {
 
 /* Desktop grande (1280px+) */
 @media (min-width: 1280px) {
-  /* Mantém layouts originais */
+  /* Dialogs em tamanho confortável para desktop */
   .dialog-content,
   .dialog-content-mobile,
   [data-radix-dialog-content],
   [role="dialog"] {
     max-width: 800px !important;
+    width: 800px !important;
     max-height: 90vh !important;
   }
 
