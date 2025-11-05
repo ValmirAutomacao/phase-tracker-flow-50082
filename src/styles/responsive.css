@@ -31,27 +31,30 @@ body {
     gap: 1rem !important;
   }
 
-  /* DIALOGS E MODAIS - Ocupam quase toda a tela */
+  /* DIALOGS E MODAIS - Ocupam tela otimizada */
   [data-radix-dialog-content],
   .dialog-content,
+  .dialog-content-mobile,
   [role="dialog"] {
-    max-width: 95vw !important;
-    max-height: 90vh !important;
-    margin: 1rem auto !important;
+    max-width: 96vw !important;
+    width: 96vw !important;
+    height: auto !important;
+    max-height: 92vh !important;
+    margin: 0.5rem auto !important;
+    padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    border-radius: 0.5rem !important;
+    border-radius: 0.75rem !important;
     overflow: hidden !important;
   }
 
-  /* Container do formulário com scroll */
+  /* Container do formulário com scroll - NOVA ABORDAGEM */
   .dialog-form-container {
+    flex: 1 1 0% !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    flex: 1 1 auto !important;
-    padding: 0.75rem 1rem !important;
-    max-height: calc(90vh - 220px) !important;
-    min-height: 150px !important;
+    padding: 1rem !important;
+    min-height: 0 !important;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
   }
@@ -105,19 +108,22 @@ body {
   .dialog-footer,
   [class*="DialogFooter"],
   [class*="dialog-footer"] {
+    flex-shrink: 0 !important;
     position: sticky !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     background: white !important;
-    padding: 1rem !important;
-    border-top: 1px solid #e2e8f0 !important;
+    padding: 1rem 1.25rem !important;
+    border-top: 1px solid #e5e7eb !important;
     margin: 0 !important;
-    margin-top: auto !important;
-    border-radius: 0 0 0.5rem 0.5rem !important;
-    z-index: 30 !important;
-    flex-shrink: 0 !important;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 0 0 0.75rem 0.75rem !important;
+    z-index: 50 !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    gap: 0.75rem !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
   }
 
   /* Dark mode para botões de ação */
@@ -125,8 +131,9 @@ body {
   .dark .dialog-footer,
   .dark [class*="DialogFooter"],
   .dark [class*="dialog-footer"] {
-    background: hsl(210 25% 12%) !important;
-    border-top-color: hsl(210 25% 20%) !important;
+    background: hsl(222 47% 11%) !important;
+    border-top-color: hsl(217 33% 17%) !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* Grid em coluna única no mobile */
@@ -149,16 +156,11 @@ body {
     margin-bottom: 0.5rem !important;
   }
 
-  /* Form actions mantém botões lado a lado mesmo em mobile */
-  .form-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 0.5rem !important;
-  }
-
+  /* Form actions - botões responsivos */
   .form-actions > * {
     flex: 1 !important;
-    min-width: 0 !important;
+    min-width: 80px !important;
+    max-width: 150px !important;
   }
 
   /* CARDS - Responsivos com margens adequadas */
@@ -177,6 +179,19 @@ body {
     font-size: 1.5rem !important; /* 24px */
   }
 
+  /* Header do diálogo otimizado */
+  [class*="DialogHeader"],
+  .dialog-header {
+    flex-shrink: 0 !important;
+    padding: 1rem 1.25rem !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+  }
+
+  .dark [class*="DialogHeader"],
+  .dark .dialog-header {
+    border-bottom-color: hsl(217 33% 17%) !important;
+  }
+
   /* PADDING E MARGENS - Reduzidos para mobile */
   .p-6 {
     padding: 1rem !important;
@@ -184,16 +199,6 @@ body {
 
   .p-4 {
     padding: 0.75rem !important;
-  }
-
-  .px-6 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-
-  .py-6 {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
   }
 
   /* SCROLLING - Barras sempre visíveis quando necessário */
@@ -232,32 +237,19 @@ body {
   /* DIALOGS - Tamanho intermediário */
   [data-radix-dialog-content],
   .dialog-content,
+  .dialog-content-mobile,
   [role="dialog"] {
-    max-width: 85vw !important;
+    max-width: 90vw !important;
     max-height: 90vh !important;
   }
 
   .dialog-form-container {
-    max-height: calc(90vh - 220px) !important;
     padding: 1rem 1.5rem !important;
   }
 
   /* CARDS - Espaçamento otimizado */
   .p-6 {
     padding: 1.25rem !important;
-  }
-
-  /* BOTÕES - Flex horizontal mantido */
-  .flex.gap-2,
-  .flex.gap-3,
-  .flex.gap-4 {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-  }
-  
-  /* Form actions mantém layout horizontal */
-  .form-actions {
-    flex-direction: row !important;
   }
 }
 
@@ -276,15 +268,15 @@ body {
 @media (min-width: 1280px) {
   /* Mantém layouts originais */
   .dialog-content,
+  .dialog-content-mobile,
   [data-radix-dialog-content],
   [role="dialog"] {
-    max-width: 75vw !important;
+    max-width: 800px !important;
     max-height: 90vh !important;
   }
 
   .dialog-form-container {
-    max-height: calc(90vh - 220px) !important;
-    padding: 1rem 1.5rem !important;
+    padding: 1.5rem 2rem !important;
   }
 }
 
