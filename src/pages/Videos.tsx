@@ -26,6 +26,7 @@ import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
+import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
 interface Obra {
@@ -243,7 +244,7 @@ const Videos = () => {
               Novo Vídeo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl dialog-content-mobile">
             <DialogHeader>
               <DialogTitle>Novo Vídeo</DialogTitle>
               <DialogDescription>
@@ -251,7 +252,8 @@ const Videos = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                <div className="dialog-form-container space-y-4">
                 <FormField
                   control={form.control}
                   name="obra_id"
@@ -303,7 +305,9 @@ const Videos = () => {
                   </ol>
                 </div>
 
-                <div className="flex justify-end gap-3">
+                </div>
+                
+                <div className="flex justify-end gap-3 form-actions mobile-stack">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>

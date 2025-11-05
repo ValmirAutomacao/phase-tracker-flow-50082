@@ -16,6 +16,7 @@ import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
+import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
 interface Obra {
@@ -313,7 +314,7 @@ const Requisicoes = () => {
               Nova Requisição
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl dialog-content-mobile">
             <DialogHeader>
               <DialogTitle>Nova Requisição</DialogTitle>
               <DialogDescription>
@@ -322,7 +323,8 @@ const Requisicoes = () => {
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                <div className="dialog-form-container space-y-4">
                 <FormField
                   control={form.control}
                   name="obra_id"
@@ -496,7 +498,9 @@ const Requisicoes = () => {
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4">
+                </div>
+                
+                <div className="flex justify-end gap-3 form-actions mobile-stack">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>

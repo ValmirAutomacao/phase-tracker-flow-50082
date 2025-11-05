@@ -27,13 +27,20 @@
 ### Formulários e Diálogos (MELHORADO ✅)
 - **Mobile**: 
   - Largura 95vw
-  - Altura máxima 90vh
-  - Conteúdo com scroll interno
-  - Botões de ação sticky sempre visíveis no rodapé
+  - Altura máxima 85vh (ajustado para evitar cortes)
+  - Conteúdo com scroll interno via `dialog-form-container`
+  - Botões de ação sticky sempre visíveis no rodapé com sombra
   - Layout em coluna única para todos os campos
+  - Padding otimizado (0.75rem/1rem)
+  - Altura máxima do container: calc(85vh - 180px)
+- **Tablet**:
+  - Largura 85vw
+  - Altura máxima 88vh
+  - Container: calc(88vh - 180px)
 - **Desktop**: 
-  - Largura fixa (max-w-2xl)
-  - Altura controlada (max 85vh)
+  - Largura fixa (80vw max)
+  - Altura controlada (88vh max)
+  - Container: calc(88vh - 180px)
   - Scroll interno quando necessário
   - Botões de ação visíveis
 
@@ -86,10 +93,13 @@ Todos os formulários seguem a estrutura:
 - Aplicado em containers de formulário
 
 ### ✅ Botões Sticky
-- Sempre visíveis no rodapé
-- Background sólido (white/dark)
+- Sempre visíveis no rodapé com `position: sticky` e `bottom: 0`
+- Background sólido (white/dark) com sombra suave
 - Border superior para separação visual
+- Z-index elevado (20) para garantir visibilidade
 - Funciona em light e dark mode
+- Padding otimizado para todos os tamanhos de tela
+- Botões lado a lado mesmo em mobile (flex-direction: row)
 
 ### ✅ Dark Mode
 - Cores adaptadas para todos os componentes
@@ -98,11 +108,22 @@ Todos os formulários seguem a estrutura:
 
 ## Testes Realizados
 
-✅ Layout principal e sidebar
-✅ Grids e cards principais
-✅ Formulários e diálogos
-✅ Componente Gantt Timeline
-✅ Breakpoints consistentes
-✅ Botões de rodapé sempre visíveis (NOVO)
-✅ Scroll interno em formulários longos (NOVO)
-✅ Layout responsivo em todas as resoluções (NOVO)
+✅ Layout principal e sidebar  
+✅ Grids e cards principais  
+✅ Formulários e diálogos - TODOS os módulos ajustados:
+  - ClientesForm
+  - ObrasForm
+  - FuncoesForm
+  - SetoresForm
+  - Funcionarios
+  - Requisicoes
+  - Videos
+  - Financeiro
+✅ Componente Gantt Timeline  
+✅ Breakpoints consistentes  
+✅ Botões de rodapé sempre visíveis com sombra (APRIMORADO)  
+✅ Scroll interno em formulários longos (APRIMORADO)  
+✅ Layout responsivo em todas as resoluções (APRIMORADO)  
+✅ Alturas calculadas corretamente para evitar cortes  
+✅ Dark mode funcionando perfeitamente  
+✅ Padding e espaçamentos otimizados
