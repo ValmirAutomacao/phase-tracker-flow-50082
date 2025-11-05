@@ -114,6 +114,7 @@ const Financeiro = () => {
   const [clienteFilter, setClienteFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<string>("");
+  const [selectedObra, setSelectedObra] = useState<string>("");
   const [selectedRequisicao, setSelectedRequisicao] = useState<string>("");
   const [selectedItens, setSelectedItens] = useState<string[]>([]);
 
@@ -135,17 +136,31 @@ const Financeiro = () => {
     return todasObras.filter(obra => obra.cliente_id === selectedCliente);
   }, [todasObras, selectedCliente]);
 
-  // Filtrar requisições aprovadas disponíveis
+  // Filtrar requisições aprovadas disponíveis da obra selecionada
   const requisicoesAprovadas = useMemo(() => {
+    if (!selectedObra) return [];
+    
     return todasRequisicoes.filter(req =>
-      req.status === 'aprovada' || req.status === 'concluida'
+      (req.status === 'aprovada' || req.status === 'concluida') &&
+      req.obra_id === selectedObra
     );
-  }, [todasRequisicoes]);
+  }, [todasRequisicoes, selectedObra]);
 
   // Buscar requisição selecionada e seus produtos
   const requisicaoAtual = useMemo(() => {
     if (!selectedRequisicao) return null;
-    return requisicoesAprovadas.find(req => req.id === selectedRequisicao);
+    const req = requisicoesAprovadas.find(req => req.id === selectedRequisicao);
+    
+    // Garantir que itens_produtos seja sempre um array com estrutura correta
+    if (req && req.itens_produtos) {
+      const itensComStatus = (Array.isArray(req.itens_produtos) ? req.itens_produtos : []).map((item: any) => ({
+        ...item,
+        status: item.comprado ? 'comprado' : 'pendente'
+      }));
+      return { ...req, itens_produtos: itensComStatus };
+    }
+    
+    return req;
   }, [requisicoesAprovadas, selectedRequisicao]);
 
   // Filtros avançados memoizados para performance
@@ -218,8 +233,22 @@ const Financeiro = () => {
     if (clienteIdFromForm !== selectedCliente) {
       setSelectedCliente(clienteIdFromForm);
       form.setValue("obra_id", ""); // Reset obra quando cliente muda
+      setSelectedObra("");
+      setSelectedRequisicao("");
+      setSelectedItens([]);
     }
   }, [form.watch("cliente_id")]);
+
+  // Atualizar requisições quando obra muda
+  useEffect(() => {
+    const obraIdFromForm = form.watch("obra_id");
+    if (obraIdFromForm !== selectedObra) {
+      setSelectedObra(obraIdFromForm);
+      form.setValue("requisicao_id", ""); // Reset requisição quando obra muda
+      setSelectedRequisicao("");
+      setSelectedItens([]);
+    }
+  }, [form.watch("obra_id")]);
 
   const onSubmit = async (data: DespesaFormData) => {
     // Validar se pelo menos um item foi selecionado se existem itens não comprados
@@ -272,6 +301,7 @@ const Financeiro = () => {
         setOpen(false);
         form.reset();
         setSelectedCliente("");
+        setSelectedObra("");
         setSelectedRequisicao("");
         setSelectedItens([]);
       },
@@ -495,16 +525,24 @@ const Financeiro = () => {
                             setSelectedItens([]); // Reset items when changing requisition
                           }}
                           value={field.value}
+                          disabled={!selectedCliente || obrasFiltradas.length === 0}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione a requisição aprovada" />
+                              <SelectValue placeholder={
+                                !selectedCliente 
+                                  ? "Primeiro selecione cliente e obra" 
+                                  : requisicoesAprovadas.length === 0
+                                    ? "Nenhuma requisição aprovada para esta obra"
+                                    : "Selecione a requisição aprovada"
+                              } />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {requisicoesAprovadas.map((requisicao) => (
                               <SelectItem key={requisicao.id} value={requisicao.id}>
-                                {requisicao.titulo} - {requisicao.obra?.nome || 'Obra não informada'}
+                                {requisicao.titulo}
+                                {requisicao.itens_produtos && ` (${requisicao.itens_produtos.filter((i: any) => !i.comprado).length} itens pendentes)`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -514,45 +552,15 @@ const Financeiro = () => {
                     )}
                   />
 
-                  {/* Lista de Produtos/Itens da Requisição */}
+                  {/* Componente de Seleção de Produtos */}
                   {requisicaoAtual?.itens_produtos && requisicaoAtual.itens_produtos.length > 0 && (
-                    <div className="space-y-3">
-                      <FormLabel>Produtos/Itens da Requisição*</FormLabel>
-                      <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
-                        {requisicaoAtual.itens_produtos.map((item: ItemProduto) => (
-                          <div key={item.id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`item-${item.id}`}
-                              disabled={item.comprado}
-                              checked={selectedItens.includes(item.id) || item.comprado}
-                              onChange={(e) => {
-                                if (e.target.checked && !item.comprado) {
-                                  setSelectedItens(prev => [...prev, item.id]);
-                                } else if (!item.comprado) {
-                                  setSelectedItens(prev => prev.filter(id => id !== item.id));
-                                }
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <label
-                              htmlFor={`item-${item.id}`}
-                              className={`flex-1 text-sm ${item.comprado ? 'line-through text-gray-500' : ''}`}
-                            >
-                              {item.nome} - Qtd: {item.quantidade} -
-                              R$ {item.valor_unitario.toFixed(2)}
-                              {item.comprado && (
-                                <span className="ml-2 text-green-600 font-medium">✓ Comprado</span>
-                              )}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      {selectedItens.length === 0 && requisicaoAtual.itens_produtos.some(item => !item.comprado) && (
-                        <p className="text-sm text-amber-600">
-                          ⚠️ Selecione pelo menos um item para esta despesa
-                        </p>
-                      )}
+                    <div className="mt-4">
+                      <SeletorProdutos
+                        itensRequisicao={requisicaoAtual.itens_produtos}
+                        itensSelecionados={selectedItens}
+                        onSelecaoChange={setSelectedItens}
+                        readonly={false}
+                      />
                     </div>
                   )}
 

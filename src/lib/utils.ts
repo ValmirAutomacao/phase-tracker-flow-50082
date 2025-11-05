@@ -9,6 +9,8 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -17,32 +19,36 @@ export function formatCurrencyInput(value: string): string {
   const numericValueWithDecimal = parseFloat(numericValue) / 100;
 
   if (isNaN(numericValueWithDecimal) || numericValueWithDecimal === 0) {
-    return '';
+    return 'R$ 0,00';
   }
 
   return formatCurrency(numericValueWithDecimal);
 }
 
 export function parseCurrencyInput(value: string): number {
+  // Remove tudo exceto números
   const numericValue = value.replace(/\D/g, '');
+  
+  if (!numericValue || numericValue === '0') return 0;
+  
+  // Converte centavos para valor decimal
   return parseFloat(numericValue) / 100;
 }
 
 export function currencyMask(value: string): string {
+  // Remove tudo exceto números
   const numericValue = value.replace(/\D/g, '');
 
-  if (numericValue === '') return '';
+  if (numericValue === '' || numericValue === '0') return 'R$ 0,00';
 
-  const length = numericValue.length;
+  // Converte para número decimal (centavos)
+  const numValue = parseFloat(numericValue) / 100;
 
-  if (length <= 2) {
-    return `R$ 0,${numericValue.padStart(2, '0')}`;
-  }
-
-  const cents = numericValue.slice(-2);
-  const reais = numericValue.slice(0, -2);
-
-  const formattedReais = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-  return `R$ ${formattedReais},${cents}`;
+  // Formata usando Intl
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numValue);
 }
