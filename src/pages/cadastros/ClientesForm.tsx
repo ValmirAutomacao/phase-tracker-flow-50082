@@ -117,8 +117,8 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="dialog-content-mobile">
-            <DialogHeader className="dialog-header">
+      <DialogContent className="dialog-content-mobile max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="dialog-header flex-shrink-0 px-4 py-3 border-b">
           <DialogTitle>{editData ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
           <DialogDescription>
             {editData ? "Atualize as informações do cliente" : "Cadastre um novo cliente no sistema"}
@@ -126,7 +126,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
-            <div className="dialog-form-container space-y-4">
+            <div className="dialog-form-container flex-1 overflow-y-auto px-4 py-3 space-y-4">
             <FormField
               control={form.control}
               name="tipo"
@@ -357,7 +357,7 @@ export function ClientesForm({ open, onOpenChange, onSubmit, editData }: Cliente
             </div>
             </div>
 
-            <div className="form-actions">
+            <div className="form-actions flex-shrink-0 flex justify-end gap-3 px-4 py-3 border-t bg-background">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

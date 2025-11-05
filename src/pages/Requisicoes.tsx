@@ -406,51 +406,47 @@ const Requisicoes = () => {
                   )}
                 />
 
-                <div className="row g-3">
-                  <div className="col-12 col-sm-6">
-                    <FormField
-                      control={form.control}
-                      name="prioridade"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prioridade *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione a prioridade" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="baixa">Baixa</SelectItem>
-                              <SelectItem value="media">Média</SelectItem>
-                              <SelectItem value="alta">Alta</SelectItem>
-                              <SelectItem value="urgente">Urgente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="col-12 col-sm-6">
-                    <FormField
-                      control={form.control}
-                      name="data_vencimento"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data de Vencimento</FormLabel>
+                <div className="grid-responsive gap-4">
+                  <FormField
+                    control={form.control}
+                    name="prioridade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prioridade *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                            />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a prioridade" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          <SelectContent>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="urgente">Urgente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="data_vencimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Vencimento</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <FormField

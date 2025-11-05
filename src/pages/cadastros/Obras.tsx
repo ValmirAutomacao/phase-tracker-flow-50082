@@ -193,13 +193,13 @@ const Obras = () => {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Cadastro de Obras</h1>
           <p className="text-muted-foreground">Gerenciamento completo de obras e projetos</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingObra(null); setOpen(true); }}>
+        <Button className="bg-gradient-to-r from-primary to-accent w-full sm:w-auto" onClick={() => { setEditingObra(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Obra
         </Button>
@@ -223,7 +223,7 @@ const Obras = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid-responsive-3 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Obras</CardTitle>
@@ -351,18 +351,18 @@ const Obras = () => {
               </div>
             ) : (
               filteredObras.map((obra) => (
-              <div 
+              <div
                 key={obra.id}
-                className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="list-item-responsive p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-3">
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Building2 className="h-6 w-6 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-lg truncate">{obra.nome}</h4>
+                        <h4 className="font-semibold text-lg text-truncate-responsive">{obra.nome}</h4>
                         {getStatusBadge(obra.status)}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
@@ -370,35 +370,35 @@ const Obras = () => {
                       </p>
                       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1 min-w-0">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{obra.endereco}, {obra.numero} - {obra.bairro}, {obra.cidade}/{obra.estado} - {obra.cep}</span>
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="text-truncate-responsive">{obra.endereco}, {obra.numero} - {obra.bairro}, {obra.cidade}/{obra.estado} - {obra.cep}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 shrink-0" />
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
                           <span className="text-nowrap">{new Date(obra.dataInicio).toLocaleDateString('pt-BR')} - {new Date(obra.dataPrevisao).toLocaleDateString('pt-BR')}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)} className="text-xs sm:text-sm">
+                  <div className="mobile-action-buttons sm:flex-shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)}>
                       <Edit className="h-4 w-4 sm:mr-1" />
                       <span className="hidden sm:inline">Editar</span>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)} className="text-xs sm:text-sm">
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)}>
                       <Trash2 className="h-4 w-4 sm:mr-1 text-destructive" />
                       <span className="hidden sm:inline">Excluir</span>
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Progresso Geral</span>
                     <span className="font-semibold">{obra.progresso}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full transition-all ${
                         obra.progresso === 100 ? 'bg-blue-500' :
                         obra.progresso >= 75 ? 'bg-green-500' :

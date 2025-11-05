@@ -461,6 +461,6 @@ async function saveConnectionReport(report: ConnectionReport) {
 }
 
 // Executar se chamado diretamente
-if (require.main === module) {
+if (import.meta.url.startsWith('file:') && process.argv[1] === new URL(import.meta.url).pathname) {
   main().catch(console.error);
 }

@@ -176,7 +176,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Endereço da Obra</h3>
-              <div className="grid grid-cols-2 gap-4 mobile-stack">
+              <div className="grid-responsive gap-4">
                 <FormField
                   control={form.control}
                   name="endereco"
@@ -205,7 +205,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mobile-stack">
+              <div className="grid-responsive gap-4">
                 <FormField
                   control={form.control}
                   name="bairro"
@@ -241,7 +241,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mobile-stack">
+              <div className="grid-responsive gap-4">
                 <FormField
                   control={form.control}
                   name="cidade"
@@ -304,7 +304,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mobile-stack">
+            <div className="grid-responsive gap-4">
               <FormField
                 control={form.control}
                 name="responsavel"
@@ -351,7 +351,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mobile-stack">
+            <div className="grid-responsive gap-4">
               <FormField
                 control={form.control}
                 name="dataInicio"

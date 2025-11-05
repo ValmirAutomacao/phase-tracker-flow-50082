@@ -31,8 +31,9 @@ button:not(.btn-minimal) {
 
 .btn-enhanced:hover,
 button:not(.btn-minimal):not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-large);
+  filter: brightness(1.05);
 }
 
 .btn-enhanced:active,
@@ -61,13 +62,14 @@ input, textarea, select {
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast),
-    background-color var(--transition-fast);
+    background-color var(--transition-smooth);
 }
 
 input:focus, textarea:focus, select:focus {
   box-shadow:
-    0 0 0 2px rgba(8, 145, 178, 0.1),
-    var(--shadow-subtle);
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--ring));
+  background-color: hsl(var(--background));
 }
 
 /* Loading states melhorados */

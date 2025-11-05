@@ -133,13 +133,13 @@ const Clientes = () => {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Cadastro de Clientes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Cadastro de Clientes</h1>
           <p className="text-muted-foreground">Gerenciamento de clientes do sistema</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingCliente(null); setOpen(true); }}>
+        <Button className="bg-gradient-to-r from-primary to-accent w-full sm:w-auto" onClick={() => { setEditingCliente(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
@@ -147,7 +147,7 @@ const Clientes = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid-responsive-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
@@ -180,18 +180,18 @@ const Clientes = () => {
       {/* List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle>Lista de Clientes</CardTitle>
               <CardDescription>Todos os clientes cadastrados</CardDescription>
             </div>
-            <div className="relative">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9 w-full"
               />
             </div>
           </div>
@@ -252,46 +252,46 @@ const Clientes = () => {
               </div>
             ) : (
               filteredClientes.map((cliente) => (
-              <div 
+              <div
                 key={cliente.id}
-                className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="list-item-responsive p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       {cliente.tipo === "fisica" ? <User className="h-6 w-6 text-primary" /> : <Building2 className="h-6 w-6 text-primary" />}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{cliente.nome}</h4>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-truncate-responsive">{cliente.nome}</h4>
                         {getTipoBadge(cliente.tipo)}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
                         {cliente.tipo === "fisica" ? "CPF" : "CNPJ"}: {cliente.documento}
                       </p>
-                      <div className="flex gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {cliente.email}
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <span className="text-truncate-responsive">{cliente.email}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
+                          <Phone className="h-3 w-3 flex-shrink-0" />
                           {cliente.telefone}
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-1 text-truncate-responsive">
                         Endereço: {cliente.endereco}, {cliente.numero} - {cliente.bairro}, {cliente.cidade}/{cliente.estado} - {cliente.cep}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="mobile-action-buttons sm:flex-shrink-0">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(cliente)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
+                      <Edit className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setDeleteId(cliente.id)}>
-                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                      Excluir
+                      <Trash2 className="h-4 w-4 sm:mr-1 text-destructive" />
+                      <span className="hidden sm:inline">Excluir</span>
                     </Button>
                   </div>
                 </div>

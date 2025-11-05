@@ -62,16 +62,14 @@ const Dashboard = () => {
       description="Visão geral do sistema EngFlow"
     >
       {/* Stats Grid */}
-      <div className="row g-3 g-sm-4">
+      <div className="grid-responsive-3 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.title} className="col-12 col-sm-6 col-lg-3">
-            <StatsCard {...stat} />
-          </div>
+          <StatsCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      <div className="row g-4 g-sm-6">
-        <div className="col-12 col-lg-6">
+      <div className="grid-responsive-2 gap-4 lg:gap-6">
+        <div>
           {/* Recent Activity */}
           <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
             <CardHeader className="border-b border-border/50">
@@ -108,7 +106,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="col-12 col-lg-6">
+        <div>
           {/* Ongoing Projects */}
           <Card className="shadow-card hover:shadow-card-hover transition-all duration-300">
             <CardHeader className="border-b border-border/50">
