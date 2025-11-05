@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import GanttTimeline from "@/components/GanttTimeline";
 import { STORAGE_KEYS, getFromStorage } from "@/lib/localStorage";
+import { PageContainer } from "@/components/layout/PageContainer";
 import {
   FolderKanban,
   Calendar,
@@ -83,16 +84,13 @@ const Projetos = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Módulo Projetos</h1>
-          <p className="text-muted-foreground">Acompanhamento de obras e timeline</p>
-        </div>
-      </div>
+    <PageContainer
+      title="Módulo Projetos"
+      description="Acompanhamento de obras e timeline"
+    >
 
       {/* Projects Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {obras.map((obra) => {
           const progresso = obra.progresso || calculateProjectProgress(obra.etapas);
           const status = getProjectStatus(obra.dataPrevisao, progresso);
@@ -103,8 +101,8 @@ const Projetos = () => {
           return (
             <Card
               key={obra.id}
-              className={`cursor-pointer transition-all hover:shadow-lg ${
-                selectedProject === obra.id ? "ring-2 ring-primary" : ""
+              className={`cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:scale-[1.02] ${
+                selectedProject === obra.id ? "ring-2 ring-primary shadow-glow" : "shadow-card"
               }`}
               onClick={() => setSelectedProject(obra.id)}
             >
@@ -254,7 +252,7 @@ const Projetos = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 };
 
