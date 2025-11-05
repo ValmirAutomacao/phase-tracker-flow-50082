@@ -406,47 +406,51 @@ const Requisicoes = () => {
                   )}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="prioridade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prioridade *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a prioridade" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="baixa">Baixa</SelectItem>
-                            <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="alta">Alta</SelectItem>
-                            <SelectItem value="urgente">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="row g-3">
+                  <div className="col-12 col-sm-6">
+                    <FormField
+                      control={form.control}
+                      name="prioridade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prioridade *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a prioridade" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="urgente">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="data_vencimento"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data de Vencimento</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="col-12 col-sm-6">
+                    <FormField
+                      control={form.control}
+                      name="data_vencimento"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de Vencimento</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <FormField
@@ -513,49 +517,57 @@ const Requisicoes = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total de Requisições</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{requisicoes.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">solicitações cadastradas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {requisicoes.filter(r => r.status === "pendente").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">aguardando análise</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {requisicoes.filter(r => r.status === "em_andamento").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">em execução</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {requisicoes.filter(r => r.status === "concluida").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">finalizadas</p>
-          </CardContent>
-        </Card>
+      <div className="row g-3">
+        <div className="col-12 col-sm-6 col-lg-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Total de Requisições</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{requisicoes.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">solicitações cadastradas</p>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="col-12 col-sm-6 col-lg-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {requisicoes.filter(r => r.status === "pendente").length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">aguardando análise</p>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="col-12 col-sm-6 col-lg-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {requisicoes.filter(r => r.status === "em_andamento").length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">em execução</p>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="col-12 col-sm-6 col-lg-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {requisicoes.filter(r => r.status === "concluida").length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">finalizadas</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Filtros Avançados */}
@@ -564,45 +576,49 @@ const Requisicoes = () => {
           <CardTitle>Filtros</CardTitle>
           <CardDescription>Busque e filtre requisições por critérios específicos</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por título, descrição, obra..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+          <CardContent>
+            <div className="row g-3">
+              <div className="col-12">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por título, descrição, obra..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="col-12 col-sm-6">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                    <SelectItem value="concluida">Concluída</SelectItem>
+                    <SelectItem value="cancelada">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-12 col-sm-6">
+                <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as Prioridades</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluida">Concluída</SelectItem>
-                  <SelectItem value="cancelada">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Prioridades</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="urgente">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
       </Card>
 
       {/* Lista de Requisições */}
