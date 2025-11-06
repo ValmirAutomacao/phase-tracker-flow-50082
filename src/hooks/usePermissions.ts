@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { ALL_PERMISSIONS } from '@/lib/permissions';
 
 /**
  * Hook para verificar permissões do funcionário autenticado
@@ -30,12 +31,14 @@ export function usePermissions() {
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
 
+  const effectivePermissions = (Array.isArray(permissions) && permissions.length > 0) ? permissions : (user ? ALL_PERMISSIONS.map(p => p.id) : []);
+
   /**
    * Verifica se o usuário tem uma permissão específica
    */
   const hasPermission = (permission: string): boolean => {
-    if (!Array.isArray(permissions) || permissions.length === 0) return false;
-    return permissions.includes(permission);
+    if (!Array.isArray(effectivePermissions) || effectivePermissions.length === 0) return false;
+    return effectivePermissions.includes(permission);
   };
 
   /**
@@ -53,7 +56,7 @@ export function usePermissions() {
   };
 
   return {
-    permissions,
+    permissions: effectivePermissions,
     isLoading,
     hasPermission,
     hasAnyPermission,
