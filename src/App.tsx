@@ -7,6 +7,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PermissionGuard } from "@/components/PermissionGuard";
+import { PERMISSIONS } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
@@ -57,16 +59,81 @@ function AppLayout() {
           <main className="flex-1 overflow-auto">
             <Routes>
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
-              <Route path="/despesas-detalhes" element={<ProtectedRoute><DespesasDetalhes /></ProtectedRoute>} />
-              <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
+              
+              <Route path="/financeiro" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <Financeiro />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/despesas-detalhes" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <DespesasDetalhes />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/projetos" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_OBRAS}>
+                    <Projetos />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
               <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
-              <Route path="/cadastros/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-              <Route path="/cadastros/obras" element={<ProtectedRoute><Obras /></ProtectedRoute>} />
-              <Route path="/cadastros/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
-              <Route path="/cadastros/funcoes" element={<ProtectedRoute><Funcoes /></ProtectedRoute>} />
-              <Route path="/cadastros/setores" element={<ProtectedRoute><Setores /></ProtectedRoute>} />
-              <Route path="/requisicoes" element={<ProtectedRoute><Requisicoes /></ProtectedRoute>} />
+              
+              <Route path="/cadastros/clientes" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_CLIENTES}>
+                    <Clientes />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/cadastros/obras" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.EDITAR_OBRAS}>
+                    <Obras />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/cadastros/funcionarios" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                    <Funcionarios />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/cadastros/funcoes" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                    <Funcoes />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/cadastros/setores" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                    <Setores />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/requisicoes" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_REQUISICOES}>
+                    <Requisicoes />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
