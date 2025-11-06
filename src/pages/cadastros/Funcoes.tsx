@@ -62,7 +62,7 @@ const Funcoes = () => {
         descricao: data.descricao,
         setor_id: data.setor_id,
         nivel: data.nivel,
-        permissoes: data.permissoes || [],
+        permissoes: JSON.stringify(data.permissoes || []),
       };
 
       update.mutate(
@@ -71,7 +71,7 @@ const Funcoes = () => {
           onSuccess: () => {
             toast({
               title: "Função atualizada!",
-              description: `${data.nome} foi atualizada com sucesso.`,
+              description: `${data.nome} foi atualizada com sucesso com ${data.permissoes?.length || 0} permissões.`,
             });
             setOpen(false);
             setEditingFuncao(null);
@@ -91,15 +91,14 @@ const Funcoes = () => {
         descricao: data.descricao,
         setor_id: data.setor_id,
         nivel: data.nivel,
-        permissoes: data.permissoes || [],
-        totalColaboradores: 0,
+        permissoes: JSON.stringify(data.permissoes || []),
       };
 
       add.mutate(novaFuncao, {
         onSuccess: () => {
           toast({
             title: "Função cadastrada!",
-            description: `${data.nome} foi adicionada com sucesso.`,
+            description: `${data.nome} foi adicionada com ${data.permissoes?.length || 0} permissões.`,
           });
           setOpen(false);
         },

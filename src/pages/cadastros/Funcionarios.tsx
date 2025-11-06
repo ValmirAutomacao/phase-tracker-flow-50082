@@ -23,7 +23,7 @@ const funcionarioSchema = z.object({
   email: z.string().email("Email inválido"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
   funcao_id: z.string().min(1, "Selecione uma função"),
-  senha: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+  senha: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional().or(z.literal("")),
 });
 
 type FuncionarioFormData = z.infer<typeof funcionarioSchema>;
@@ -94,7 +94,7 @@ const Funcionarios = () => {
       email: "",
       telefone: "",
       funcao_id: "",
-      senha: "",
+      senha: undefined,
     },
   });
 
@@ -130,7 +130,7 @@ const Funcionarios = () => {
         email: editingFuncionario.email,
         telefone: editingFuncionario.telefone,
         funcao_id: editingFuncionario.funcao_id,
-        senha: editingFuncionario.senha || "",
+        senha: undefined,
       });
       setFotoPreview(editingFuncionario.foto || "");
     } else {
@@ -139,7 +139,7 @@ const Funcionarios = () => {
         email: "",
         telefone: "",
         funcao_id: "",
-        senha: "",
+        senha: undefined,
       });
       setFotoPreview("");
       setSelectedSetor("");
@@ -157,14 +157,14 @@ const Funcionarios = () => {
     }
   };
 
-  const onSubmit = (data: FuncionarioFormData) => {
+  const onSubmit = async (data: FuncionarioFormData) => {
     if (editingFuncionario) {
+      // Ao editar, apenas atualiza dados do funcionário
       const updates = {
         nome: data.nome,
         email: data.email,
         telefone: data.telefone,
         funcao_id: data.funcao_id,
-        senha: data.senha,
         foto: fotoPreview,
       };
 
@@ -191,36 +191,87 @@ const Funcionarios = () => {
         }
       );
     } else {
-      const novoFuncionario = {
-        nome: data.nome,
-        email: data.email,
-        telefone: data.telefone,
-        funcao_id: data.funcao_id,
-        senha: data.senha,
-        foto: fotoPreview,
-        status: "ativo",
-        dataAdmissao: new Date().toISOString().split('T')[0],
-      };
+      // Validar senha ao criar
+      if (!data.senha || data.senha.length < 6) {
+        toast({
+          title: "Senha obrigatória",
+          description: "Digite uma senha com no mínimo 6 caracteres.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      add.mutate(novoFuncionario, {
-        onSuccess: () => {
+      // Ao criar, primeiro cria usuário no Supabase Auth
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        
+        // Criar usuário no Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.senha,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              nome: data.nome,
+            }
+          }
+        });
+
+        if (authError) {
           toast({
-            title: "Funcionário cadastrado!",
-            description: `${data.nome} foi adicionado com sucesso.`,
-          });
-          setOpen(false);
-          form.reset();
-          setFotoPreview("");
-          setSelectedSetor("");
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro ao cadastrar",
-            description: error.message || "Ocorreu um erro ao cadastrar o funcionário.",
+            title: "Erro ao criar usuário",
+            description: authError.message,
             variant: "destructive",
           });
+          return;
         }
-      });
+
+        if (!authData.user) {
+          toast({
+            title: "Erro ao criar usuário",
+            description: "Não foi possível criar o usuário no sistema.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Criar funcionário vinculado ao usuário
+        const novoFuncionario = {
+          nome: data.nome,
+          email: data.email,
+          telefone: data.telefone,
+          funcao_id: data.funcao_id,
+          user_id: authData.user.id,
+          foto: fotoPreview,
+          ativo: true,
+        };
+
+        add.mutate(novoFuncionario, {
+          onSuccess: () => {
+            toast({
+              title: "Funcionário cadastrado!",
+              description: `${data.nome} foi adicionado com sucesso e pode fazer login no sistema.`,
+            });
+            setOpen(false);
+            form.reset();
+            setFotoPreview("");
+            setSelectedSetor("");
+          },
+          onError: async (error) => {
+            toast({
+              title: "Erro ao cadastrar",
+              description: error.message || "Ocorreu um erro ao cadastrar o funcionário.",
+              variant: "destructive",
+            });
+          }
+        });
+      } catch (error: any) {
+        toast({
+          title: "Erro ao cadastrar",
+          description: error.message || "Ocorreu um erro ao cadastrar o funcionário.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -414,19 +465,21 @@ const Funcionarios = () => {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="senha"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Senha de Acesso</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!editingFuncionario && (
+                  <FormField
+                    control={form.control}
+                    name="senha"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Senha de Acesso</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 </div>
                 

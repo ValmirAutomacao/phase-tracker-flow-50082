@@ -130,6 +130,7 @@ export type Database = {
           nome: string
           telefone: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           ativo?: boolean | null
@@ -140,6 +141,7 @@ export type Database = {
           nome: string
           telefone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           ativo?: boolean | null
@@ -150,6 +152,7 @@ export type Database = {
           nome?: string
           telefone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -166,7 +169,9 @@ export type Database = {
           created_at: string | null
           descricao: string | null
           id: string
+          nivel: string | null
           nome: string
+          permissoes: Json | null
           setor_id: string | null
           updated_at: string | null
         }
@@ -174,7 +179,9 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           id?: string
+          nivel?: string | null
           nome: string
+          permissoes?: Json | null
           setor_id?: string | null
           updated_at?: string | null
         }
@@ -182,7 +189,9 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           id?: string
+          nivel?: string | null
           nome?: string
+          permissoes?: Json | null
           setor_id?: string | null
           updated_at?: string | null
         }
@@ -426,6 +435,10 @@ export type Database = {
     }
     Functions: {
       current_user_organization: { Args: never; Returns: string }
+      funcionario_tem_permissao: {
+        Args: { _permissao: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -434,6 +447,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      obter_permissoes_funcionario: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
