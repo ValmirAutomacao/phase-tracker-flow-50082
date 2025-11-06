@@ -104,7 +104,7 @@ const DespesasDetalhes = () => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openNew, setOpenNew] = useState(false);
   const [selectedDespesa, setSelectedDespesa] = useState<Despesa | null>(null);
-  const [selectedRequisicao, setSelectedRequisicao] = useState<string>("");
+  const [selectedRequisicao, setSelectedRequisicao] = useState<string | undefined>(undefined);
 
   const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
@@ -122,16 +122,16 @@ const DespesasDetalhes = () => {
   const form = useForm<DespesaFormData>({
     resolver: zodResolver(despesaSchema),
     defaultValues: {
-      requisicao_id: "",
+      requisicao_id: undefined,
       fornecedor: "",
       cnpj: "",
       data: "",
       hora: "",
-      formaPagamento: "",
-      tipoParcela: "",
+      formaPagamento: undefined,
+      tipoParcela: undefined,
       quantidadeParcelas: "1",
       valorParcela: "",
-      bandeira: "",
+      bandeira: undefined,
       categoria: "",
       responsavel: "",
       status: "pendente",
@@ -169,7 +169,7 @@ const DespesasDetalhes = () => {
     setDespesas(updated);
     setOpenNew(false);
     form.reset();
-    setSelectedRequisicao("");
+    setSelectedRequisicao(undefined);
 
     toast({
       title: "Nova despesa criada!",
@@ -246,7 +246,7 @@ const DespesasDetalhes = () => {
 
   const openNewDialog = () => {
     form.reset();
-    setSelectedRequisicao("");
+    setSelectedRequisicao(undefined);
     setOpenNew(true);
   };
 
@@ -477,7 +477,7 @@ const DespesasDetalhes = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Requisição (Opcional)</FormLabel>
-                    <Select onValueChange={handleRequisicaoChange} value={selectedRequisicao}>
+                    <Select onValueChange={handleRequisicaoChange} value={selectedRequisicao || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma requisição para vincular" />
@@ -562,7 +562,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -587,7 +587,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -615,7 +615,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -691,7 +691,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -827,7 +827,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -852,7 +852,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -880,7 +880,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
@@ -956,7 +956,7 @@ const DespesasDetalhes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
