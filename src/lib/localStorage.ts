@@ -57,25 +57,10 @@ export const deleteFromStorage = <T extends { id: string }>(key: string, id: str
   return newItems;
 };
 
-// Initialize default data if storage is empty
-export const initializeStorage = () => {
-  // Initialize Funções
-  if (!localStorage.getItem(STORAGE_KEYS.FUNCOES)) {
-    const defaultFuncoes = [
-      { id: '1', nome: 'Engenheiro Civil', descricao: 'Responsável por projetos estruturais' },
-      { id: '2', nome: 'Pedreiro', descricao: 'Execução de alvenaria e estruturas' },
-      { id: '3', nome: 'Eletricista', descricao: 'Instalações elétricas' },
-    ];
-    saveToStorage(STORAGE_KEYS.FUNCOES, defaultFuncoes);
-  }
-
-  // Initialize Setores
-  if (!localStorage.getItem(STORAGE_KEYS.SETORES)) {
-    const defaultSetores = [
-      { id: '1', nome: 'Administrativo', descricao: 'Setor administrativo' },
-      { id: '2', nome: 'Operacional', descricao: 'Setor de operações' },
-      { id: '3', nome: 'Financeiro', descricao: 'Setor financeiro' },
-    ];
-    saveToStorage(STORAGE_KEYS.SETORES, defaultSetores);
-  }
+// Clear all mock data from localStorage (keeping only Supabase data)
+export const clearAllMockData = () => {
+  Object.values(STORAGE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+  console.log('✅ Todos os dados mockados foram removidos do localStorage');
 };
