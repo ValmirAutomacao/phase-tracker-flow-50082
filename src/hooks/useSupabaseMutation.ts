@@ -27,24 +27,7 @@ export function useSupabaseAdd<T extends BaseEntity>(
 
   return useMutation({
     mutationFn: async (item: Omit<T, 'id' | 'created_at' | 'updated_at'>): Promise<T> => {
-      // Fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        console.info(`🔄 Usando fallback localStorage para adicionar em ${storageKey}`)
-        const itemWithId = { ...item, id: crypto.randomUUID() } as T
-        addToStorage(storageKey, itemWithId)
-        return itemWithId
-      }
-
-      try {
-        return await supabaseService.addToSupabase<T>(storageKey, item)
-      } catch (error) {
-        // Fallback automático em caso de erro
-        console.warn(`⚠️ Erro ao adicionar em ${storageKey}, usando fallback:`, error)
-        FallbackStrategy.enableFallback()
-        const itemWithId = { ...item, id: crypto.randomUUID() } as T
-        addToStorage(storageKey, itemWithId)
-        return itemWithId
-      }
+      return await supabaseService.addToSupabase<T>(storageKey, item)
     },
     onSuccess: (data, variables) => {
       // Invalidação inteligente do cache
@@ -78,25 +61,7 @@ export function useSupabaseUpdate<T extends BaseEntity>(
 
   return useMutation({
     mutationFn: async ({ id, updates }): Promise<T> => {
-      // Fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        console.info(`🔄 Usando fallback localStorage para atualizar em ${storageKey}`)
-        const items = updateInStorage<T>(storageKey, id, updates as any)
-        const updatedItem = items.find(item => item.id === id)
-        if (!updatedItem) throw new Error(`Item ${id} não encontrado`)
-        return updatedItem
-      }
-
-      try {
-        return await supabaseService.updateInSupabase<T>(storageKey, id, updates as any)
-      } catch (error) {
-        console.warn(`⚠️ Erro ao atualizar ${storageKey}/${id}, usando fallback:`, error)
-        FallbackStrategy.enableFallback()
-        const items = updateInStorage<T>(storageKey, id, updates as any)
-        const updatedItem = items.find(item => item.id === id)
-        if (!updatedItem) throw new Error(`Item ${id} não encontrado`)
-        return updatedItem
-      }
+      return await supabaseService.updateInSupabase<T>(storageKey, id, updates as any)
     },
     onSuccess: (data, variables) => {
       // Invalidação do cache
@@ -133,20 +98,7 @@ export function useSupabaseDelete(
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      // Fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        console.info(`🔄 Usando fallback localStorage para deletar de ${storageKey}`)
-        deleteFromStorage(storageKey, id)
-        return
-      }
-
-      try {
-        await supabaseService.deleteFromSupabase(storageKey, id)
-      } catch (error) {
-        console.warn(`⚠️ Erro ao deletar ${storageKey}/${id}, usando fallback:`, error)
-        FallbackStrategy.enableFallback()
-        deleteFromStorage(storageKey, id)
-      }
+      await supabaseService.deleteFromSupabase(storageKey, id)
     },
     onSuccess: (_, id) => {
       // Invalidação do cache
@@ -184,20 +136,7 @@ export function useSupabaseSave<T extends BaseEntity>(
 
   return useMutation({
     mutationFn: async (data: T[]): Promise<void> => {
-      // Fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        console.info(`🔄 Usando fallback localStorage para salvar em ${storageKey}`)
-        saveToStorage(storageKey, data)
-        return
-      }
-
-      try {
-        await supabaseService.saveToSupabase<T>(storageKey, data)
-      } catch (error) {
-        console.warn(`⚠️ Erro ao salvar ${storageKey}, usando fallback:`, error)
-        FallbackStrategy.enableFallback()
-        saveToStorage(storageKey, data)
-      }
+      await supabaseService.saveToSupabase<T>(storageKey, data)
     },
     onSuccess: (_, variables) => {
       // Atualização completa do cache

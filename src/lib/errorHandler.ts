@@ -195,17 +195,18 @@ export class FallbackStrategy {
   private static fallbackToLocalStorage = false
 
   static enableFallback(): void {
-    this.fallbackToLocalStorage = true
-    console.warn('🔄 Fallback para localStorage ativado devido a erros do Supabase')
+    // Fallback desabilitado - sempre usar Supabase
+    console.warn('⚠️ Tentativa de ativar fallback ignorada - sistema configurado para usar apenas Supabase')
   }
 
   static disableFallback(): void {
     this.fallbackToLocalStorage = false
-    console.info('✅ Conexão Supabase restaurada, fallback desativado')
+    console.info('✅ Sistema usando Supabase como fonte primária')
   }
 
   static shouldUseFallback(): boolean {
-    return this.fallbackToLocalStorage
+    // Sempre retorna false - não usar fallback
+    return false
   }
 
   /**

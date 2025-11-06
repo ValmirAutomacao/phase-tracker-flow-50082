@@ -31,20 +31,8 @@ export function useSupabaseQuery<T extends BaseEntity>(
   return useQuery({
     queryKey: ['supabase', storageKey],
     queryFn: async (): Promise<T[]> => {
-      // Verifica se deve usar fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        console.info(`🔄 Usando fallback localStorage para ${storageKey}`)
-        return getFromStorage<T>(storageKey)
-      }
-
-      try {
-        return await supabaseService.getFromSupabase<T>(storageKey)
-      } catch (error) {
-        // Em caso de erro, ativa fallback e retorna dados localStorage
-        console.warn(`⚠️ Erro Supabase para ${storageKey}, usando fallback:`, error)
-        FallbackStrategy.enableFallback()
-        return getFromStorage<T>(storageKey)
-      }
+      // Sempre usar Supabase como fonte primária
+      return await supabaseService.getFromSupabase<T>(storageKey)
     },
     ...DEFAULT_CACHE_CONFIG,
     ...options,
@@ -65,20 +53,7 @@ export function useSupabaseQueryById<T extends BaseEntity>(
     queryKey: ['supabase', storageKey, 'byId', id],
     queryFn: async (): Promise<T | null> => {
       if (!id) return null
-
-      // Fallback para localStorage
-      if (FallbackStrategy.shouldUseFallback()) {
-        const items = getFromStorage<T>(storageKey)
-        return items.find(item => item.id === id) || null
-      }
-
-      try {
-        return await supabaseService.getByIdFromSupabase<T>(storageKey, id)
-      } catch (error) {
-        console.warn(`⚠️ Erro Supabase para ${storageKey}/${id}, usando fallback:`, error)
-        const items = getFromStorage<T>(storageKey)
-        return items.find(item => item.id === id) || null
-      }
+      return await supabaseService.getByIdFromSupabase<T>(storageKey, id)
     },
     enabled: !!id,
     ...DEFAULT_CACHE_CONFIG,
@@ -99,27 +74,7 @@ export function useSupabaseQueryFiltered<T extends BaseEntity>(
   return useQuery({
     queryKey: ['supabase', storageKey, 'filtered', filters],
     queryFn: async (): Promise<T[]> => {
-      // Fallback para localStorage com filtro manual
-      if (FallbackStrategy.shouldUseFallback()) {
-        const items = getFromStorage<T>(storageKey)
-        return items.filter(item => {
-          return Object.entries(filters).every(([field, value]) => {
-            return item[field] === value
-          })
-        })
-      }
-
-      try {
-        return await supabaseService.getFilteredFromSupabase<T>(storageKey, filters)
-      } catch (error) {
-        console.warn(`⚠️ Erro Supabase filtered para ${storageKey}, usando fallback:`, error)
-        const items = getFromStorage<T>(storageKey)
-        return items.filter(item => {
-          return Object.entries(filters).every(([field, value]) => {
-            return item[field] === value
-          })
-        })
-      }
+      return await supabaseService.getFilteredFromSupabase<T>(storageKey, filters)
     },
     ...DEFAULT_CACHE_CONFIG,
     ...options,
