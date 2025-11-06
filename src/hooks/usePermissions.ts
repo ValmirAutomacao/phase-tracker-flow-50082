@@ -63,28 +63,42 @@ export function usePermissions() {
 
 /**
  * IDs de permissões disponíveis no sistema
+ * @deprecated Use PERMISSION_MODULES from @/lib/permissions instead
  */
 export const PERMISSIONS = {
   // Obras
   VISUALIZAR_OBRAS: 'visualizar_obras',
+  CRIAR_OBRAS: 'criar_obras',
   EDITAR_OBRAS: 'editar_obras',
-  
-  // Compras
-  APROVAR_COMPRAS: 'aprovar_compras',
-  
-  // Equipe
-  GERENCIAR_EQUIPE: 'gerenciar_equipe',
-  
-  // Financeiro
-  VISUALIZAR_FINANCEIRO: 'visualizar_financeiro',
-  EDITAR_FINANCEIRO: 'editar_financeiro',
+  DELETAR_OBRAS: 'deletar_obras',
   
   // Clientes
   VISUALIZAR_CLIENTES: 'visualizar_clientes',
+  CRIAR_CLIENTES: 'criar_clientes',
   EDITAR_CLIENTES: 'editar_clientes',
+  DELETAR_CLIENTES: 'deletar_clientes',
   
-  // Requisições
-  VISUALIZAR_REQUISICOES: 'visualizar_requisicoes',
-  EDITAR_REQUISICOES: 'editar_requisicoes',
-  APROVAR_REQUISICOES: 'aprovar_requisicoes',
+  // Financeiro/Despesas
+  VISUALIZAR_FINANCEIRO: 'visualizar_financeiro',
+  CRIAR_DESPESAS: 'criar_despesas',
+  EDITAR_DESPESAS: 'editar_despesas',
+  DELETAR_DESPESAS: 'deletar_despesas',
+  EDITAR_FINANCEIRO: 'editar_financeiro',
+  
+  // Compras/Requisições
+  VISUALIZAR_COMPRAS: 'visualizar_compras',
+  CRIAR_COMPRAS: 'criar_compras',
+  EDITAR_COMPRAS: 'editar_compras',
+  DELETAR_COMPRAS: 'deletar_compras',
+  APROVAR_COMPRAS: 'aprovar_compras',
+  
+  // Vídeos
+  VISUALIZAR_VIDEOS: 'visualizar_videos',
+  CRIAR_VIDEOS: 'criar_videos',
+  EDITAR_VIDEOS: 'editar_videos',
+  DELETAR_VIDEOS: 'deletar_videos',
+  
+  // Equipe
+  GERENCIAR_EQUIPE: 'gerenciar_equipe',
+  VISUALIZAR_EQUIPE: 'visualizar_equipe',
 } as const;

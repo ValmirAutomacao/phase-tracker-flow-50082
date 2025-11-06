@@ -128,7 +128,7 @@ function AppLayout() {
               
               <Route path="/requisicoes" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_REQUISICOES}>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_COMPRAS}>
                     <Requisicoes />
                   </PermissionGuard>
                 </ProtectedRoute>

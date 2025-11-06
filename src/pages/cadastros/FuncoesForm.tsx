@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { PERMISSION_MODULES } from "@/lib/permissions";
 import "@/styles/responsive.css";
 
 const funcaoSchema = z.object({
@@ -34,15 +37,6 @@ interface FuncoesFormProps {
 }
 
 export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = [] }: FuncoesFormProps) {
-  const permissoesDisponiveis = [
-    { id: "visualizar_obras", label: "Visualizar Obras" },
-    { id: "editar_obras", label: "Editar Obras" },
-    { id: "aprovar_compras", label: "Aprovar Compras" },
-    { id: "gerenciar_equipe", label: "Gerenciar Equipe" },
-    { id: "visualizar_financeiro", label: "Visualizar Financeiro" },
-    { id: "editar_financeiro", label: "Editar Financeiro" },
-  ];
-
   const niveisDisponiveis = [
     { id: "Gestão", label: "Gestão" },
     { id: "Técnico", label: "Técnico" },
@@ -175,42 +169,70 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
                   <div className="mb-4">
                     <FormLabel className="text-base">Permissões</FormLabel>
                     <FormDescription>
-                      Selecione as permissões para esta função
+                      Selecione as permissões para esta função organizadas por módulo
                     </FormDescription>
                   </div>
-                  {permissoesDisponiveis.map((permissao) => (
-                    <FormField
-                      key={permissao.id}
-                      control={form.control}
-                      name="permissoes"
-                      render={({ field }) => {
-                        return (
-                          <FormItem
-                            key={permissao.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(permissao.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, permissao.id])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== permissao.id
-                                        )
-                                      )
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {permissao.label}
-                            </FormLabel>
-                          </FormItem>
-                        )
-                      }}
-                    />
-                  ))}
+                  
+                  <Accordion type="multiple" className="w-full" defaultValue={PERMISSION_MODULES.map(m => m.id)}>
+                    {PERMISSION_MODULES.map((module) => {
+                      const selectedInModule = form.watch('permissoes')?.filter(
+                        p => module.permissions.some(mp => mp.id === p)
+                      ).length || 0;
+                      
+                      return (
+                        <AccordionItem key={module.id} value={module.id}>
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex items-center gap-2">
+                              <span>{module.label}</span>
+                              {selectedInModule > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {selectedInModule} de {module.permissions.length}
+                                </Badge>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-3 pt-2">
+                              {module.permissions.map((permissao) => (
+                                <FormField
+                                  key={permissao.id}
+                                  control={form.control}
+                                  name="permissoes"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border/50 p-3 hover:bg-accent/50 transition-colors">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(permissao.id)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, permissao.id])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== permissao.id
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <div className="flex-1">
+                                        <FormLabel className="font-medium cursor-pointer">
+                                          {permissao.label}
+                                        </FormLabel>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {permissao.description}
+                                        </p>
+                                      </div>
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                  
                   <FormMessage />
                 </FormItem>
               )}
