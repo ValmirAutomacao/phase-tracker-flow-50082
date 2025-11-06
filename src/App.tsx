@@ -67,7 +67,6 @@ function AppLayout() {
               <Route path="/cadastros/funcoes" element={<ProtectedRoute><Funcoes /></ProtectedRoute>} />
               <Route path="/cadastros/setores" element={<ProtectedRoute><Setores /></ProtectedRoute>} />
               <Route path="/requisicoes" element={<ProtectedRoute><Requisicoes /></ProtectedRoute>} />
-              <Route path="/auth" element={<Auth />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
@@ -84,7 +83,10 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppLayout />
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/*" element={<AppLayout />} />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
