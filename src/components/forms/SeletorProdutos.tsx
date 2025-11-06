@@ -145,7 +145,8 @@ export function SeletorProdutos({
                   {!readonly && (
                     <Checkbox
                       checked={item.selecionado}
-                      onChange={() => toggleItemSelecao(item.id)}
+                      onCheckedChange={() => toggleItemSelecao(item.id)}
+                      onClick={(e) => e.stopPropagation()}
                       className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     />
                   )}
