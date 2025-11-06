@@ -33,8 +33,8 @@ function AppHeader() {
       <div className="flex items-center">
         <SidebarTrigger className="mr-2 md:mr-4" />
         <h1 className="text-base md:text-lg font-semibold truncate">
-          <span className="hidden sm:inline">EngFlow - Sistema de Gestão</span>
-          <span className="sm:hidden">EngFlow</span>
+          <span className="hidden sm:inline">SecEngenharia - Sistema de Gestão</span>
+          <span className="sm:hidden">SecEngenharia</span>
         </h1>
       </div>
       {user && (

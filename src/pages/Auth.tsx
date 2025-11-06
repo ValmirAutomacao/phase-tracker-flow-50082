@@ -31,10 +31,10 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <img src={logo} alt="EngFlow Logo" className="h-20 w-20 object-contain" />
+            <img src={logo} alt="SecEngenharia Logo" className="h-20 w-20 object-contain" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">EngFlow</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">SecEngenharia</CardTitle>
             <CardDescription className="text-center">
               Sistema de Gestão de Obras
             </CardDescription>
