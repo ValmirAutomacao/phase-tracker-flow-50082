@@ -22,6 +22,7 @@ import Funcionarios from "./pages/cadastros/Funcionarios";
 import Funcoes from "./pages/cadastros/Funcoes";
 import Setores from "./pages/cadastros/Setores";
 import Requisicoes from "./pages/Requisicoes";
+import Kanban from "./pages/Kanban";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -133,6 +134,8 @@ function AppLayout() {
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
+              
+              <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

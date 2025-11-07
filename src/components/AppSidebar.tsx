@@ -7,7 +7,8 @@ import {
   Briefcase,
   UserCog,
   FolderKanban,
-  FileText
+  FileText,
+  Kanban as KanbanIcon
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -42,6 +43,11 @@ const menuItems = [
     title: "Vídeos",
     url: "/videos",
     icon: Video,
+  },
+  {
+    title: "CRM Kanban",
+    url: "/kanban",
+    icon: KanbanIcon,
   },
 ];
 
