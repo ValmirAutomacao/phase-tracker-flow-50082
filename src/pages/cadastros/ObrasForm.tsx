@@ -21,7 +21,6 @@ interface Cliente {
 
 const etapaSchema = z.object({
   nome: z.string().min(1, "Nome da etapa é obrigatório"),
-  responsavel: z.string().min(1, "Selecione um responsável"),
   dataInicio: z.string().min(1, "Data de início é obrigatória"),
   dataPrevisao: z.string().min(1, "Data de previsão é obrigatória"),
 });
@@ -55,13 +54,6 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
   // Buscar clientes reais do Supabase
   const { data: clientes = [] } = useOptimizedSupabaseQuery<any>('CLIENTES');
 
-  const mockResponsaveis = [
-    "João Silva",
-    "Ana Lima",
-    "Pedro Costa",
-    "Maria Santos",
-  ];
-
   const form = useForm<ObraFormData>({
     resolver: zodResolver(obraSchema),
     defaultValues: {
@@ -73,7 +65,6 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
       cidade: "",
       estado: "",
       cep: "",
-      responsavel: "",
       status: "",
       dataInicio: "",
       dataPrevisaoFinal: "",
@@ -100,7 +91,6 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
         cidade: "",
         estado: "",
         cep: "",
-        responsavel: "",
         status: "",
         dataInicio: "",
         dataPrevisaoFinal: "",
@@ -306,28 +296,6 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
             <div className="grid-responsive gap-4">
               <FormField
                 control={form.control}
-                name="responsavel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Responsável</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {mockResponsaveis.map(resp => (
-                          <SelectItem key={resp} value={resp}>{resp}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
@@ -409,7 +377,7 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ nome: "", responsavel: "", dataInicio: "", dataPrevisao: "" })}
+                    onClick={() => append({ nome: "", dataInicio: "", dataPrevisao: "" })}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar Etapa
@@ -445,29 +413,6 @@ export function ObrasForm({ open, onOpenChange, onSubmit, editData }: ObrasFormP
                           <FormControl>
                             <Input placeholder="Ex: Fundação" {...field} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`etapas.${index}.responsavel`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Responsável</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mockResponsaveis.map(resp => (
-                                <SelectItem key={resp} value={resp}>{resp}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
