@@ -62,7 +62,7 @@ const Funcoes = () => {
         descricao: data.descricao,
         setor_id: data.setor_id,
         nivel: data.nivel,
-        permissoes: JSON.stringify(data.permissoes || []),
+        permissoes: data.permissoes || [],
       };
 
       update.mutate(
@@ -91,7 +91,7 @@ const Funcoes = () => {
         descricao: data.descricao,
         setor_id: data.setor_id,
         nivel: data.nivel,
-        permissoes: JSON.stringify(data.permissoes || []),
+        permissoes: data.permissoes || [],
       };
 
       add.mutate(novaFuncao, {
@@ -114,7 +114,16 @@ const Funcoes = () => {
   };
 
   const handleEdit = (funcao: Funcao) => {
-    setEditingFuncao(funcao);
+    // Garantir que permissoes seja sempre um array
+    const funcaoParaEditar = {
+      ...funcao,
+      permissoes: Array.isArray(funcao.permissoes) 
+        ? funcao.permissoes 
+        : typeof funcao.permissoes === 'string'
+          ? JSON.parse(funcao.permissoes)
+          : []
+    };
+    setEditingFuncao(funcaoParaEditar);
     setOpen(true);
   };
 
@@ -321,7 +330,12 @@ const Funcoes = () => {
                         <span className="font-medium">Permissões:</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {(funcao.permissoes || []).map((permissao, idx) => (
+                        {(Array.isArray(funcao.permissoes) 
+                          ? funcao.permissoes 
+                          : typeof funcao.permissoes === 'string' 
+                            ? JSON.parse(funcao.permissoes) 
+                            : []
+                        ).map((permissao, idx) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {permissao}
                           </Badge>
