@@ -205,6 +205,201 @@ export type Database = {
           },
         ]
       }
+      kanban_boards: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      kanban_card_activities: {
+        Row: {
+          card_id: string
+          created_at: string | null
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          descricao: string
+          id: string
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          card_id: string
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao: string
+          id?: string
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          card_id?: string
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao?: string
+          id?: string
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_activities_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_cards: {
+        Row: {
+          board_id: string
+          cliente_email: string | null
+          cliente_empresa: string | null
+          cliente_nome: string
+          cliente_telefone: string | null
+          created_at: string | null
+          descricao: string | null
+          funcionario_responsavel_id: string | null
+          id: string
+          obra_id: string | null
+          ordem: number
+          origem: string
+          phase_id: string
+          tags: Json | null
+          titulo: string | null
+          updated_at: string | null
+          valor_estimado: number | null
+        }
+        Insert: {
+          board_id: string
+          cliente_email?: string | null
+          cliente_empresa?: string | null
+          cliente_nome: string
+          cliente_telefone?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          funcionario_responsavel_id?: string | null
+          id?: string
+          obra_id?: string | null
+          ordem?: number
+          origem?: string
+          phase_id: string
+          tags?: Json | null
+          titulo?: string | null
+          updated_at?: string | null
+          valor_estimado?: number | null
+        }
+        Update: {
+          board_id?: string
+          cliente_email?: string | null
+          cliente_empresa?: string | null
+          cliente_nome?: string
+          cliente_telefone?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          funcionario_responsavel_id?: string | null
+          id?: string
+          obra_id?: string | null
+          ordem?: number
+          origem?: string
+          phase_id?: string
+          tags?: Json | null
+          titulo?: string | null
+          updated_at?: string | null
+          valor_estimado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_cards_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_funcionario_responsavel_id_fkey"
+            columns: ["funcionario_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_phases: {
+        Row: {
+          board_id: string
+          cor: string
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string | null
+        }
+        Insert: {
+          board_id: string
+          cor: string
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem: number
+          updated_at?: string | null
+        }
+        Update: {
+          board_id?: string
+          cor?: string
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_phases_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obras: {
         Row: {
           cliente_id: string | null
