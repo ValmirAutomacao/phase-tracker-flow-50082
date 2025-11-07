@@ -35,7 +35,6 @@ const obraSchema = z.object({
   cidade: z.string().min(1, "Cidade é obrigatória"),
   estado: z.string().min(1, "Estado é obrigatório"),
   cep: z.string().min(1, "CEP é obrigatório"),
-  responsavel: z.string().min(1, "Selecione um responsável"),
   status: z.string().min(1, "Selecione um status"),
   dataInicio: z.string().min(1, "Data de início é obrigatória"),
   dataPrevisaoFinal: z.string().min(1, "Data de previsão final é obrigatória"),

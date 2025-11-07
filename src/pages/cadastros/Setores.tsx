@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserCog, Plus, Search, Edit, Users, Trash2 } from "lucide-react";
+import { UserCog, Plus, Search, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SetoresForm, SetorFormData } from "./SetoresForm";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
@@ -40,8 +40,7 @@ const Setores = () => {
     const searchLower = searchTerm.toLowerCase();
     return setores.filter(setor =>
       setor.nome.toLowerCase().includes(searchLower) ||
-      (setor.descricao && setor.descricao.toLowerCase().includes(searchLower)) ||
-      (setor.responsavel && setor.responsavel.toLowerCase().includes(searchLower))
+      (setor.descricao && setor.descricao.toLowerCase().includes(searchLower))
     );
   }, [setores, searchTerm]);
 
@@ -50,8 +49,6 @@ const Setores = () => {
       const updates: any = {
         nome: data.nome,
         descricao: data.descricao,
-        responsavel: data.responsavel,
-        status: (data as any).status || "ativo",
       };
 
       update.mutate(
@@ -78,9 +75,6 @@ const Setores = () => {
       const novoSetor = {
         nome: data.nome,
         descricao: data.descricao,
-        responsavel: data.responsavel,
-        totalColaboradores: 0,
-        status: data.status || "ativo",
       };
 
       add.mutate(novoSetor, {
@@ -128,19 +122,6 @@ const Setores = () => {
     }
   };
 
-  // Status badge memoizado para performance
-  const getStatusBadge = useCallback((status: string) => {
-    const variants: Record<string, { label: string; className: string }> = {
-      ativo: { label: "Ativo", className: "bg-green-100 text-green-700" },
-      inativo: { label: "Inativo", className: "bg-gray-100 text-gray-700" },
-    };
-
-    return (
-      <Badge className={variants[status]?.className || ""}>
-        {variants[status]?.label || status}
-      </Badge>
-    );
-  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -165,44 +146,6 @@ const Setores = () => {
           <CardContent>
             <div className="text-2xl font-bold">{setores.length}</div>
             <p className="text-xs text-muted-foreground mt-1">cadastrados no sistema</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Setores Ativos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {setores.filter(s => s.status === 'ativo').length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">em operação</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total de Colaboradores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {useMemo(() =>
-                setores.reduce((acc, setor) => acc + (setor.totalColaboradores || 0), 0)
-              , [setores])}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">distribuídos nos setores</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Média por Setor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {useMemo(() => {
-                const totalColaboradores = setores.reduce((acc, setor) => acc + (setor.totalColaboradores || 0), 0);
-                return setores.length > 0 ? Math.round(totalColaboradores / setores.length) : 0;
-              }, [setores])}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">colaboradores/setor</p>
           </CardContent>
         </Card>
       </div>
@@ -298,10 +241,9 @@ const Setores = () => {
                         <UserCog className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-base">{setor.nome}</CardTitle>
-                          {getStatusBadge(setor.status || "ativo")}
-                        </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <CardTitle className="text-base">{setor.nome}</CardTitle>
+                          </div>
                         <CardDescription className="text-sm">
                           {setor.descricao}
                         </CardDescription>
@@ -310,17 +252,6 @@ const Setores = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Responsável:</span>
-                    </div>
-                    <span className="font-medium">{setor.responsavel || "Não definido"}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Colaboradores:</span>
-                    <Badge variant="outline">{setor.totalColaboradores || 0}</Badge>
-                  </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(setor)}>
                       <Edit className="h-4 w-4 mr-1" />

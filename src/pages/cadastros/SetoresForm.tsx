@@ -12,8 +12,6 @@ import "@/styles/responsive.css";
 const setorSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
-  responsavel: z.string().optional(),
-  status: z.string().optional(),
 });
 
 export type SetorFormData = z.infer<typeof setorSchema>;
@@ -26,19 +24,12 @@ interface SetoresFormProps {
 }
 
 export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresFormProps) {
-  const mockResponsaveis = [
-    "João Silva",
-    "Maria Santos",
-    "Pedro Costa",
-    "Ana Lima",
-  ];
 
   const form = useForm<SetorFormData>({
     resolver: zodResolver(setorSchema),
     defaultValues: {
       nome: "",
       descricao: "",
-      responsavel: "",
     },
   });
 
@@ -49,7 +40,6 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
       form.reset({
         nome: "",
         descricao: "",
-        responsavel: "",
       });
     }
   }, [editData, form]);
@@ -99,28 +89,6 @@ export function SetoresForm({ open, onOpenChange, onSubmit, editData }: SetoresF
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="responsavel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o responsável" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {mockResponsaveis.map(resp => (
-                        <SelectItem key={resp} value={resp}>{resp}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             </div>
 
             <div className="form-actions">
