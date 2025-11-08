@@ -21,6 +21,7 @@ import Obras from "./pages/cadastros/Obras";
 import Funcionarios from "./pages/cadastros/Funcionarios";
 import Funcoes from "./pages/cadastros/Funcoes";
 import Setores from "./pages/cadastros/Setores";
+import Categorias from "./pages/Categorias";
 import Requisicoes from "./pages/Requisicoes";
 import Kanban from "./pages/Kanban";
 import Auth from "./pages/Auth";
@@ -126,7 +127,15 @@ function AppLayout() {
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
-              
+
+              <Route path="/categorias" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <Categorias />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
               <Route path="/requisicoes" element={
                 <ProtectedRoute>
                   <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_COMPRAS}>

@@ -19,22 +19,27 @@ import {
   Clock,
   AlertCircle,
   Plus,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
-import { currencyMask, parseCurrencyInput } from "@/lib/utils";
-import { SeletorProdutos } from "@/components/forms/SeletorProdutos";
-import { ItemCarrinho } from "@/components/forms/CarrinhoItens";
+import { currencyMask, parseCurrencyInput, formatCurrency } from "@/lib/utils";
+// import { SeletorProdutos } from "@/components/forms/SeletorProdutos";
+// import { ItemCarrinho } from "@/components/forms/CarrinhoItens";
 import "@/styles/responsive.css";
 
 // Interface para itens/produtos das requisições
 interface ItemProduto {
   id: string;
-  nome: string;
+  numero: string;
+  descricao: string;
   quantidade: number;
+  unidade_medida: string;
   valor_unitario: number;
   comprado: boolean;
+  requisicao_id: string;
 }
 
 // Interface para Despesa compatível com Supabase
@@ -115,19 +120,34 @@ const Financeiro = () => {
   const [selectedCliente, setSelectedCliente] = useState<string>("");
   const [selectedObra, setSelectedObra] = useState<string>("");
   const [selectedRequisicao, setSelectedRequisicao] = useState<string>("");
+  const [editingDespesa, setEditingDespesa] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [selectedItens, setSelectedItens] = useState<string[]>([]);
+  const [itensEditados, setItensEditados] = useState<Record<string, {
+    quantidade: number;
+    valor_unitario: number;
+  }>>({});
 
   // Hooks Supabase para substituir localStorage
-  const { data: despesas = [], isLoading, error } = useOptimizedSupabaseQuery<any>('DESPESAS');
+  const { data: despesas = [], isLoading, error } = useSupabaseQuery<any>('DESPESAS');
   const { add, update, delete: deleteDespesa } = useSupabaseCRUD<any>('DESPESAS');
-  const { update: updateRequisicao } = useSupabaseCRUD<any>('REQUISICOES');
+  const crudRequisicoes = useSupabaseCRUD<any>('REQUISICOES');
 
   // Hooks para carregar dados de relacionamento
-  const { data: clientes = [] } = useOptimizedSupabaseQuery<any>('CLIENTES');
-  const { data: todasObras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
+  const { data: clientes = [] } = useSupabaseQuery<any>('CLIENTES');
+  const { data: todasObras = [] } = useSupabaseQuery<any>('OBRAS');
 
   // Hook para carregar requisições aprovadas
-  const { data: todasRequisicoes = [] } = useOptimizedSupabaseQuery<any>('REQUISICOES');
+  const { data: todasRequisicoes = [] } = useSupabaseQuery<any>('REQUISICOES');
+
+  // Hook para carregar categorias ativas
+  const { data: categorias = [] } = useSupabaseQuery<any>('CATEGORIAS');
+
+  // Hook para carregar itens das requisições
+  const { data: itensRequisicao = [] } = useSupabaseQuery<any>('ITENS_REQUISICAO');
+
+  // Hook para CRUD dos itens de requisição
+  const crudItens = useSupabaseCRUD<any>('ITENS_REQUISICAO');
 
   // Filtrar obras por cliente selecionado
   const obrasFiltradas = useMemo(() => {
@@ -135,32 +155,40 @@ const Financeiro = () => {
     return todasObras.filter(obra => obra.cliente_id === selectedCliente);
   }, [todasObras, selectedCliente]);
 
-  // Filtrar requisições aprovadas disponíveis da obra selecionada
-  const requisicoesAprovadas = useMemo(() => {
+  // Filtrar requisições abertas disponíveis da obra selecionada
+  const requisicoesAbertas = useMemo(() => {
     if (!selectedObra) return [];
-    
+
     return todasRequisicoes.filter(req =>
-      (req.status === 'aprovada' || req.status === 'concluida') &&
+      req.status === 'aberta' &&
       req.obra_id === selectedObra
     );
   }, [todasRequisicoes, selectedObra]);
 
-  // Buscar requisição selecionada e seus produtos
+  // Buscar requisição selecionada e seus itens da nova tabela
   const requisicaoAtual = useMemo(() => {
     if (!selectedRequisicao) return null;
-    const req = requisicoesAprovadas.find(req => req.id === selectedRequisicao);
-    
-    // Garantir que itens_produtos seja sempre um array com estrutura correta
-    if (req && req.itens_produtos) {
-      const itensComStatus = (Array.isArray(req.itens_produtos) ? req.itens_produtos : []).map((item: any) => ({
+    const req = requisicoesAbertas.find(req => req.id === selectedRequisicao);
+
+    if (req) {
+      // Buscar itens da nova tabela de itens_requisicao
+      const itensReq = itensRequisicao.filter(item => item.requisicao_id === selectedRequisicao);
+
+      // Calcular quantidade disponível (quantidade total - quantidade já comprada)
+      const itensComDisponibilidade = itensReq.map(item => ({
         ...item,
-        status: item.comprado ? 'comprado' : 'pendente'
+        quantidade_disponivel: Number(item.quantidade) - Number(item.quantidade_comprada || 0),
+        quantidade_original: Number(item.quantidade)
       }));
-      return { ...req, itens_produtos: itensComStatus };
+
+      // Filtrar apenas itens que ainda têm quantidade disponível
+      const itensDisponiveis = itensComDisponibilidade.filter(item => item.quantidade_disponivel > 0);
+
+      return { ...req, itens_produtos: itensDisponiveis };
     }
-    
+
     return req;
-  }, [requisicoesAprovadas, selectedRequisicao]);
+  }, [requisicoesAbertas, selectedRequisicao, itensRequisicao]);
 
   // Filtros avançados memoizados para performance
   const filteredDespesas = useMemo(() => {
@@ -224,6 +252,21 @@ const Financeiro = () => {
     },
   });
 
+  const editForm = useForm<DespesaFormData>({
+    resolver: zodResolver(despesaSchema),
+    defaultValues: {
+      cliente_id: "",
+      obra_id: "",
+      categoria: "",
+      valor: "",
+      data_despesa: new Date(),
+      comprovante_url: "",
+      fornecedor_cnpj: "",
+      numero_documento: "",
+      observacao: "",
+    },
+  });
+
   // Atualizar obra quando cliente muda
   useEffect(() => {
     const clienteIdFromForm = form.watch("cliente_id");
@@ -233,6 +276,7 @@ const Financeiro = () => {
       setSelectedObra("");
       setSelectedRequisicao("");
       setSelectedItens([]);
+      setItensEditados({});
     }
   }, [form.watch("cliente_id")]);
 
@@ -244,8 +288,45 @@ const Financeiro = () => {
       form.setValue("requisicao_id", ""); // Reset requisição quando obra muda
       setSelectedRequisicao("");
       setSelectedItens([]);
+      setItensEditados({});
     }
   }, [form.watch("obra_id")]);
+
+  // Calcular valor total da despesa automaticamente baseado nos itens selecionados
+  useEffect(() => {
+    if (selectedItens.length > 0) {
+      const valorTotal = selectedItens.reduce((total, itemId) => {
+        const itemEditado = itensEditados[itemId];
+        if (itemEditado) {
+          return total + (itemEditado.quantidade * itemEditado.valor_unitario);
+        }
+        return total;
+      }, 0);
+
+      // Formatar como string monetária para o campo
+      const valorFormatado = `R$ ${valorTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+      form.setValue("valor", valorFormatado);
+    } else {
+      form.setValue("valor", "");
+    }
+  }, [selectedItens, itensEditados, form]);
+
+  // Populr formulário de edição quando uma despesa for selecionada
+  useEffect(() => {
+    if (editingDespesa && editOpen) {
+      editForm.reset({
+        cliente_id: editingDespesa.cliente_id || "",
+        obra_id: editingDespesa.obra_id || "",
+        categoria: editingDespesa.categoria || "",
+        valor: formatCurrency(editingDespesa.valor) || "",
+        data_despesa: editingDespesa.data_despesa ? new Date(editingDespesa.data_despesa) : new Date(),
+        comprovante_url: editingDespesa.comprovante_url || "",
+        fornecedor_cnpj: editingDespesa.fornecedor_cnpj || "",
+        numero_documento: editingDespesa.numero_documento || "",
+        observacao: editingDespesa.observacao || "",
+      });
+    }
+  }, [editingDespesa, editOpen, editForm]);
 
   const onSubmit = async (data: DespesaFormData) => {
     // Validar se pelo menos um item foi selecionado se existem itens não comprados
@@ -256,6 +337,19 @@ const Financeiro = () => {
         variant: "destructive"
       });
       return;
+    }
+
+    // Validar se todos os itens selecionados têm quantidades e valores definidos
+    for (const itemId of selectedItens) {
+      const itemEditado = itensEditados[itemId];
+      if (!itemEditado || itemEditado.quantidade <= 0 || itemEditado.valor_unitario <= 0) {
+        toast({
+          title: "Erro de validação",
+          description: "Todos os itens selecionados devem ter quantidade e valor unitário maiores que zero.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     const novaDespesa = {
@@ -274,39 +368,70 @@ const Financeiro = () => {
 
     add.mutate(novaDespesa, {
       onSuccess: async () => {
-        // Atualizar status dos itens como comprados na requisição
+        // Atualizar quantidades compradas na tabela itens_requisicao
         if (selectedItens.length > 0 && requisicaoAtual) {
-          const itensAtualizados = requisicaoAtual.itens_produtos?.map(item =>
-            selectedItens.includes(item.id) ? { ...item, comprado: true } : item
-          );
-
-          // Verificar se todos os itens foram comprados para definir o status
-          const todosItensComprados = itensAtualizados?.every(item => item.comprado) || false;
-          const algumaCompra = itensAtualizados?.some(item => item.comprado) || false;
-
-          let novoStatus = requisicaoAtual.status;
-          if (todosItensComprados) {
-            novoStatus = 'concluida';
-          } else if (algumaCompra) {
-            novoStatus = 'aberta';
-          }
-
           try {
-            await updateRequisicao.mutateAsync({
-              id: requisicaoAtual.id,
-              updates: {
-                itens_produtos: itensAtualizados,
-                status: novoStatus
-              } as any
+            // Atualizar cada item selecionado com a quantidade comprada
+            const updatePromises = selectedItens.map(itemId => {
+              const item = requisicaoAtual.itens_produtos?.find(i => i.id === itemId);
+              const itemEditado = itensEditados[itemId];
+
+              if (item && itemEditado) {
+                const novaQuantidadeComprada = Number(item.quantidade_comprada || 0) + itemEditado.quantidade;
+                const quantidadeTotal = Number(item.quantidade_original);
+
+                return crudItens.update.mutateAsync({
+                  id: itemId,
+                  updates: {
+                    quantidade_comprada: novaQuantidadeComprada,
+                    valor_unitario: itemEditado.valor_unitario,
+                    // Marcar como comprado apenas se a quantidade total foi atingida
+                    comprado: novaQuantidadeComprada >= quantidadeTotal
+                  }
+                });
+              }
+              return Promise.resolve();
             });
+
+            await Promise.all(updatePromises);
+
+            // Verificar se todos os itens da requisição foram completamente comprados
+            const todosItensRequisicao = itensRequisicao.filter(item => item.requisicao_id === requisicaoAtual.id);
+            let todosItensComprados = true;
+
+            for (const item of todosItensRequisicao) {
+              const itemEditado = itensEditados[item.id];
+              const quantidadeComprada = itemEditado ?
+                Number(item.quantidade_comprada || 0) + itemEditado.quantidade :
+                Number(item.quantidade_comprada || 0);
+
+              if (quantidadeComprada < Number(item.quantidade)) {
+                todosItensComprados = false;
+                break;
+              }
+            }
+
+            // Atualizar status da requisição
+            const novoStatus = todosItensComprados ? 'concluida' : 'aberta';
+            if (novoStatus !== requisicaoAtual.status) {
+              await crudRequisicoes.update.mutateAsync({
+                id: requisicaoAtual.id,
+                updates: { status: novoStatus }
+              });
+            }
           } catch (error) {
             console.error('Erro ao atualizar itens da requisição:', error);
           }
         }
 
+        const totalItensComprados = selectedItens.reduce((acc, itemId) => {
+          const itemEditado = itensEditados[itemId];
+          return acc + (itemEditado ? itemEditado.quantidade : 0);
+        }, 0);
+
         toast({
           title: "Despesa registrada!",
-          description: `Despesa cadastrada e ${selectedItens.length} itens marcados como comprados.`,
+          description: `Despesa cadastrada com ${selectedItens.length} item(ns) e ${totalItensComprados.toFixed(2)} unidades compradas.`,
         });
         setOpen(false);
         form.reset();
@@ -314,6 +439,7 @@ const Financeiro = () => {
         setSelectedObra("");
         setSelectedRequisicao("");
         setSelectedItens([]);
+        setItensEditados({});
       },
       onError: (error) => {
         toast({
@@ -327,19 +453,19 @@ const Financeiro = () => {
 
   // Cálculos financeiros memoizados para performance (baseados nos filtros)
   const totalDespesas = useMemo(() =>
-    filteredDespesas.reduce((acc, d) => acc + (d.valor || 0), 0), [filteredDespesas]);
+    filteredDespesas.reduce((acc, d) => acc + parseCurrencyInput(d.valor || 0), 0), [filteredDespesas]);
 
   const despesasValidadas = useMemo(() =>
-    filteredDespesas.filter(d => d.status === "validado").reduce((acc, d) => acc + (d.valor || 0), 0), [filteredDespesas]);
+    filteredDespesas.filter(d => d.status === "validado").reduce((acc, d) => acc + parseCurrencyInput(d.valor || 0), 0), [filteredDespesas]);
 
   const despesasPendentes = useMemo(() =>
-    filteredDespesas.filter(d => d.status === "pendente").reduce((acc, d) => acc + (d.valor || 0), 0), [filteredDespesas]);
+    filteredDespesas.filter(d => d.status === "pendente").reduce((acc, d) => acc + parseCurrencyInput(d.valor || 0), 0), [filteredDespesas]);
 
   // Relatórios avançados por categoria e período
   const relatoriosPorCategoria = useMemo(() => {
     const categorias = filteredDespesas.reduce((acc, despesa) => {
       const categoria = despesa.categoria || "Sem categoria";
-      acc[categoria] = (acc[categoria] || 0) + (despesa.valor || 0);
+      acc[categoria] = (acc[categoria] || 0) + parseCurrencyInput(despesa.valor || 0);
       return acc;
     }, {} as Record<string, number>);
     return Object.entries(categorias).sort(([,a], [,b]) => (b as number) - (a as number));
@@ -348,7 +474,7 @@ const Financeiro = () => {
   const relatoriosPorCliente = useMemo(() => {
     const clientes = filteredDespesas.reduce((acc, despesa) => {
       const cliente = despesa.cliente?.nome || "Cliente não informado";
-      acc[cliente] = (acc[cliente] || 0) + (despesa.valor || 0);
+      acc[cliente] = (acc[cliente] || 0) + parseCurrencyInput(despesa.valor || 0);
       return acc;
     }, {} as Record<string, number>);
     return Object.entries(clientes).sort(([,a], [,b]) => (b as number) - (a as number));
@@ -363,33 +489,90 @@ const Financeiro = () => {
     setClienteFilter("all");
   };
 
-  // Função para processar upload de comprovante
+  // Função para upload de comprovante no Supabase Storage
   const handleFileUpload = async (file: File) => {
     if (!file) return null;
 
     try {
-      // Aqui será implementada a integração com storage (Supabase Storage ou similar)
-      // Por enquanto, vamos simular um URL para preparar a integração n8n
-      const timestamp = Date.now();
-      const fileName = `comprovante_${timestamp}_${file.name}`;
-      const mockUrl = `https://storage.exemplo.com/comprovantes/${fileName}`;
+      // Importar dinamicamente para evitar problema de dependência circular
+      const { SupabaseStorage, COMPROVANTE_TYPES, MAX_COMPROVANTE_SIZE } = await import('@/lib/supabaseStorage');
+
+      // Validar tipo do arquivo
+      if (!SupabaseStorage.validateFile(file, COMPROVANTE_TYPES)) {
+        toast({
+          title: "Arquivo inválido",
+          description: "Por favor, envie apenas imagens (JPG, PNG) ou PDF.",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Validar tamanho do arquivo
+      if (!SupabaseStorage.validateFileSize(file, MAX_COMPROVANTE_SIZE)) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 10MB.",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Fazer upload para o Supabase Storage
+      const result = await SupabaseStorage.uploadComprovante(file);
 
       // Atualizar o campo comprovante_url automaticamente
-      form.setValue("comprovante_url", mockUrl);
+      form.setValue("comprovante_url", result.url);
 
       toast({
         title: "Comprovante carregado!",
-        description: `Arquivo ${file.name} preparado para processamento.`,
+        description: `Arquivo ${file.name} enviado com sucesso.`,
       });
 
-      return mockUrl;
+      return result.url;
     } catch (error) {
+      console.error('Erro no upload:', error);
       toast({
         title: "Erro no upload",
-        description: "Não foi possível processar o arquivo.",
+        description: "Não foi possível enviar o arquivo. Tente novamente.",
         variant: "destructive",
       });
       return null;
+    }
+  };
+
+  const onEditSubmit = async (data: DespesaFormData) => {
+    if (!editingDespesa) return;
+
+    try {
+      const despesaAtualizada = {
+        cliente_id: data.cliente_id,
+        obra_id: data.obra_id,
+        categoria: data.categoria,
+        valor: parseCurrencyInput(data.valor),
+        data_despesa: data.data_despesa.toISOString().split('T')[0],
+        comprovante_url: data.comprovante_url || null,
+        fornecedor_cnpj: data.fornecedor_cnpj || null,
+        numero_documento: data.numero_documento || null,
+        observacao: data.observacao || null,
+      };
+
+      await update(editingDespesa.id, despesaAtualizada);
+
+      toast({
+        title: "Despesa atualizada",
+        description: "A despesa foi atualizada com sucesso.",
+      });
+
+      setEditOpen(false);
+      setEditingDespesa(null);
+      editForm.reset();
+    } catch (error) {
+      console.error('Erro ao atualizar despesa:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar a despesa.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -526,19 +709,23 @@ const Financeiro = () => {
                               <SelectValue placeholder={
                                 !selectedCliente 
                                   ? "Primeiro selecione cliente e obra" 
-                                  : requisicoesAprovadas.length === 0
-                                    ? "Nenhuma requisição aprovada para esta obra"
-                                    : "Selecione a requisição aprovada"
+                                  : requisicoesAbertas.length === 0
+                                    ? "Nenhuma requisição aberta para esta obra"
+                                    : "Selecione a requisição aberta"
                               } />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {requisicoesAprovadas.map((requisicao) => (
-                              <SelectItem key={requisicao.id} value={requisicao.id}>
-                                {requisicao.titulo}
-                                {requisicao.itens_produtos && ` (${requisicao.itens_produtos.filter((i: any) => !i.comprado).length} itens pendentes)`}
-                              </SelectItem>
-                            ))}
+                            {requisicoesAbertas.map((requisicao) => {
+                              const itensReq = itensRequisicao.filter(item => item.requisicao_id === requisicao.id);
+                              const itensPendentes = itensReq.filter(item => !item.comprado).length;
+                              return (
+                                <SelectItem key={requisicao.id} value={requisicao.id}>
+                                  {requisicao.titulo}
+                                  {itensReq.length > 0 && ` (${itensPendentes} de ${itensReq.length} itens pendentes)`}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -546,15 +733,138 @@ const Financeiro = () => {
                     )}
                   />
 
-                  {/* Componente de Seleção de Produtos */}
+                  {/* Seleção de Itens da Requisição */}
                   {requisicaoAtual?.itens_produtos && requisicaoAtual.itens_produtos.length > 0 && (
-                    <div className="mt-4">
-                      <SeletorProdutos
-                        itensRequisicao={requisicaoAtual.itens_produtos}
-                        itensSelecionados={selectedItens}
-                        onSelecaoChange={setSelectedItens}
-                        readonly={false}
-                      />
+                    <div className="mt-4 border rounded-lg p-4 bg-blue-50">
+                      <h4 className="font-medium text-blue-900 mb-3">Itens da Requisição</h4>
+                      <p className="text-sm text-blue-700 mb-3">
+                        Selecione os itens que estão sendo comprados nesta despesa:
+                      </p>
+                      <div className="space-y-4">
+                        {requisicaoAtual.itens_produtos.map((item: any, index: number) => {
+                          const itemId = item.id || `item-${index}`;
+                          const quantidadeEditada = itensEditados[itemId]?.quantidade || item.quantidade_disponivel;
+                          const valorEditado = itensEditados[itemId]?.valor_unitario || item.valor_unitario || 0;
+                          const totalCalculado = quantidadeEditada * valorEditado;
+
+                          return (
+                            <div key={itemId} className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                              {/* Header com checkbox e info básica */}
+                              <div className="flex items-start space-x-3">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedItens.includes(itemId)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedItens([...selectedItens, itemId]);
+                                      // Inicializar valores editados se não existirem
+                                      if (!itensEditados[itemId]) {
+                                        setItensEditados(prev => ({
+                                          ...prev,
+                                          [itemId]: {
+                                            quantidade: item.quantidade_disponivel,
+                                            valor_unitario: item.valor_unitario || 0
+                                          }
+                                        }));
+                                      }
+                                    } else {
+                                      setSelectedItens(selectedItens.filter(id => id !== itemId));
+                                    }
+                                  }}
+                                  className="mt-1 h-4 w-4 text-blue-600"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
+                                      #{item.numero || `${index + 1}`}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Disponível: {item.quantidade_disponivel} de {item.quantidade_original} {item.unidade_medida || 'UN'}
+                                    </span>
+                                  </div>
+                                  <h5 className="font-medium text-gray-900 mb-1">{item.descricao || item.nome}</h5>
+                                </div>
+                              </div>
+
+                              {/* Campos editáveis - só aparecem se o item estiver selecionado */}
+                              {selectedItens.includes(itemId) && (
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-3 border-t border-gray-100">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Quantidade a Comprar *
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0.01"
+                                      max={item.quantidade_disponivel}
+                                      step="0.01"
+                                      value={quantidadeEditada || ""}
+                                      onChange={(e) => {
+                                        const valor = e.target.value;
+                                        const novaQuantidade = valor === "" ? 0 : parseFloat(valor);
+                                        setItensEditados(prev => ({
+                                          ...prev,
+                                          [itemId]: {
+                                            ...prev[itemId] || { valor_unitario: item.valor_unitario || 0 },
+                                            quantidade: novaQuantidade
+                                          }
+                                        }));
+                                      }}
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Unidade
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={item.unidade_medida || 'UN'}
+                                      disabled
+                                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded bg-gray-50"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Valor Unitário (R$) *
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0.01"
+                                      step="0.01"
+                                      value={valorEditado || ""}
+                                      onChange={(e) => {
+                                        const valor = e.target.value;
+                                        const novoValor = valor === "" ? 0 : parseFloat(valor);
+                                        setItensEditados(prev => ({
+                                          ...prev,
+                                          [itemId]: {
+                                            ...prev[itemId] || { quantidade: item.quantidade_disponivel },
+                                            valor_unitario: novoValor
+                                          }
+                                        }));
+                                      }}
+                                      placeholder="0,00"
+                                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Total Calculado
+                                    </label>
+                                    <div className="w-full px-2 py-1 text-sm border border-gray-200 rounded bg-blue-50 font-semibold text-blue-800">
+                                      {formatCurrency(totalCalculado)}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -572,11 +882,11 @@ const Financeiro = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Material">Material</SelectItem>
-                              <SelectItem value="Ferramentas">Ferramentas</SelectItem>
-                              <SelectItem value="Logística">Logística</SelectItem>
-                              <SelectItem value="Material Elétrico">Material Elétrico</SelectItem>
-                              <SelectItem value="Outros">Outros</SelectItem>
+                              {categorias.filter(cat => cat.ativa).map(categoria => (
+                                <SelectItem key={categoria.id} value={categoria.nome}>
+                                  {categoria.nome}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -641,27 +951,56 @@ const Financeiro = () => {
                     />
                   </div>
 
+                  {/* Upload de Comprovante */}
+                  <FormField
+                    control={form.control}
+                    name="comprovante"
+                    render={({ field: { onChange, value, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Comprovante ou Nota Fiscal *</FormLabel>
+                        <FormControl>
+                          <div className="space-y-2">
+                            <Input
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.pdf"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  onChange(file);
+                                  await handleFileUpload(file);
+                                }
+                              }}
+                              className="cursor-pointer"
+                              {...field}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Aceita imagens (JPG, PNG) e PDF. Máximo 10MB.
+                            </p>
+                            {form.watch("comprovante_url") && (
+                              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded">
+                                <FileText className="h-4 w-4" />
+                                <span>Comprovante enviado com sucesso</span>
+                                <a
+                                  href={form.watch("comprovante_url")}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline hover:text-green-700"
+                                >
+                                  Visualizar
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Campos preparatórios n8n - Opcional */}
                   <div className="border-t pt-4">
                     <h3 className="text-sm font-medium text-muted-foreground mb-3">Campos para Automação (Opcional)</h3>
                     <div className="grid grid-cols-1 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="comprovante_url"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL do Comprovante</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Link do comprovante digitalizado"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
@@ -718,53 +1057,6 @@ const Financeiro = () => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="comprovante"
-                    render={({ field: { onChange, value, ...field } }) => (
-                      <FormItem>
-                        <FormLabel>Comprovante (Upload)</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            <Input
-                              type="file"
-                              accept="image/jpeg,image/png,application/pdf"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  onChange(file);
-                                  await handleFileUpload(file);
-                                }
-                              }}
-                              {...field}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Aceita imagens (JPG, PNG) e PDF. Este arquivo será processado pela automação.
-                            </p>
-                            {form.watch("comprovante_url") && (
-                              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded">
-                                <FileText className="h-4 w-4" />
-                                <span>Comprovante integrado com automação</span>
-                              </div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Seletor de Produtos da Requisição */}
-                  {requisicaoAtual && requisicaoAtual.itens_produtos && (
-                    <div className="pt-4">
-                      <SeletorProdutos
-                        itensRequisicao={requisicaoAtual.itens_produtos as ItemCarrinho[]}
-                        itensSelecionados={selectedItens}
-                        onSelecaoChange={setSelectedItens}
-                      />
-                    </div>
-                  )}
-
                   </div>
                   
                   <div className="form-actions">
@@ -791,7 +1083,7 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Total do Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDespesas)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalDespesas)}</div>
             <p className="text-xs text-muted-foreground mt-1">{despesas.length} despesas registradas</p>
           </CardContent>
         </Card>
@@ -800,7 +1092,7 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasPendentes)}</div>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(despesasPendentes)}</div>
             <p className="text-xs text-muted-foreground mt-1">{despesas.filter(d => d.status === "pendente").length} validação(ões) pendente(s)</p>
           </CardContent>
         </Card>
@@ -809,7 +1101,7 @@ const Financeiro = () => {
             <CardTitle className="text-sm font-medium">Validados</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasValidadas)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(despesasValidadas)}</div>
             <p className="text-xs text-muted-foreground mt-1">{despesas.filter(d => d.status === "validado").length} despesa(s) aprovada(s)</p>
           </CardContent>
         </Card>
@@ -831,7 +1123,7 @@ const Financeiro = () => {
                   <div key={categoria} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{categoria}</span>
                     <span className="font-medium">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor as number)}
+                      {formatCurrency(valor)}
                     </span>
                   </div>
                 ))
@@ -854,7 +1146,7 @@ const Financeiro = () => {
                   <div key={cliente} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{cliente}</span>
                     <span className="font-medium">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor as number)}
+                      {formatCurrency(valor)}
                     </span>
                   </div>
                 ))
@@ -1035,17 +1327,53 @@ const Financeiro = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valor || 0)}
+                    <div className="text-xl font-bold mb-2">
+                      {formatCurrency(despesa.valor)}
                     </div>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="text-primary"
-                      onClick={() => navigate(`/despesas-detalhes?obra=${encodeURIComponent(despesa.obra?.nome || '')}`)}
-                    >
-                      Ver detalhes
-                    </Button>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingDespesa(despesa);
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={async () => {
+                          if (window.confirm('Tem certeza que deseja excluir esta despesa?')) {
+                            try {
+                              await deleteDespesa(despesa.id);
+                              toast({
+                                title: "Despesa excluída",
+                                description: "A despesa foi excluída com sucesso.",
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Erro ao excluir",
+                                description: "Não foi possível excluir a despesa.",
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-primary"
+                        onClick={() => navigate(`/despesas-detalhes?obra=${encodeURIComponent(despesa.obra?.nome || '')}`)}
+                      >
+                        Ver detalhes
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -1053,6 +1381,123 @@ const Financeiro = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Edição de Despesa */}
+      <Dialog open={editOpen} onOpenChange={(open) => {
+        setEditOpen(open);
+        if (!open) {
+          setEditingDespesa(null);
+          editForm.reset();
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Despesa</DialogTitle>
+            <DialogDescription>
+              Edite os dados da despesa selecionada.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="categoria"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Material">Material</SelectItem>
+                          <SelectItem value="Ferramentas">Ferramentas</SelectItem>
+                          <SelectItem value="Logística">Logística</SelectItem>
+                          <SelectItem value="Material Elétrico">Material Elétrico</SelectItem>
+                          <SelectItem value="Outros">Outros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="valor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="R$ 0,00"
+                        onChange={(e) => {
+                          const formatted = currencyMask(e.target.value);
+                          field.onChange(formatted);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="fornecedor_cnpj"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CNPJ do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="00.000.000/0000-00" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="numero_documento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número do Documento</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="NF-001, REC-123, etc." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="observacao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observação</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Observações adicionais..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1">
+                  Salvar Alterações
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

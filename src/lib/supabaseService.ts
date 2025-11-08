@@ -12,6 +12,8 @@ const TABLE_MAP = {
   'engflow_despesas': 'despesas',
   'engflow_videos': 'videos',
   'engflow_requisicoes': 'requisicoes',
+  'engflow_categorias': 'categorias',
+  'engflow_itens_requisicao': 'itens_requisicao',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
@@ -197,13 +199,14 @@ export class SupabaseService {
         funcionario_solicitante_id: item.funcionario_solicitante_id || item.funcionario_solicitante || null,
         // Garante que datas sejam strings se fornecidas
         data_vencimento: item.data_vencimento || null,
-        // Se houver itens do carrinho, salva no campo itens_produtos como JSONB
-        itens_produtos: item.itens_produtos || null
+        // REMOVIDO: itens_produtos agora vai para tabela separada itens_requisicao
       }
 
       // Remove campos com nomenclatura incorreta se existirem
       delete transformed.funcionario_responsavel;
       delete transformed.funcionario_solicitante;
+      // Remove campo que não existe mais na tabela
+      delete transformed.itens_produtos;
 
       return transformed
     }
@@ -506,4 +509,6 @@ export const SUPABASE_KEYS = {
   DESPESAS: 'engflow_despesas',
   REQUISICOES: 'engflow_requisicoes',
   VIDEOS: 'engflow_videos',
+  CATEGORIAS: 'engflow_categorias',
+  ITENS_REQUISICAO: 'engflow_itens_requisicao',
 } as const

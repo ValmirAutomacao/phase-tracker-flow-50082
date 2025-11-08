@@ -1,1033 +1,280 @@
-import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
-  Edit,
   FileText,
+  Package,
+  Calendar,
+  Building,
+  User,
+  Receipt,
   CheckCircle,
   Clock,
-  AlertCircle,
-  Trash2,
-  Plus,
-  ShoppingCart,
-  Receipt,
+  AlertTriangle,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { STORAGE_KEYS, getFromStorage, addToStorage, updateInStorage, deleteFromStorage } from "@/lib/localStorage";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-const despesaSchema = z.object({
-  requisicao_id: z.string().optional(),
-  fornecedor: z.string().min(1, "Fornecedor é obrigatório"),
-  cnpj: z.string().min(1, "CNPJ é obrigatório"),
-  data: z.string().min(1, "Data é obrigatória"),
-  hora: z.string().min(1, "Hora é obrigatória"),
-  formaPagamento: z.string().min(1, "Forma de pagamento é obrigatória"),
-  tipoParcela: z.string().min(1, "Tipo de parcela é obrigatório"),
-  quantidadeParcelas: z.string().min(1, "Quantidade de parcelas é obrigatória"),
-  valorParcela: z.string().min(1, "Valor da parcela é obrigatório"),
-  bandeira: z.string().min(1, "Bandeira é obrigatória"),
-  categoria: z.string().min(1, "Categoria é obrigatória"),
-  responsavel: z.string().min(1, "Responsável é obrigatório"),
-  status: z.string().min(1, "Status é obrigatório"),
-  imagemComprovante: z.string().optional(),
-  observacoes: z.string().optional(),
-  itens_relacionados: z.array(z.object({
-    id: z.string(),
-    nome: z.string(),
-    quantidade: z.number(),
-    valor_unitario: z.number().optional(),
-    comprado: z.boolean(),
-  })).optional(),
-});
-
-type DespesaFormData = z.infer<typeof despesaSchema>;
-
-interface Despesa {
-  id: string;
-  requisicao_id?: string;
-  fornecedor: string;
-  cnpj: string;
-  data: string;
-  hora: string;
-  formaPagamento: string;
-  tipoParcela: string;
-  quantidadeParcelas: number;
-  valorParcela: number;
-  bandeira: string;
-  categoria: string;
-  status: string;
-  responsavel: string;
-  imagemComprovante?: string;
-  observacoes?: string;
-  itens_relacionados?: Array<{
-    id: string;
-    nome: string;
-    quantidade: number;
-    valor_unitario?: number;
-    comprado: boolean;
-  }>;
-}
-
-interface Requisicao {
-  id: string;
-  titulo: string;
-  obra_id: string;
-  funcionario_solicitante_id: string;
-  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
-  itens_produtos?: Array<{
-    id: string;
-    nome: string;
-    quantidade: number;
-    valor_unitario?: number;
-    comprado: boolean;
-  }>;
-}
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { formatCurrency } from "@/lib/utils";
 
 const DespesasDetalhes = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const obraId = searchParams.get("obra");
+  const [searchParams] = useSearchParams();
+  const obraParam = searchParams.get('obra');
+  const despesaParam = searchParams.get('despesa');
 
-  const [openEdit, setOpenEdit] = useState(false);
-  const [openNew, setOpenNew] = useState(false);
-  const [selectedDespesa, setSelectedDespesa] = useState<Despesa | null>(null);
-  const [selectedRequisicao, setSelectedRequisicao] = useState<string | undefined>(undefined);
+  // Buscar dados
+  const { data: despesas = [] } = useSupabaseQuery<any>('DESPESAS');
+  const { data: itensRequisicao = [] } = useSupabaseQuery<any>('ITENS_REQUISICAO');
+  const { data: clientes = [] } = useSupabaseQuery<any>('CLIENTES');
+  const { data: obras = [] } = useSupabaseQuery<any>('OBRAS');
 
-  const [despesas, setDespesas] = useState<Despesa[]>([]);
-  const [requisicoes, setRequisicoes] = useState<Requisicao[]>([]);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const storedDespesas = getFromStorage<Despesa>(STORAGE_KEYS.DESPESAS);
-    const storedRequisicoes = getFromStorage<Requisicao>(STORAGE_KEYS.REQUISICOES);
-    setDespesas(storedDespesas);
-    setRequisicoes(storedRequisicoes.filter(req =>
-      obraId ? req.obra_id === obraId : true
-    ));
-  }, [obraId]);
-
-  const form = useForm<DespesaFormData>({
-    resolver: zodResolver(despesaSchema),
-    defaultValues: {
-      requisicao_id: undefined,
-      fornecedor: "",
-      cnpj: "",
-      data: "",
-      hora: "",
-      formaPagamento: undefined,
-      tipoParcela: undefined,
-      quantidadeParcelas: "1",
-      valorParcela: "",
-      bandeira: undefined,
-      categoria: "",
-      responsavel: "",
-      status: "pendente",
-      imagemComprovante: "",
-      observacoes: "",
-      itens_relacionados: [],
-    },
-  });
-
-
-  const handleCreate = (data: DespesaFormData) => {
-    const requisicaoSelecionada = requisicoes.find(r => r.id === data.requisicao_id);
-
-    const novaDespesa: Despesa = {
-      id: crypto.randomUUID(),
-      requisicao_id: data.requisicao_id,
-      fornecedor: data.fornecedor,
-      cnpj: data.cnpj,
-      data: data.data,
-      hora: data.hora,
-      formaPagamento: data.formaPagamento,
-      tipoParcela: data.tipoParcela,
-      quantidadeParcelas: parseInt(data.quantidadeParcelas),
-      valorParcela: parseFloat(data.valorParcela),
-      bandeira: data.bandeira,
-      categoria: data.categoria,
-      status: data.status,
-      responsavel: data.responsavel,
-      imagemComprovante: data.imagemComprovante,
-      observacoes: data.observacoes,
-      itens_relacionados: requisicaoSelecionada?.itens_produtos || [],
-    };
-
-    const updated = addToStorage<Despesa>(STORAGE_KEYS.DESPESAS, novaDespesa);
-    setDespesas(updated);
-    setOpenNew(false);
-    form.reset();
-    setSelectedRequisicao(undefined);
-
-    toast({
-      title: "Nova despesa criada!",
-      description: "A despesa foi registrada com sucesso.",
-    });
-  };
-
-  const handleEdit = (data: DespesaFormData) => {
-    if (!selectedDespesa) return;
-
-    const updated = updateInStorage<Despesa>(STORAGE_KEYS.DESPESAS, selectedDespesa.id.toString(), {
-      requisicao_id: data.requisicao_id,
-      fornecedor: data.fornecedor,
-      cnpj: data.cnpj,
-      data: data.data,
-      hora: data.hora,
-      formaPagamento: data.formaPagamento,
-      tipoParcela: data.tipoParcela,
-      quantidadeParcelas: parseInt(data.quantidadeParcelas),
-      valorParcela: parseFloat(data.valorParcela),
-      bandeira: data.bandeira,
-      categoria: data.categoria,
-      status: data.status,
-      responsavel: data.responsavel,
-      imagemComprovante: data.imagemComprovante,
-      observacoes: data.observacoes,
-      itens_relacionados: data.itens_relacionados,
-    });
-
-    setDespesas(updated);
-    setOpenEdit(false);
-    setSelectedDespesa(null);
-    form.reset();
-    toast({
-      title: "Despesa atualizada!",
-      description: "As alterações foram salvas com sucesso.",
-    });
-  };
-
-  const handleDelete = () => {
-    if (deleteId) {
-      const updated = deleteFromStorage<Despesa>(STORAGE_KEYS.DESPESAS, deleteId);
-      setDespesas(updated);
-      toast({
-        title: "Despesa excluída!",
-        description: "A despesa foi removida com sucesso.",
-      });
-      setDeleteId(null);
+  // Filtrar despesas por obra ou despesa específica
+  const despesasFiltradas = useMemo(() => {
+    if (despesaParam) {
+      return despesas.filter(d => d.id === despesaParam);
     }
-  };
-
-  const openEditDialog = (despesa: Despesa) => {
-    setSelectedDespesa(despesa);
-    form.reset({
-      requisicao_id: despesa.requisicao_id || "",
-      fornecedor: despesa.fornecedor,
-      cnpj: despesa.cnpj,
-      data: despesa.data,
-      hora: despesa.hora,
-      formaPagamento: despesa.formaPagamento,
-      tipoParcela: despesa.tipoParcela,
-      quantidadeParcelas: despesa.quantidadeParcelas.toString(),
-      valorParcela: despesa.valorParcela.toString(),
-      bandeira: despesa.bandeira,
-      categoria: despesa.categoria,
-      responsavel: despesa.responsavel,
-      status: despesa.status,
-      imagemComprovante: despesa.imagemComprovante,
-      observacoes: despesa.observacoes || "",
-      itens_relacionados: despesa.itens_relacionados || [],
-    });
-    setOpenEdit(true);
-  };
-
-  const openNewDialog = () => {
-    form.reset();
-    setSelectedRequisicao(undefined);
-    setOpenNew(true);
-  };
-
-  const handleRequisicaoChange = (requisicaoId: string) => {
-    setSelectedRequisicao(requisicaoId);
-    const requisicao = requisicoes.find(r => r.id === requisicaoId);
-
-    if (requisicao) {
-      form.setValue('requisicao_id', requisicaoId);
-      form.setValue('categoria', 'Material'); // Categoria padrão para requisições
-      form.setValue('itens_relacionados', requisicao.itens_produtos || []);
+    if (obraParam) {
+      return despesas.filter(d => d.obra?.nome === obraParam);
     }
-  };
+    return despesas;
+  }, [despesas, obraParam, despesaParam]);
+
+  // Enriquecer despesas com dados de relacionamento
+  const despesasEnriquecidas = useMemo(() => {
+    return despesasFiltradas.map(despesa => {
+      const cliente = clientes.find(c => c.id === despesa.cliente_id);
+      const obra = obras.find(o => o.id === despesa.obra_id);
+
+      // Buscar itens da requisição
+      const itens = itensRequisicao.filter(item => item.requisicao_id === despesa.requisicao_id);
+
+      return {
+        ...despesa,
+        cliente,
+        obra,
+        itens
+      };
+    });
+  }, [despesasFiltradas, clientes, obras, itensRequisicao]);
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
-      validado: { 
-        label: "Validado", 
-        className: "bg-green-100 text-green-700 hover:bg-green-100",
-        icon: CheckCircle
-      },
-      pendente: { 
-        label: "Pendente", 
-        className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
-        icon: Clock
-      },
-      rejeitado: { 
-        label: "Rejeitado", 
-        className: "bg-red-100 text-red-700 hover:bg-red-100",
-        icon: AlertCircle
-      },
+    const statusConfig = {
+      pendente: { color: "bg-yellow-100 text-yellow-800", icon: Clock, label: "Pendente" },
+      validado: { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Validado" },
+      rejeitado: { color: "bg-red-100 text-red-800", icon: AlertTriangle, label: "Rejeitado" }
     };
-    
-    const variant = variants[status];
-    const IconComponent = variant.icon;
-    
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pendente;
+    const IconComponent = config.icon;
+
     return (
-      <Badge className={variant.className as any}>
-        <IconComponent className="h-3 w-3 mr-1" />
-        {variant.label}
+      <Badge className={`${config.color} flex items-center gap-1`}>
+        <IconComponent className="h-3 w-3" />
+        {config.label}
       </Badge>
     );
   };
 
-  const totalDespesas = despesas.reduce((acc, d) => acc + (d.valorParcela * d.quantidadeParcelas), 0);
-  const despesasValidadas = despesas.filter(d => d.status === "validado").reduce((acc, d) => acc + (d.valorParcela * d.quantidadeParcelas), 0);
-  const despesasPendentes = despesas.filter(d => d.status === "pendente").reduce((acc, d) => acc + (d.valorParcela * d.quantidadeParcelas), 0);
+  const calcularValorItens = (itens: any[]) => {
+    return itens.reduce((total, item) => {
+      const quantidade = Number(item.quantidade) || 0;
+      const valorUnitario = Number(item.valor_unitario) || 0;
+      return total + (quantidade * valorUnitario);
+    }, 0);
+  };
+
+  if (despesasEnriquecidas.length === 0) {
+    return (
+      <div className="flex-1 p-4 md:p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" size="sm" onClick={() => navigate('/financeiro')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <h1 className="text-2xl font-bold">Detalhes de Despesas</h1>
+        </div>
+
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                Nenhuma despesa encontrada para os filtros aplicados.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Despesas - {obraId || "Geral"}</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Gerenciamento de despesas da obra</p>
-          </div>
-        </div>
-        <Button onClick={openNewDialog} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Despesa
+    <div className="flex-1 p-4 md:p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="outline" size="sm" onClick={() => navigate('/financeiro')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
         </Button>
+        <h1 className="text-2xl font-bold">
+          Detalhes de Despesas
+          {obraParam && ` - ${obraParam}`}
+        </h1>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Total de Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDespesas)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{despesas.length} despesas registradas</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              Validadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasValidadas)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">despesas aprovadas</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              Pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-yellow-600">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesasPendentes)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">aguardando validação</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Expenses List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Despesas</CardTitle>
-          <CardDescription>Todas as despesas desta obra</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {despesas.length === 0 ? (
-              <div className="text-center py-8">
-                <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <p className="text-muted-foreground">Nenhuma despesa registrada ainda</p>
-                <p className="text-sm text-muted-foreground">Clique em "Nova Despesa" para começar</p>
+      <div className="space-y-6">
+        {despesasEnriquecidas.map((despesa) => (
+          <Card key={despesa.id} className="overflow-hidden">
+            <CardHeader className="bg-muted/50">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Despesa - {despesa.categoria || 'Sem categoria'}
+                  </CardTitle>
+                  <CardDescription>
+                    Criada em {new Date(despesa.created_at || despesa.data_despesa || '').toLocaleDateString('pt-BR')}
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  {getStatusBadge(despesa.status || 'pendente')}
+                  <div className="text-2xl font-bold mt-2">
+                    {formatCurrency(despesa.valor)}
+                  </div>
+                </div>
               </div>
-            ) : (
-              despesas.map((despesa) => {
-                const requisicaoRelacionada = requisicoes.find(r => r.id === despesa.requisicao_id);
+            </CardHeader>
 
-                return (
-                  <div
-                    key={despesa.id}
-                    className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
-                  >
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                          <h4 className="font-semibold truncate">{despesa.fornecedor}</h4>
-                          <div className="flex gap-2">
-                            {getStatusBadge(despesa.status)}
-                            {requisicaoRelacionada && (
-                              <Badge variant="outline" className="text-xs">
-                                <ShoppingCart className="h-3 w-3 mr-1" />
-                                Requisição
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+            <CardContent className="space-y-6 p-6">
+              {/* Informações Básicas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Cliente:</span>
+                    <span>{despesa.cliente?.nome || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Obra:</span>
+                    <span>{despesa.obra?.nome || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Data:</span>
+                    <span>{new Date(despesa.data_despesa).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </div>
 
-                        {/* Informações da requisição relacionada */}
-                        {requisicaoRelacionada && (
-                          <div className="mb-2 p-2 bg-blue-50 rounded text-sm">
-                            <p className="font-medium text-blue-900">
-                              Requisição: {requisicaoRelacionada.titulo}
-                            </p>
-                            {despesa.itens_relacionados && despesa.itens_relacionados.length > 0 && (
-                              <p className="text-blue-700 text-xs">
-                                {despesa.itens_relacionados.length} itens relacionados
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <div className="flex flex-wrap gap-4">
-                            <span>CNPJ: {despesa.cnpj}</span>
-                            <span>Bandeira: {despesa.bandeira}</span>
-                          </div>
-                          <p>{despesa.formaPagamento} - {despesa.quantidadeParcelas}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela)}</p>
-                          <div className="flex flex-wrap gap-4">
-                            <span>Categoria: {despesa.categoria}</span>
-                            <span>Responsável: {despesa.responsavel}</span>
-                          </div>
-                          <p>Data: {new Date(despesa.data).toLocaleDateString('pt-BR')} às {despesa.hora}</p>
-                          {despesa.observacoes && (
-                            <p className="text-xs bg-gray-50 p-2 rounded mt-2">{despesa.observacoes}</p>
-                          )}
-                        </div>
-                      </div>
+                <div className="space-y-3">
+                  {despesa.fornecedor_cnpj && (
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">CNPJ Fornecedor:</span>
+                      <span>{despesa.fornecedor_cnpj}</span>
                     </div>
+                  )}
+                  {despesa.numero_documento && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Documento:</span>
+                      <span>{despesa.numero_documento}</span>
+                    </div>
+                  )}
+                  {despesa.observacao && (
+                    <div className="flex items-start gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <span className="font-medium">Observação:</span>
+                      <span className="text-sm">{despesa.observacao}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground mb-1">Total</div>
-                        <div className="text-xl font-bold">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(despesa.valorParcela * despesa.quantidadeParcelas)}
+              {/* Comprovante */}
+              {despesa.comprovante_url && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      Comprovante
+                    </h3>
+                    <div className="border rounded-lg p-4 bg-muted/50">
+                      <a
+                        href={despesa.comprovante_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Ver comprovante
+                      </a>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Itens da Requisição */}
+              {despesa.itens && despesa.itens.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Itens da Requisição ({despesa.itens.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {despesa.itens.map((item: any, index: number) => (
+                        <div key={item.id || index} className="border rounded-lg p-4 bg-muted/50">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Número</p>
+                              <p className="font-medium">{item.numero}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Descrição</p>
+                              <p className="font-medium">{item.descricao}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Qtd.</p>
+                                <p className="font-medium">{item.quantidade} {item.unidade_medida}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Valor Unit.</p>
+                                <p className="font-medium">{formatCurrency(item.valor_unitario)}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Total</p>
+                              <p className="font-bold text-lg">
+                                {formatCurrency(Number(item.quantidade) * Number(item.valor_unitario))}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="outline" size="sm" onClick={() => openEditDialog(despesa)} className="flex-1 sm:flex-none">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setDeleteId(despesa.id.toString())} className="shrink-0">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                      ))}
+
+                      {/* Total dos Itens */}
+                      <div className="border-t pt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">Total dos Itens:</span>
+                          <span className="text-xl font-bold">
+                            {formatCurrency(calcularValorItens(despesa.itens))}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-
-      {/* New Expense Dialog */}
-      <Dialog open={openNew} onOpenChange={setOpenNew}>
-        <DialogContent className="dialog-content-mobile">
-          <DialogHeader className="dialog-header">
-            <DialogTitle>Nova Despesa</DialogTitle>
-            <DialogDescription>
-              Registre uma nova despesa, opcionalmente vinculada a uma requisição
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreate)} className="flex flex-col h-full">
-              <div className="dialog-form-container space-y-4">
-              {/* Seleção de Requisição */}
-              <FormField
-                control={form.control}
-                name="requisicao_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Requisição (Opcional)</FormLabel>
-                    <Select onValueChange={handleRequisicaoChange} value={selectedRequisicao || undefined}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma requisição para vincular" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {requisicoes.map(req => (
-                          <SelectItem key={req.id} value={req.id}>
-                            {req.titulo} ({req.status})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Resto do formulário aqui será adicionado */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fornecedor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fornecedor (Estabelecimento)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do estabelecimento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cnpj"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CNPJ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00.000.000/0000-00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="data"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data da Compra</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="hora"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hora da Compra</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="formaPagamento"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Crédito à vista">Crédito à vista</SelectItem>
-                          <SelectItem value="Crédito parcelado">Crédito parcelado</SelectItem>
-                          <SelectItem value="Débito">Débito</SelectItem>
-                          <SelectItem value="PIX">PIX</SelectItem>
-                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                          <SelectItem value="Transferência">Transferência</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bandeira"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Visa">Visa</SelectItem>
-                          <SelectItem value="Mastercard">Mastercard</SelectItem>
-                          <SelectItem value="Elo">Elo</SelectItem>
-                          <SelectItem value="American Express">American Express</SelectItem>
-                          <SelectItem value="Hipercard">Hipercard</SelectItem>
-                          <SelectItem value="N/A">Não se aplica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="tipoParcela"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="À vista">À vista</SelectItem>
-                          <SelectItem value="Parcelado">Parcelado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quantidadeParcelas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantidade de Parcelas</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="1" placeholder="1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="valorParcela"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor da Parcela (R$)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="categoria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Material, Equipamento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="responsavel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Responsável</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do responsável" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pendente">Pendente</SelectItem>
-                          <SelectItem value="validado">Validado</SelectItem>
-                          <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Informações adicionais sobre a despesa..." rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="imagemComprovante"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Imagem do Comprovante (URL)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="URL da imagem do comprovante" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              </div>
-
-              <div className="form-actions">
-                <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Criar Despesa</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="dialog-content-mobile">
-          <DialogHeader className="dialog-header">
-            <DialogTitle>Editar Despesa</DialogTitle>
-            <DialogDescription>
-              Atualize as informações da despesa
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEdit)} className="flex flex-col h-full">
-              <div className="dialog-form-container space-y-4">
-              {/* Mesmo layout do formulário de criação */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fornecedor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fornecedor (Estabelecimento)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do estabelecimento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cnpj"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CNPJ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00.000.000/0000-00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="data"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data da Compra</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="hora"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hora da Compra</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="formaPagamento"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Forma de Pagamento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Crédito à vista">Crédito à vista</SelectItem>
-                          <SelectItem value="Crédito parcelado">Crédito parcelado</SelectItem>
-                          <SelectItem value="Débito">Débito</SelectItem>
-                          <SelectItem value="PIX">PIX</SelectItem>
-                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                          <SelectItem value="Transferência">Transferência</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bandeira"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bandeira</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Visa">Visa</SelectItem>
-                          <SelectItem value="Mastercard">Mastercard</SelectItem>
-                          <SelectItem value="Elo">Elo</SelectItem>
-                          <SelectItem value="American Express">American Express</SelectItem>
-                          <SelectItem value="Hipercard">Hipercard</SelectItem>
-                          <SelectItem value="N/A">Não se aplica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="tipoParcela"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Parcela</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="À vista">À vista</SelectItem>
-                          <SelectItem value="Parcelado">Parcelado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quantidadeParcelas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantidade de Parcelas</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="1" placeholder="1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="valorParcela"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor da Parcela (R$)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="categoria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Material, Equipamento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="responsavel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Responsável</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do responsável" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pendente">Pendente</SelectItem>
-                          <SelectItem value="validado">Validado</SelectItem>
-                          <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Informações adicionais sobre a despesa..." rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="imagemComprovante"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Imagem do Comprovante (URL)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="URL da imagem do comprovante" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              </div>
-
-              <div className="form-actions">
-                <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Salvar Alterações</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

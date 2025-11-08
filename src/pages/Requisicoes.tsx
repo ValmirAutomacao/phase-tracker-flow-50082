@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, Trash2, User, Building, ThumbsUp, ThumbsDown, Edit } from "lucide-react";
+import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, Trash2, User, Building, ThumbsUp, ThumbsDown, Edit, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
@@ -87,13 +87,18 @@ const Requisicoes = () => {
   const [open, setOpen] = useState(false);
   const [editingRequisicao, setEditingRequisicao] = useState<RequisicaoItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewDetailsId, setViewDetailsId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState<string>("all");
   const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([]);
 
   // Hooks Supabase para substituir localStorage
-  const { data: requisicoes = [], isLoading, error } = useOptimizedSupabaseQuery<any>('REQUISICOES');
+  const { data: requisicoes = [], isLoading, error } = useSupabaseQuery<any>('REQUISICOES');
   const { add, update, delete: deleteRequisicao } = useSupabaseCRUD<any>('REQUISICOES');
+
+  // Hook para itens das requisições
+  const { data: itensRequisicao = [] } = useSupabaseQuery<any>('ITENS_REQUISICAO');
+  const crudItens = useSupabaseCRUD<any>('ITENS_REQUISICAO');
 
   // Hook de permissões para controlar ações
   const { hasAnyPermission } = usePermissions();
@@ -102,29 +107,45 @@ const Requisicoes = () => {
   const podeExcluir = hasAnyPermission(['deletar_compras']);
 
   // Query para obras (para dropdown)
-  const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
+  const { data: obras = [] } = useSupabaseQuery<any>('OBRAS');
 
   // Query para funcionários (para dropdown)
-  const { data: funcionarios = [] } = useOptimizedSupabaseQuery<any>('FUNCIONARIOS');
+  const { data: funcionarios = [] } = useSupabaseQuery<any>('FUNCIONARIOS');
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      deleteRequisicao.mutate(deleteId, {
-        onSuccess: () => {
-          toast({
-            title: "Requisição excluída!",
-            description: "A requisição foi removida com sucesso.",
-          });
-          setDeleteId(null);
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro ao excluir requisição",
-            description: error.message || "Tente novamente em alguns instantes.",
-            variant: "destructive",
-          });
-        },
-      });
+      try {
+        // Primeiro excluir itens relacionados
+        const itensParaExcluir = itensRequisicao.filter(item => item.requisicao_id === deleteId);
+        const deleteItensPromises = itensParaExcluir.map(item =>
+          crudItens.delete.mutateAsync(item.id)
+        );
+        await Promise.all(deleteItensPromises);
+
+        // Depois excluir a requisição
+        deleteRequisicao.mutate(deleteId, {
+          onSuccess: () => {
+            toast({
+              title: "Requisição excluída!",
+              description: "A requisição foi removida com sucesso.",
+            });
+            setDeleteId(null);
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao excluir requisição",
+              description: error.message || "Tente novamente em alguns instantes.",
+              variant: "destructive",
+            });
+          },
+        });
+      } catch (error) {
+        toast({
+          title: "Erro ao excluir itens",
+          description: "Não foi possível excluir os itens da requisição.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -185,7 +206,6 @@ const Requisicoes = () => {
       funcionario_responsavel_id: data.funcionario_responsavel_id || null,
       observacoes: data.observacoes || null,
       anexos: null,
-      itens_produtos: itensCarrinho,
     };
 
     if (editingRequisicao) {
@@ -193,7 +213,34 @@ const Requisicoes = () => {
       update.mutate(
         { id: editingRequisicao.id, updates: requisicaoData as any },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            // Excluir itens antigos e adicionar novos
+            try {
+              // Excluir itens existentes da requisição
+              const itensExistentes = itensRequisicao.filter(item => item.requisicao_id === editingRequisicao.id);
+              const deletePromises = itensExistentes.map(item =>
+                crudItens.delete.mutateAsync(item.id)
+              );
+              await Promise.all(deletePromises);
+
+              // Adicionar novos itens
+              const addPromises = itensCarrinho.map((item, index) =>
+                crudItens.add.mutateAsync({
+                  requisicao_id: editingRequisicao.id,
+                  numero: String(index + 1),
+                  descricao: item.nome,
+                  quantidade: item.quantidade,
+                  unidade_medida: 'Un',
+                  valor_unitario: item.valor_unitario || 0,
+                  comprado: false
+                })
+              );
+              await Promise.all(addPromises);
+
+            } catch (error) {
+              console.error('Erro ao atualizar itens:', error);
+            }
+
             toast({
               title: "Requisição atualizada!",
               description: "A requisição foi atualizada com sucesso.",
@@ -220,11 +267,35 @@ const Requisicoes = () => {
       };
 
       add.mutate(novaRequisicao, {
-        onSuccess: () => {
-          toast({
-            title: "Requisição criada!",
-            description: "A requisição foi criada com sucesso e está aguardando aprovação.",
-          });
+        onSuccess: async (requisicaoCriada) => {
+          try {
+            // Adicionar itens do carrinho à nova tabela itens_requisicao
+            const addPromises = itensCarrinho.map((item, index) =>
+              crudItens.add.mutateAsync({
+                requisicao_id: requisicaoCriada.id,
+                numero: String(index + 1),
+                descricao: item.nome,
+                quantidade: item.quantidade,
+                unidade_medida: 'Un',
+                valor_unitario: item.valor_unitario || 0,
+                comprado: false
+              })
+            );
+            await Promise.all(addPromises);
+
+            toast({
+              title: "Requisição criada!",
+              description: "A requisição foi criada com sucesso e está aguardando aprovação.",
+            });
+          } catch (error) {
+            console.error('Erro ao adicionar itens:', error);
+            toast({
+              title: "Requisição criada com aviso",
+              description: "A requisição foi criada, mas houve erro ao salvar os itens.",
+              variant: "destructive",
+            });
+          }
+
           setOpen(false);
           form.reset();
           setItensCarrinho([]);
@@ -284,7 +355,8 @@ const Requisicoes = () => {
       return;
     }
 
-    handleStatusChange(id, "aprovada");
+    // Quando aprovada, fica como "aberta" para permitir despesas
+    handleStatusChange(id, "aberta");
   };
 
   const handleRecusar = (id: string) => {
@@ -311,7 +383,15 @@ const Requisicoes = () => {
     }
 
     setEditingRequisicao(requisicao);
-    setItensCarrinho(requisicao.itens_produtos || []);
+    // Buscar itens da nova tabela itens_requisicao
+    const itensReq = itensRequisicao.filter(item => item.requisicao_id === requisicao.id);
+    const itensCarrinhoFormat = itensReq.map(item => ({
+      id: item.id,
+      nome: item.descricao,
+      quantidade: item.quantidade,
+      valor_unitario: item.valor_unitario || 0
+    }));
+    setItensCarrinho(itensCarrinhoFormat);
     form.reset({
       obra_id: requisicao.obra_id,
       funcionario_solicitante_id: requisicao.funcionario_solicitante_id,
@@ -331,20 +411,15 @@ const Requisicoes = () => {
         className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
         icon: Clock
       },
+      aberta: {
+        label: "Aberta",
+        className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
+        icon: AlertTriangle
+      },
       aprovada: {
         label: "Aprovada",
         className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
         icon: CheckCircle
-      },
-      aberta: {
-        label: "Aberta",
-        className: "bg-purple-100 text-purple-700 hover:bg-purple-100",
-        icon: AlertTriangle
-      },
-      em_andamento: {
-        label: "Em Andamento",
-        className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
-        icon: AlertTriangle
       },
       concluida: {
         label: "Concluída",
@@ -548,7 +623,7 @@ const Requisicoes = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Funcionário Responsável</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o responsável (opcional)" />
@@ -634,13 +709,13 @@ const Requisicoes = () => {
         <div className="col-12 col-sm-6 col-lg-3">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+              <CardTitle className="text-sm font-medium">Abertas</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {requisicoes.filter(r => r.status === "em_andamento").length}
+                {requisicoes.filter(r => r.status === "aberta").length}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">em execução</p>
+              <p className="text-xs text-muted-foreground mt-1">disponíveis para despesas</p>
             </CardContent>
           </Card>
         </div>
@@ -686,7 +761,8 @@ const Requisicoes = () => {
                   <SelectContent>
                     <SelectItem value="all">Todos os Status</SelectItem>
                     <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                    <SelectItem value="aberta">Aberta</SelectItem>
+                    <SelectItem value="aprovada">Aprovada</SelectItem>
                     <SelectItem value="concluida">Concluída</SelectItem>
                     <SelectItem value="cancelada">Cancelada</SelectItem>
                   </SelectContent>
@@ -823,8 +899,8 @@ const Requisicoes = () => {
                       </>
                     )}
 
-                    {/* Botões de controle de status (para requisições já aprovadas) */}
-                    {req.status === "em_andamento" && (
+                    {/* Botões de controle de status (para requisições abertas) */}
+                    {req.status === "aberta" && podeAprovar && (
                       <>
                         <Button
                           variant="outline"
@@ -833,7 +909,7 @@ const Requisicoes = () => {
                           className="text-green-600 hover:text-green-700 w-full sm:w-auto"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
-                          Concluir
+                          Marcar como Concluída
                         </Button>
                       </>
                     )}
@@ -849,6 +925,17 @@ const Requisicoes = () => {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
+
+                    {/* Botão de ver detalhes */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewDetailsId(req.id)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Detalhes
+                    </Button>
 
                     {/* Botão de excluir (apenas para quem tem permissão) */}
                     {podeExcluir && (
@@ -883,6 +970,153 @@ const Requisicoes = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Detalhes da Requisição */}
+      <Dialog open={!!viewDetailsId} onOpenChange={() => setViewDetailsId(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Detalhes da Requisição
+            </DialogTitle>
+          </DialogHeader>
+
+          {(() => {
+            const requisicao = filteredRequisicoes.find(req => req.id === viewDetailsId);
+            if (!requisicao) return null;
+
+            const itensRequisicaoDetalhes = itensRequisicao.filter(item => item.requisicao_id === viewDetailsId);
+
+            return (
+              <div className="space-y-6">
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Título</label>
+                      <p className="font-semibold">{requisicao.titulo}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <div className="mt-1">{getStatusBadge(requisicao.status)}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Prioridade</label>
+                      <div className="mt-1">{getPrioridadeBadge(requisicao.prioridade)}</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Obra</label>
+                      <p className="font-semibold">{requisicao.obra?.nome || 'Obra não encontrada'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Solicitante</label>
+                      <p className="font-semibold">{requisicao.funcionario_solicitante?.nome || 'Funcionário não encontrado'}</p>
+                    </div>
+                    {requisicao.funcionario_responsavel && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Responsável</label>
+                        <p className="font-semibold">{requisicao.funcionario_responsavel.nome}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Descrição */}
+                {requisicao.descricao && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Descrição</label>
+                    <p className="mt-1 p-3 bg-muted/50 rounded-lg">{requisicao.descricao}</p>
+                  </div>
+                )}
+
+                {/* Observações */}
+                {requisicao.observacoes && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Observações</label>
+                    <p className="mt-1 p-3 bg-muted/50 rounded-lg">{requisicao.observacoes}</p>
+                  </div>
+                )}
+
+                {/* Itens da Requisição */}
+                {itensRequisicaoDetalhes.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-3 block">
+                      Itens da Requisição ({itensRequisicaoDetalhes.length})
+                    </label>
+                    <div className="space-y-3">
+                      {itensRequisicaoDetalhes.map((item, index) => (
+                        <div key={item.id || index} className="border rounded-lg p-4 bg-muted/50">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Número</p>
+                              <p className="font-medium">{item.numero}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Descrição</p>
+                              <p className="font-medium">{item.descricao}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Qtd.</p>
+                                <p className="font-medium">{item.quantidade}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Unidade</p>
+                                <p className="font-medium">{item.unidade_medida}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Status</p>
+                              <Badge className={`${item.quantidade_comprada > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {item.quantidade_comprada > 0 ? 'Parcialmente Comprado' : 'Pendente'}
+                              </Badge>
+                            </div>
+                          </div>
+                          {item.valor_unitario && (
+                            <div className="mt-3 pt-3 border-t">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Valor Unitário:</span>
+                                  <p className="font-semibold">R$ {Number(item.valor_unitario).toFixed(2)}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Qtd. Comprada:</span>
+                                  <p className="font-semibold">{item.quantidade_comprada || 0}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Total:</span>
+                                  <p className="font-semibold">R$ {(Number(item.valor_unitario) * Number(item.quantidade)).toFixed(2)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Datas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Criada em</label>
+                    <p className="font-medium">{new Date(requisicao.created_at || Date.now()).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  {requisicao.data_vencimento && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Vencimento</label>
+                      <p className="font-medium">{new Date(requisicao.data_vencimento).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,14 +1,15 @@
-import { 
-  LayoutDashboard, 
-  DollarSign, 
-  Building2, 
-  Video, 
-  Users, 
+import {
+  LayoutDashboard,
+  DollarSign,
+  Building2,
+  Video,
+  Users,
   Briefcase,
   UserCog,
   FolderKanban,
   FileText,
-  Kanban as KanbanIcon
+  Kanban as KanbanIcon,
+  Tag
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -88,6 +89,12 @@ const cadastrosItems = [
     url: "/cadastros/setores",
     icon: UserCog,
     permissions: ["gerenciar_equipe"],
+  },
+  {
+    title: "Categorias",
+    url: "/categorias",
+    icon: Tag,
+    permissions: ["visualizar_financeiro"],
   },
 ];
 

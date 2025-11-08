@@ -1,13 +1,6 @@
 import { useMutation, useQueryClient, UseMutationOptions, UseMutationResult } from '@tanstack/react-query'
 import { supabaseService, SUPABASE_KEYS } from '@/lib/supabaseService'
 import { FallbackStrategy, AppError } from '@/lib/errorHandler'
-import {
-  addToStorage,
-  updateInStorage,
-  deleteFromStorage,
-  saveToStorage,
-  getFromStorage
-} from '@/lib/localStorage'
 
 // Interface genérica para entidades que têm ID
 interface BaseEntity {

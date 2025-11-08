@@ -1,7 +1,6 @@
 import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
 import { supabaseService, SUPABASE_KEYS } from '@/lib/supabaseService'
 import { FallbackStrategy } from '@/lib/errorHandler'
-import { getFromStorage } from '@/lib/localStorage'
 
 // Interface genérica para entidades que têm ID
 interface BaseEntity {
