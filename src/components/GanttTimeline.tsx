@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Etapa {
-  id: string;
+  id?: string;
   nome: string;
-  responsavel: string;
+  responsavel?: string;
   dataInicio: string;
   dataPrevisao: string;
   progresso?: number;
@@ -79,6 +79,7 @@ export default function GanttTimeline({ obra }: GanttTimelineProps) {
       progress: etapa.progresso || 0,
       weight: weight,
       dependsOn: index > 0 ? [obra.etapas[index - 1].id || `task-${index}`] : [],
+      responsavel: etapa.responsavel || 'Não definido'
     }));
 
     return [

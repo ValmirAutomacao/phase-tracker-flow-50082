@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import GanttTimeline from "@/components/GanttTimeline";
-import { STORAGE_KEYS, getFromStorage } from "@/lib/localStorage";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { PageContainer } from "@/components/layout/PageContainer";
 import {
   FolderKanban,
@@ -17,15 +17,16 @@ import {
 
 const Projetos = () => {
   const [selectedProject, setSelectedProject] = useState(null);
-  const [obras, setObras] = useState([]);
+
+  // Buscar obras e funcionários do Supabase
+  const { data: obras = [], isLoading } = useSupabaseQuery<any>('OBRAS');
+  const { data: funcionarios = [] } = useSupabaseQuery<any>('FUNCIONARIOS');
 
   useEffect(() => {
-    const stored = getFromStorage(STORAGE_KEYS.OBRAS);
-    setObras(stored);
-    if (stored.length > 0 && !selectedProject) {
-      setSelectedProject((stored[0] as any).id);
+    if (obras.length > 0 && !selectedProject) {
+      setSelectedProject(obras[0].id);
     }
-  }, []);
+  }, [obras, selectedProject]);
 
   const calculateProjectProgress = (etapas: any) => {
     if (!etapas || etapas.length === 0) return 0;
@@ -238,14 +239,19 @@ const Projetos = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {["João Silva - Gerente", "Maria Santos - Engenheira", "Pedro Costa - Mestre de Obras", "Ana Lima - Arquiteta"].map((membro, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
+                {funcionarios.length > 0 ? funcionarios.slice(0, 6).map((funcionario, index) => (
+                  <div key={funcionario.id || index} className="flex items-center gap-3 p-3 border rounded-lg">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Users className="h-5 w-5 text-primary" />
                     </div>
-                    <span className="font-medium">{membro}</span>
+                    <span className="font-medium">{funcionario.nome} - {funcionario.funcao?.nome || funcionario.setor?.nome || 'Funcionário'}</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum funcionário cadastrado</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
