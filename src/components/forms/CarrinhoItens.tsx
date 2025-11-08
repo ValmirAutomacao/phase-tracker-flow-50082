@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, ShoppingCart, Package, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,6 +18,7 @@ export interface ItemCarrinho {
   id: string;
   nome: string;
   quantidade: number;
+  unidade: string;
   descricao?: string;
   status: 'pendente' | 'comprado';
 }
@@ -25,6 +27,7 @@ export interface ItemCarrinho {
 const itemSchema = z.object({
   nome: z.string().min(1, "Nome do item é obrigatório"),
   quantidade: z.number().min(1, "Quantidade deve ser pelo menos 1"),
+  unidade: z.string().min(1, "Unidade de medida é obrigatória"),
   descricao: z.string().optional(),
 });
 
@@ -46,15 +49,22 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
     defaultValues: {
       nome: "",
       quantidade: 1,
+      unidade: "",
       descricao: "",
     },
   });
 
-  const adicionarItem = (data: ItemFormData) => {
+  const adicionarItem = (data: ItemFormData, e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const novoItem: ItemCarrinho = {
       id: crypto.randomUUID(),
       nome: data.nome,
       quantidade: data.quantidade,
+      unidade: data.unidade,
       descricao: data.descricao,
       status: 'pendente'
     };
@@ -65,16 +75,21 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
 
     toast({
       title: "Item adicionado",
-      description: `${data.nome} foi adicionado ao carrinho`,
+      description: `${data.quantidade} ${data.unidade} de ${data.nome} foi adicionado ao carrinho`,
     });
   };
 
-  const editarItem = (data: ItemFormData) => {
+  const editarItem = (data: ItemFormData, e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!editingItem) return;
 
     const itensAtualizados = itens.map(item =>
       item.id === editingItem.id
-        ? { ...item, nome: data.nome, quantidade: data.quantidade, descricao: data.descricao }
+        ? { ...item, nome: data.nome, quantidade: data.quantidade, unidade: data.unidade, descricao: data.descricao }
         : item
     );
 
@@ -85,7 +100,7 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
 
     toast({
       title: "Item atualizado",
-      description: `${data.nome} foi atualizado`,
+      description: `${data.quantidade} ${data.unidade} de ${data.nome} foi atualizado`,
     });
   };
 
@@ -105,6 +120,7 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
     setEditingItem(item);
     form.setValue('nome', item.nome);
     form.setValue('quantidade', item.quantidade);
+    form.setValue('unidade', item.unidade);
     form.setValue('descricao', item.descricao || '');
     setIsDialogOpen(true);
   };
@@ -154,7 +170,7 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
                     </Badge>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                    <span className="font-medium">Qtd: {item.quantidade}</span>
+                    <span className="font-medium">Qtd: {item.quantidade} {item.unidade}</span>
                     {item.descricao && (
                       <span className="truncate">{item.descricao}</span>
                     )}
@@ -216,7 +232,11 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
 
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(editingItem ? editarItem : adicionarItem)}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.handleSubmit(editingItem ? editarItem : adicionarItem)(e);
+                  }}
                   className="space-y-4"
                 >
                   <FormField
@@ -233,25 +253,73 @@ export function CarrinhoItens({ itens, onItensChange, readonly = false }: Carrin
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="quantidade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantidade</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="quantidade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantidade</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="1"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="unidade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Unidade</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Não fazer submit automático
+                            }}
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="un">Unidade (un)</SelectItem>
+                              <SelectItem value="kg">Quilograma (kg)</SelectItem>
+                              <SelectItem value="g">Grama (g)</SelectItem>
+                              <SelectItem value="l">Litro (l)</SelectItem>
+                              <SelectItem value="ml">Mililitro (ml)</SelectItem>
+                              <SelectItem value="m">Metro (m)</SelectItem>
+                              <SelectItem value="cm">Centímetro (cm)</SelectItem>
+                              <SelectItem value="mm">Milímetro (mm)</SelectItem>
+                              <SelectItem value="m²">Metro quadrado (m²)</SelectItem>
+                              <SelectItem value="m³">Metro cúbico (m³)</SelectItem>
+                              <SelectItem value="saco">Saco</SelectItem>
+                              <SelectItem value="caixa">Caixa</SelectItem>
+                              <SelectItem value="pct">Pacote</SelectItem>
+                              <SelectItem value="barra">Barra</SelectItem>
+                              <SelectItem value="rolo">Rolo</SelectItem>
+                              <SelectItem value="tubo">Tubo</SelectItem>
+                              <SelectItem value="galão">Galão</SelectItem>
+                              <SelectItem value="lata">Lata</SelectItem>
+                              <SelectItem value="dz">Dúzia</SelectItem>
+                              <SelectItem value="par">Par</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}

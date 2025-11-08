@@ -22,32 +22,39 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useRole } from "@/components/auth/RoleGuard";
 
 const menuItems = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+    permissions: [], // Livre para todos
   },
   {
     title: "Financeiro",
     url: "/financeiro",
     icon: DollarSign,
+    permissions: ["visualizar_financeiro"],
   },
   {
     title: "Projetos",
     url: "/projetos",
     icon: FolderKanban,
+    permissions: ["visualizar_obras"],
   },
   {
     title: "Vídeos",
     url: "/videos",
     icon: Video,
+    permissions: ["visualizar_videos"],
   },
   {
     title: "CRM Kanban",
     url: "/kanban",
     icon: KanbanIcon,
+    permissions: ["visualizar_clientes"], // CRM relacionado a clientes
   },
 ];
 
@@ -56,26 +63,31 @@ const cadastrosItems = [
     title: "Clientes",
     url: "/cadastros/clientes",
     icon: Users,
+    permissions: ["visualizar_clientes"],
   },
   {
     title: "Obras",
     url: "/cadastros/obras",
     icon: Building2,
+    permissions: ["visualizar_obras"],
   },
   {
     title: "Funcionários",
     url: "/cadastros/funcionarios",
     icon: Users,
+    permissions: ["visualizar_equipe"],
   },
   {
     title: "Funções",
     url: "/cadastros/funcoes",
     icon: Briefcase,
+    permissions: ["gerenciar_equipe"],
   },
   {
     title: "Setores",
     url: "/cadastros/setores",
     icon: UserCog,
+    permissions: ["gerenciar_equipe"],
   },
 ];
 
@@ -84,10 +96,26 @@ const comprasItems = [
     title: "Requisições",
     url: "/requisicoes",
     icon: FileText,
+    permissions: ["visualizar_compras"],
   },
 ];
 
 export function AppSidebar() {
+  const { hasAnyPermission } = usePermissions();
+
+  // Filtrar itens baseados em permissões
+  const filteredMenuItems = menuItems.filter(item =>
+    item.permissions.length === 0 || hasAnyPermission(item.permissions)
+  );
+
+  const filteredCadastrosItems = cadastrosItems.filter(item =>
+    hasAnyPermission(item.permissions)
+  );
+
+  const filteredComprasItems = comprasItems.filter(item =>
+    hasAnyPermission(item.permissions)
+  );
+
   return (
     <Sidebar className="border-r border-border">
       <SidebarHeader className="border-b border-border px-4 md:px-6 py-4">
@@ -107,7 +135,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
@@ -129,11 +157,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {cadastrosItems.map((item) => (
+        {filteredCadastrosItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredCadastrosItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
@@ -149,16 +178,18 @@ export function AppSidebar() {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Compras</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {comprasItems.map((item) => (
+        {filteredComprasItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Compras</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredComprasItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
@@ -174,10 +205,11 @@ export function AppSidebar() {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

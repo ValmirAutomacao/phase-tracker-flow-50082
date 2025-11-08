@@ -44,7 +44,6 @@ interface Despesa {
   obra_id: string; // FK para obras
   requisicao_id?: string; // FK para requisições (novo campo obrigatório)
   valor: number;
-  descricao?: string;
   data_despesa: string; // Date ISO string
   categoria?: string;
   status?: string;
@@ -82,7 +81,6 @@ interface Obra {
 }
 
 const despesaSchema = z.object({
-  descricao: z.string().min(1, "Descrição é obrigatória"),
   cliente_id: z.string().min(1, "Cliente é obrigatório"),
   obra_id: z.string().min(1, "Obra é obrigatória"),
   requisicao_id: z.string().min(1, "Requisição é obrigatória - despesas devem estar vinculadas a uma requisição aprovada"),
@@ -172,7 +170,6 @@ const Financeiro = () => {
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(despesa =>
-        (despesa.descricao && despesa.descricao.toLowerCase().includes(searchLower)) ||
         (despesa.categoria && despesa.categoria.toLowerCase().includes(searchLower)) ||
         (despesa.cliente?.nome && despesa.cliente.nome.toLowerCase().includes(searchLower)) ||
         (despesa.obra?.nome && despesa.obra.nome.toLowerCase().includes(searchLower)) ||
@@ -213,7 +210,6 @@ const Financeiro = () => {
   const form = useForm<DespesaFormData>({
     resolver: zodResolver(despesaSchema),
     defaultValues: {
-      descricao: "",
       cliente_id: "",
       obra_id: "",
       categoria: "",
@@ -267,7 +263,6 @@ const Financeiro = () => {
       obra_id: data.obra_id,
       requisicao_id: data.requisicao_id,
       valor: parseCurrencyInput(data.valor),
-      descricao: data.descricao,
       categoria: data.categoria,
       data_despesa: data.data_despesa.toISOString().split('T')[0],
       status: "pendente",
@@ -285,10 +280,24 @@ const Financeiro = () => {
             selectedItens.includes(item.id) ? { ...item, comprado: true } : item
           );
 
+          // Verificar se todos os itens foram comprados para definir o status
+          const todosItensComprados = itensAtualizados?.every(item => item.comprado) || false;
+          const algumaCompra = itensAtualizados?.some(item => item.comprado) || false;
+
+          let novoStatus = requisicaoAtual.status;
+          if (todosItensComprados) {
+            novoStatus = 'concluida';
+          } else if (algumaCompra) {
+            novoStatus = 'aberta';
+          }
+
           try {
             await updateRequisicao.mutateAsync({
               id: requisicaoAtual.id,
-              updates: { itens_produtos: itensAtualizados } as any
+              updates: {
+                itens_produtos: itensAtualizados,
+                status: novoStatus
+              } as any
             });
           } catch (error) {
             console.error('Erro ao atualizar itens da requisição:', error);
@@ -439,23 +448,6 @@ const Financeiro = () => {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
                   <div className="dialog-form-container space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="descricao"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição da Despesa*</FormLabel>
-                        <FormControl>
-                          <textarea
-                            className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:border-2 focus:border-[#0891b2] disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="Ex: Compra de material de construção"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -1024,7 +1016,7 @@ const Financeiro = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{despesa.descricao || 'Despesa sem descrição'}</h4>
+                        <h4 className="font-semibold">{despesa.categoria || 'Despesa'} - {despesa.obra?.nome || 'N/A'}</h4>
                         {getStatusBadge(despesa.status || 'pendente')}
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1">

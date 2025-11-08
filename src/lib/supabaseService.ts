@@ -46,7 +46,23 @@ export class SupabaseService {
     // Configuração específica de JOINs para cada tabela
     let selectQuery = '*'
 
-    if (tableName === 'requisicoes') {
+    if (tableName === 'funcionarios') {
+      selectQuery = `
+        *,
+        funcao:funcao_id(
+          id,
+          nome,
+          nivel,
+          setor_id,
+          setor:setor_id(id, nome)
+        )
+      `
+    } else if (tableName === 'funcoes') {
+      selectQuery = `
+        *,
+        setor:setor_id(id, nome)
+      `
+    } else if (tableName === 'requisicoes') {
       selectQuery = `
         *,
         obra:obra_id(id, nome),
@@ -75,7 +91,12 @@ export class SupabaseService {
       throw ErrorHandler.mapSupabaseError(error)
     }
 
-    return (data || []) as unknown as T[]
+    // Transforma os dados para o formato esperado pelo frontend
+    const transformedData = (data || []).map(item =>
+      this.transformDataFromSupabase(tableName, item)
+    )
+
+    return transformedData as T[]
   }
 
   /**
@@ -115,6 +136,162 @@ export class SupabaseService {
   }
 
   /**
+   * Transforma dados do formato localStorage para o formato Supabase
+   */
+  private transformDataForSupabase(tableName: string, item: any): any {
+    if (tableName === 'clientes') {
+      // Transforma dados de cliente do formato localStorage para JSONB
+      const transformed = {
+        nome: item.nome,
+        tipo: item.tipo === 'fisica' ? 'fisico' : item.tipo === 'juridica' ? 'juridico' : item.tipo,
+        documento: item.documento,
+        endereco: {
+          logradouro: item.endereco,
+          numero: item.numero,
+          bairro: item.bairro,
+          cidade: item.cidade,
+          estado: item.estado,
+          cep: item.cep
+        },
+        contato: {
+          email: item.email,
+          telefone: item.telefone
+        }
+      }
+      return transformed
+    }
+
+    if (tableName === 'obras') {
+      // Para obras, precisamos mapear os campos corretamente
+      let orcamentoValue = 0;
+      if (item.orcamento) {
+        if (typeof item.orcamento === 'string') {
+          // Se for string, remove formatação e converte para número
+          orcamentoValue = parseFloat(item.orcamento.replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+        } else if (typeof item.orcamento === 'number') {
+          // Se já for número, usa diretamente
+          orcamentoValue = item.orcamento;
+        }
+      }
+
+      const transformed = {
+        nome: item.nome,
+        cliente_id: item.cliente, // Mapeia 'cliente' para 'cliente_id'
+        status: item.status,
+        data_inicio: item.dataInicio, // Mapeia 'dataInicio' para 'data_inicio'
+        data_fim: item.dataPrevisaoFinal, // Mapeia 'dataPrevisaoFinal' para 'data_fim'
+        orcamento: orcamentoValue,
+        etapas: item.etapas || [],
+        progresso: 0 // Inicialmente 0%
+        // Remove campos de endereço que não existem na tabela obras
+      }
+      return transformed
+    }
+
+    if (tableName === 'requisicoes') {
+      // Para requisições, mapear alguns campos se necessário
+      const transformed = {
+        ...item,
+        // Mapeia campos de funcionário para o formato correto
+        funcionario_responsavel_id: item.funcionario_responsavel_id || item.funcionario_responsavel || null,
+        funcionario_solicitante_id: item.funcionario_solicitante_id || item.funcionario_solicitante || null,
+        // Garante que datas sejam strings se fornecidas
+        data_vencimento: item.data_vencimento || null,
+        // Se houver itens do carrinho, salva no campo itens_produtos como JSONB
+        itens_produtos: item.itens_produtos || null
+      }
+
+      // Remove campos com nomenclatura incorreta se existirem
+      delete transformed.funcionario_responsavel;
+      delete transformed.funcionario_solicitante;
+
+      return transformed
+    }
+
+    if (tableName === 'despesas') {
+      // Para despesas, pode precisar converter tipos
+      let valorValue = 0;
+      if (item.valor) {
+        if (typeof item.valor === 'string') {
+          // Se for string, remove formatação e converte para número
+          valorValue = parseFloat(item.valor.replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+        } else if (typeof item.valor === 'number') {
+          // Se já for número, usa diretamente
+          valorValue = item.valor;
+        }
+      }
+
+      const transformed = {
+        ...item,
+        // Converte valor de string formatada para number se necessário
+        valor: valorValue,
+        // Garante que data_despesa seja uma data válida
+        data_despesa: item.data_despesa instanceof Date ? item.data_despesa.toISOString().split('T')[0] : item.data_despesa
+      }
+      return transformed
+    }
+
+    // Para outras tabelas, retorna os dados como estão
+    return item
+  }
+
+  /**
+   * Transforma dados do formato Supabase para o formato localStorage
+   */
+  private transformDataFromSupabase(tableName: string, item: any): any {
+    if (tableName === 'clientes' && item.endereco && item.contato) {
+      // Transforma dados de cliente do formato JSONB para localStorage
+      const transformed = {
+        ...item,
+        tipo: item.tipo === 'fisico' ? 'fisica' : item.tipo === 'juridico' ? 'juridica' : item.tipo,
+        endereco: item.endereco?.logradouro || '',
+        numero: item.endereco?.numero || '',
+        bairro: item.endereco?.bairro || '',
+        cidade: item.endereco?.cidade || '',
+        estado: item.endereco?.estado || '',
+        cep: item.endereco?.cep || '',
+        email: item.contato?.email || '',
+        telefone: item.contato?.telefone || ''
+      }
+      // Remove os campos JSONB para manter compatibilidade com localStorage
+      delete transformed.contato
+      return transformed
+    }
+
+    if (tableName === 'obras') {
+      // Para obras, mapeia os campos de volta para o formato esperado pelo frontend
+      const transformed = {
+        ...item,
+        cliente: item.cliente_id, // Mapeia 'cliente_id' para 'cliente'
+        dataInicio: item.data_inicio, // Mapeia 'data_inicio' para 'dataInicio'
+        dataPrevisaoFinal: item.data_fim, // Mapeia 'data_fim' para 'dataPrevisaoFinal'
+        orcamento: item.orcamento ? `R$ ${item.orcamento.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : 'R$ 0,00',
+        // Adiciona campos de endereço vazios para compatibilidade com o form
+        endereco: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        cep: ''
+      }
+      return transformed
+    }
+
+    if (tableName === 'despesas') {
+      // Para despesas, formata valores de volta para o frontend
+      const transformed = {
+        ...item,
+        // Formata valor como string monetária para o frontend
+        valor: item.valor ? `R$ ${item.valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : 'R$ 0,00'
+      }
+      return transformed
+    }
+
+    // Para outras tabelas (requisicoes, etc.), retorna os dados como estão
+    return item
+  }
+
+  /**
    * Compatível com addToStorage<T>(key: string, item: T): T
    * Adiciona um novo item e retorna o item criado
    */
@@ -122,9 +299,12 @@ export class SupabaseService {
     try {
       const tableName = this.getTableName(key)
 
+      // Transforma os dados para o formato esperado pelo Supabase
+      const transformedItem = this.transformDataForSupabase(tableName, item)
+
       const { data, error } = await supabase
         .from(tableName)
-        .insert(item as unknown as TablesInsert<TableName>)
+        .insert(transformedItem as unknown as TablesInsert<TableName>)
         .select()
         .single()
 
@@ -137,7 +317,9 @@ export class SupabaseService {
         throw new Error(`Nenhum dado retornado ao adicionar em ${tableName}`)
       }
 
-      return data as T
+      // Transforma os dados de volta para o formato esperado pelo frontend
+      const transformedData = this.transformDataFromSupabase(tableName, data)
+      return transformedData as T
     } catch (error) {
       console.error(`Error in addToSupabase for ${key}:`, error)
       throw error
@@ -156,9 +338,12 @@ export class SupabaseService {
     try {
       const tableName = this.getTableName(key)
 
+      // Transforma os dados para o formato esperado pelo Supabase
+      const transformedUpdates = this.transformDataForSupabase(tableName, updates)
+
       const { data, error } = await supabase
         .from(tableName)
-        .update(updates as TablesUpdate<TableName>)
+        .update(transformedUpdates as TablesUpdate<TableName>)
         .eq('id', id)
         .select()
         .single()
@@ -172,7 +357,9 @@ export class SupabaseService {
         throw new Error(`Item com ID ${id} não encontrado em ${tableName}`)
       }
 
-      return data as T
+      // Transforma os dados de volta para o formato esperado pelo frontend
+      const transformedData = this.transformDataFromSupabase(tableName, data)
+      return transformedData as T
     } catch (error) {
       console.error(`Error in updateInSupabase for ${key}:`, error)
       throw error
@@ -224,7 +411,9 @@ export class SupabaseService {
         throw new Error(`Erro ao buscar ${tableName} por ID: ${error.message}`)
       }
 
-      return data as T
+      // Transforma os dados para o formato esperado pelo frontend
+      const transformedData = this.transformDataFromSupabase(tableName, data)
+      return transformedData as T
     } catch (error) {
       console.error(`Error in getByIdFromSupabase for ${key}:`, error)
       return null
@@ -256,7 +445,12 @@ export class SupabaseService {
         throw new Error(`Erro ao filtrar ${tableName}: ${error.message}`)
       }
 
-      return (data || []) as T[]
+      // Transforma os dados para o formato esperado pelo frontend
+      const transformedData = (data || []).map(item =>
+        this.transformDataFromSupabase(tableName, item)
+      )
+
+      return transformedData as T[]
     } catch (error) {
       console.error(`Error in getFilteredFromSupabase for ${key}:`, error)
       return []

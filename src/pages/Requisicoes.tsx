@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, Trash2, User, Building } from "lucide-react";
+import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, Trash2, User, Building, ThumbsUp, ThumbsDown, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
+import { usePermissions } from "@/hooks/usePermissions";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
@@ -37,7 +38,7 @@ interface RequisicaoItem {
   funcionario_solicitante_id: string; // FK para funcionarios
   titulo: string;
   descricao?: string;
-  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
+  status: 'pendente' | 'aprovada' | 'aberta' | 'concluida' | 'cancelada';
   prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
   data_vencimento?: string;
   funcionario_responsavel_id?: string; // FK para funcionarios
@@ -74,7 +75,6 @@ const requisicaoSchema = z.object({
   titulo: z.string().min(10, "O título deve ter no mínimo 10 caracteres"),
   descricao: z.string().optional(),
   prioridade: z.enum(["baixa", "media", "alta", "urgente"]),
-  data_vencimento: z.string().optional(),
   funcionario_responsavel_id: z.string().optional(),
   observacoes: z.string().optional(),
 });
@@ -85,6 +85,7 @@ const Requisicoes = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [editingRequisicao, setEditingRequisicao] = useState<RequisicaoItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState<string>("all");
@@ -93,6 +94,12 @@ const Requisicoes = () => {
   // Hooks Supabase para substituir localStorage
   const { data: requisicoes = [], isLoading, error } = useOptimizedSupabaseQuery<any>('REQUISICOES');
   const { add, update, delete: deleteRequisicao } = useSupabaseCRUD<any>('REQUISICOES');
+
+  // Hook de permissões para controlar ações
+  const { hasAnyPermission } = usePermissions();
+  const podeAprovar = hasAnyPermission(['aprovar_compras']);
+  const podeEditar = hasAnyPermission(['editar_compras']);
+  const podeExcluir = hasAnyPermission(['deletar_compras']);
 
   // Query para obras (para dropdown)
   const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
@@ -150,55 +157,87 @@ const Requisicoes = () => {
       titulo: "",
       descricao: "",
       prioridade: "media",
-      data_vencimento: "",
       funcionario_responsavel_id: "",
       observacoes: "",
     },
   });
 
   const onSubmit = (data: RequisicaoFormData) => {
+    console.log('onSubmit - itensCarrinho:', itensCarrinho);
+    console.log('onSubmit - itensCarrinho.length:', itensCarrinho.length);
+
     // Validação: requisição deve ter pelo menos 1 item
     if (itensCarrinho.length === 0) {
       toast({
         title: "Erro de validação",
-        description: "Adicione pelo menos um item ao carrinho antes de criar a requisição.",
+        description: "Adicione pelo menos um item ao carrinho antes de salvar a requisição.",
         variant: "destructive",
       });
       return;
     }
 
-    const novaRequisicao = {
+    const requisicaoData = {
       obra_id: data.obra_id,
       funcionario_solicitante_id: data.funcionario_solicitante_id,
       titulo: data.titulo,
       descricao: data.descricao || null,
-      status: "pendente" as const,
       prioridade: data.prioridade,
-      data_vencimento: data.data_vencimento || null,
       funcionario_responsavel_id: data.funcionario_responsavel_id || null,
       observacoes: data.observacoes || null,
       anexos: null,
       itens_produtos: itensCarrinho,
     };
 
-    add.mutate(novaRequisicao, {
-      onSuccess: () => {
-        toast({
-          title: "Requisição criada!",
-          description: "A requisição foi criada com sucesso e está aguardando aprovação.",
-        });
-        setOpen(false);
-        form.reset();
-        setItensCarrinho([]); // Limpar carrinho após sucesso
-      },
-      onError: (error) => {
-        toast({
-          title: "Erro ao criar requisição",
-          description: error.message || "Tente novamente em alguns instantes.",
-          variant: "destructive",
-        });
-      },
-    });
+    if (editingRequisicao) {
+      // Editando requisição existente
+      update.mutate(
+        { id: editingRequisicao.id, updates: requisicaoData as any },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Requisição atualizada!",
+              description: "A requisição foi atualizada com sucesso.",
+            });
+            setOpen(false);
+            setEditingRequisicao(null);
+            form.reset();
+            setItensCarrinho([]);
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao atualizar requisição",
+              description: error.message || "Tente novamente em alguns instantes.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    } else {
+      // Criando nova requisição
+      const novaRequisicao = {
+        ...requisicaoData,
+        status: "pendente" as const,
+      };
+
+      add.mutate(novaRequisicao, {
+        onSuccess: () => {
+          toast({
+            title: "Requisição criada!",
+            description: "A requisição foi criada com sucesso e está aguardando aprovação.",
+          });
+          setOpen(false);
+          form.reset();
+          setItensCarrinho([]);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao criar requisição",
+            description: error.message || "Tente novamente em alguns instantes.",
+            variant: "destructive",
+          });
+        },
+      });
+    }
   };
 
   const handleStatusChange = (id: string, novoStatus: RequisicaoItem['status']) => {
@@ -206,7 +245,6 @@ const Requisicoes = () => {
     if (!requisicao) return;
 
     const updatedRequisicao = {
-      ...requisicao,
       status: novoStatus,
     };
 
@@ -236,12 +274,72 @@ const Requisicoes = () => {
     );
   };
 
+  const handleAprovar = (id: string) => {
+    if (!podeAprovar) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para aprovar requisições.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleStatusChange(id, "aprovada");
+  };
+
+  const handleRecusar = (id: string) => {
+    if (!podeAprovar) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para recusar requisições.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleStatusChange(id, "cancelada");
+  };
+
+  const handleEdit = (requisicao: RequisicaoItem) => {
+    if (!podeEditar) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para editar requisições.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditingRequisicao(requisicao);
+    setItensCarrinho(requisicao.itens_produtos || []);
+    form.reset({
+      obra_id: requisicao.obra_id,
+      funcionario_solicitante_id: requisicao.funcionario_solicitante_id,
+      titulo: requisicao.titulo,
+      descricao: requisicao.descricao || "",
+      prioridade: requisicao.prioridade,
+      funcionario_responsavel_id: requisicao.funcionario_responsavel_id || "",
+      observacoes: requisicao.observacoes || "",
+    });
+    setOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string; icon: React.ElementType }> = {
       pendente: {
         label: "Pendente",
         className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
         icon: Clock
+      },
+      aprovada: {
+        label: "Aprovada",
+        className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
+        icon: CheckCircle
+      },
+      aberta: {
+        label: "Aberta",
+        className: "bg-purple-100 text-purple-700 hover:bg-purple-100",
+        icon: AlertTriangle
       },
       em_andamento: {
         label: "Em Andamento",
@@ -307,7 +405,15 @@ const Requisicoes = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Requisições & Tickets</h1>
           <p className="text-muted-foreground">Sistema de solicitações e acompanhamento de tarefas</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            // Resetar formulário quando fechar o dialog
+            setEditingRequisicao(null);
+            setItensCarrinho([]);
+            form.reset();
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -316,9 +422,12 @@ const Requisicoes = () => {
           </DialogTrigger>
           <DialogContent className="dialog-content-mobile">
             <DialogHeader className="dialog-header">
-              <DialogTitle>Nova Requisição</DialogTitle>
+              <DialogTitle>{editingRequisicao ? "Editar Requisição" : "Nova Requisição"}</DialogTitle>
               <DialogDescription>
-                Crie uma nova solicitação ou ticket. Preencha os dados obrigatórios e opcionais conforme necessário.
+                {editingRequisicao
+                  ? "Atualize os dados da requisição de compra"
+                  : "Crie uma nova solicitação ou ticket. Preencha os dados obrigatórios e opcionais conforme necessário."
+                }
               </DialogDescription>
             </DialogHeader>
 
@@ -431,22 +540,6 @@ const Requisicoes = () => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="data_vencimento"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data de Vencimento</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <FormField
@@ -701,34 +794,36 @@ const Requisicoes = () => {
                         )}
                         <div className="flex flex-wrap gap-4 text-xs">
                           <span>Criada: {new Date(req.created_at || Date.now()).toLocaleDateString('pt-BR')}</span>
-                          {req.data_vencimento && (
-                            <span>Vencimento: {new Date(req.data_vencimento).toLocaleDateString('pt-BR')}</span>
-                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-                    {req.status === "pendente" && (
+                    {/* Botões de aprovação/recusa (apenas para quem tem permissão e status pendente) */}
+                    {req.status === "pendente" && podeAprovar && (
                       <>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleStatusChange(req.id, "em_andamento")}
-                          className="text-blue-600 hover:text-blue-700 w-full sm:w-auto"
+                          onClick={() => handleAprovar(req.id)}
+                          className="text-green-600 hover:text-green-700 w-full sm:w-auto"
                         >
-                          Iniciar
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          Aprovar
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleStatusChange(req.id, "cancelada")}
+                          onClick={() => handleRecusar(req.id)}
                           className="text-red-600 hover:text-red-700 w-full sm:w-auto"
                         >
-                          Cancelar
+                          <ThumbsDown className="h-4 w-4 mr-1" />
+                          Recusar
                         </Button>
                       </>
                     )}
+
+                    {/* Botões de controle de status (para requisições já aprovadas) */}
                     {req.status === "em_andamento" && (
                       <>
                         <Button
@@ -737,26 +832,35 @@ const Requisicoes = () => {
                           onClick={() => handleStatusChange(req.id, "concluida")}
                           className="text-green-600 hover:text-green-700 w-full sm:w-auto"
                         >
+                          <CheckCircle className="h-4 w-4 mr-1" />
                           Concluir
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStatusChange(req.id, "cancelada")}
-                          className="text-red-600 hover:text-red-700 w-full sm:w-auto"
-                        >
-                          Cancelar
                         </Button>
                       </>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteId(req.id)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+
+                    {/* Botão de editar (apenas para quem tem permissão) */}
+                    {podeEditar && req.status === "pendente" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(req)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    {/* Botão de excluir (apenas para quem tem permissão) */}
+                    {podeExcluir && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteId(req.id)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

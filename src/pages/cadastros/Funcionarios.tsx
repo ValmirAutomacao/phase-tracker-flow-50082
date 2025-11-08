@@ -17,6 +17,7 @@ import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import "@/styles/responsive.css";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const funcionarioSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -334,13 +335,14 @@ const Funcionarios = () => {
           <h1 className="text-3xl font-bold">Cadastro de Funcionários</h1>
           <p className="text-muted-foreground">Gerenciamento de colaboradores</p>
         </div>
-        <Dialog open={open} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-primary to-accent">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Funcionário
-            </Button>
-          </DialogTrigger>
+        <PermissionGuard permissions={['gerenciar_equipe']}>
+          <Dialog open={open} onOpenChange={handleDialogChange}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-primary to-accent">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Funcionário
+              </Button>
+            </DialogTrigger>
           <DialogContent className="dialog-content-mobile">
             <DialogHeader className="dialog-header">
               <DialogTitle>{editingFuncionario ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
@@ -493,6 +495,7 @@ const Funcionarios = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        </PermissionGuard>
       </div>
 
       {/* Stats */}
@@ -665,14 +668,16 @@ const Funcionarios = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(funcionario)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(funcionario.id)}>
-                      <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                      Excluir
-                    </Button>
+                    <PermissionGuard permissions={['gerenciar_equipe']}>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(funcionario)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setDeleteId(funcionario.id)}>
+                        <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                        Excluir
+                      </Button>
+                    </PermissionGuard>
                   </div>
                 </div>
               ))
