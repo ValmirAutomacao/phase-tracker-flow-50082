@@ -578,26 +578,26 @@ const Financeiro = () => {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
-      validado: { 
-        label: "Validado", 
-        className: "bg-green-100 text-green-700 hover:bg-green-100",
+      validado: {
+        label: "Validado",
+        className: "status-badge-validado",
         icon: CheckCircle
       },
-      pendente: { 
-        label: "Pendente", 
-        className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
+      pendente: {
+        label: "Pendente",
+        className: "status-badge-pendente",
         icon: Clock
       },
-      rejeitado: { 
-        label: "Rejeitado", 
-        className: "bg-red-100 text-red-700 hover:bg-red-100",
+      rejeitado: {
+        label: "Rejeitado",
+        className: "status-badge-rejeitado",
         icon: AlertCircle
       },
     };
-    
-    const variant = variants[status];
+
+    const variant = variants[status] || variants.pendente;
     const IconComponent = variant.icon;
-    
+
     return (
       <Badge className={variant.className as any}>
         <IconComponent className="h-3 w-3 mr-1" />
@@ -608,15 +608,15 @@ const Financeiro = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold">Módulo Financeiro</h1>
-          <p className="text-muted-foreground">Gestão de despesas e comprovantes</p>
+          <h1 className="page-title">Módulo Financeiro</h1>
+          <p className="page-description">Gestão de despesas e comprovantes</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-primary to-accent">
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Despesa
               </Button>
@@ -1300,11 +1300,11 @@ const Financeiro = () => {
               filteredDespesas.map((despesa) => (
                 <div
                   key={despesa.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="card-item"
                 >
                   <div className="flex items-start gap-4 flex-1">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary" />
+                    <div className="icon-container">
+                      <FileText className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">

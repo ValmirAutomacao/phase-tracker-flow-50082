@@ -134,12 +134,12 @@ const Clientes = () => {
 
   return (
     <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Cadastro de Clientes</h1>
-          <p className="text-muted-foreground">Gerenciamento de clientes do sistema</p>
+          <h1 className="page-title">Cadastro de Clientes</h1>
+          <p className="page-description">Gerenciamento de clientes do sistema</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent w-full sm:w-auto" onClick={() => { setEditingCliente(null); setOpen(true); }}>
+        <Button className="w-full sm:w-auto" onClick={() => { setEditingCliente(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
@@ -254,11 +254,11 @@ const Clientes = () => {
               filteredClientes.map((cliente) => (
               <div
                 key={cliente.id}
-                className="list-item-responsive p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="card-item"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <div className="icon-container">
                       {cliente.tipo === "fisica" ? <User className="h-6 w-6 text-primary" /> : <Building2 className="h-6 w-6 text-primary" />}
                     </div>
                     <div className="flex-1 min-w-0">

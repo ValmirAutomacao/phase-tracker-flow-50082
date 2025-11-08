@@ -1,0 +1,111 @@
+/* Global Theme Styles - Baseado na página de Requisições */
+
+/* Status Badge Styles */
+.status-badge-pendente { @apply bg-yellow-100 text-yellow-700 hover:bg-yellow-100; }
+.status-badge-aprovada { @apply bg-blue-100 text-blue-700 hover:bg-blue-100; }
+.status-badge-aberta { @apply bg-blue-100 text-blue-700 hover:bg-blue-100; }
+.status-badge-validado { @apply bg-green-100 text-green-700 hover:bg-green-100; }
+.status-badge-concluida { @apply bg-green-100 text-green-700 hover:bg-green-100; }
+.status-badge-rejeitado { @apply bg-red-100 text-red-700 hover:bg-red-100; }
+.status-badge-cancelada { @apply bg-red-100 text-red-700 hover:bg-red-100; }
+
+/* Priority Badge Styles */
+.priority-badge-baixa { @apply bg-gray-100 text-gray-700; }
+.priority-badge-media { @apply bg-blue-100 text-blue-700; }
+.priority-badge-alta { @apply bg-orange-100 text-orange-700; }
+.priority-badge-urgente { @apply bg-red-100 text-red-700; }
+
+/* Button Action Styles */
+.btn-action-positive { @apply text-green-600 hover:text-green-700; }
+.btn-action-negative { @apply text-red-600 hover:text-red-700; }
+.btn-action-neutral { @apply text-destructive; }
+
+/* Card and Layout Styles */
+.card-item {
+  @apply flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4;
+}
+
+.icon-container {
+  @apply h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0;
+}
+
+.page-header {
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
+}
+
+.page-title {
+  @apply text-2xl sm:text-3xl font-bold;
+}
+
+.page-description {
+  @apply text-muted-foreground;
+}
+
+/* Stats Card Styles */
+.stats-card-header {
+  @apply pb-3;
+}
+
+.stats-card-title {
+  @apply text-sm font-medium;
+}
+
+.stats-card-value {
+  @apply text-2xl font-bold;
+}
+
+.stats-card-description {
+  @apply text-xs text-muted-foreground mt-1;
+}
+
+/* Form Styles */
+.form-actions {
+  @apply flex gap-2 pt-4;
+}
+
+.form-label-detail {
+  @apply text-sm font-medium text-muted-foreground;
+}
+
+.form-content-box {
+  @apply mt-1 p-3 bg-muted/50 rounded-lg;
+}
+
+/* Loading Animation */
+.loading-skeleton {
+  @apply bg-muted animate-pulse;
+}
+
+/* Color variations for stats */
+.stats-text-primary { @apply text-primary; }
+.stats-text-yellow { @apply text-yellow-600; }
+.stats-text-blue { @apply text-blue-600; }
+.stats-text-green { @apply text-green-600; }
+.stats-text-red { @apply text-red-600; }
+
+/* Responsive Button Styles */
+.btn-responsive {
+  @apply w-full sm:w-auto;
+}
+
+/* Item Detail Grid */
+.detail-grid {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-3;
+}
+
+.detail-grid-half {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+/* Search Input Style */
+.search-container {
+  @apply relative;
+}
+
+.search-icon {
+  @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground;
+}
+
+.search-input {
+  @apply pl-10;
+}

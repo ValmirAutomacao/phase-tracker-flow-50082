@@ -164,13 +164,13 @@ const Funcoes = () => {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold">Cadastro de Funções</h1>
-          <p className="text-muted-foreground">Gerenciamento de cargos e permissões</p>
+          <h1 className="page-title">Cadastro de Funções</h1>
+          <p className="page-description">Gerenciamento de cargos e permissões</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent" onClick={() => { setEditingFuncao(null); setOpen(true); }}>
+        <Button onClick={() => { setEditingFuncao(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Função
         </Button>

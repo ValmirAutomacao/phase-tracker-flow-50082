@@ -329,16 +329,16 @@ const Funcionarios = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold">Cadastro de Funcionários</h1>
-          <p className="text-muted-foreground">Gerenciamento de colaboradores</p>
+          <h1 className="page-title">Cadastro de Funcionários</h1>
+          <p className="page-description">Gerenciamento de colaboradores</p>
         </div>
         <PermissionGuard permissions={['gerenciar_equipe']}>
           <Dialog open={open} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-primary to-accent">
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Funcionário
               </Button>

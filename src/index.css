@@ -6,6 +6,9 @@
 /* Importar melhorias de UX e interface visual */
 @import './styles/ux-improvements.css';
 
+/* Importar tema global baseado na página de requisições */
+@import './styles/global-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -193,12 +193,12 @@ const Obras = () => {
 
   return (
     <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Cadastro de Obras</h1>
-          <p className="text-muted-foreground">Gerenciamento completo de obras e projetos</p>
+          <h1 className="page-title">Cadastro de Obras</h1>
+          <p className="page-description">Gerenciamento completo de obras e projetos</p>
         </div>
-        <Button className="bg-gradient-to-r from-primary to-accent w-full sm:w-auto" onClick={() => { setEditingObra(null); setOpen(true); }}>
+        <Button className="w-full sm:w-auto" onClick={() => { setEditingObra(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Obra
         </Button>

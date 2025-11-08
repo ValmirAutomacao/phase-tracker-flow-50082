@@ -17,6 +17,7 @@ import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
 import { usePermissions } from "@/hooks/usePermissions";
+import { StatusBadge, PriorityBadge } from "@/components/ui/status-badge";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
