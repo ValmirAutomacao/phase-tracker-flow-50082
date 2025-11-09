@@ -38,6 +38,32 @@ export class SupabaseService {
     return tableName
   }
 
+  private formatDate(dateValue: any): string {
+    if (!dateValue) return ''
+
+    try {
+      // Se já é uma string no formato esperado, retorna
+      if (typeof dateValue === 'string' && dateValue.includes('/')) {
+        return dateValue
+      }
+
+      // Tenta criar uma data a partir do valor
+      const date = new Date(dateValue)
+
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        console.warn('Data inválida recebida:', dateValue)
+        return ''
+      }
+
+      // Formata para o padrão brasileiro
+      return date.toLocaleDateString('pt-BR')
+    } catch (error) {
+      console.warn('Erro ao formatar data:', dateValue, error)
+      return ''
+    }
+  }
+
   /**
    * Compatível com getFromStorage<T>(key: string): T[]
    * Busca todos os registros de uma tabela
@@ -75,6 +101,11 @@ export class SupabaseService {
       selectQuery = `
         *,
         obra:obra_id(id, nome)
+      `
+    } else if (tableName === 'obras') {
+      selectQuery = `
+        *,
+        cliente:cliente_id(id, nome)
       `
     } else if (tableName === 'despesas') {
       selectQuery = `
@@ -265,9 +296,9 @@ export class SupabaseService {
       // Para obras, mapeia os campos de volta para o formato esperado pelo frontend
       const transformed = {
         ...item,
-        cliente: item.cliente_id, // Mapeia 'cliente_id' para 'cliente'
-        dataInicio: item.data_inicio, // Mapeia 'data_inicio' para 'dataInicio'
-        dataPrevisaoFinal: item.data_fim, // Mapeia 'data_fim' para 'dataPrevisaoFinal'
+        cliente: item.cliente?.nome || item.cliente_id, // Usa o nome do cliente se disponível, senão o ID
+        dataInicio: this.formatDate(item.data_inicio), // Mapeia e formata 'data_inicio'
+        dataPrevisaoFinal: this.formatDate(item.data_fim), // Mapeia e formata 'data_fim'
         orcamento: item.orcamento ? `R$ ${item.orcamento.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : 'R$ 0,00',
         // Adiciona campos de endereço vazios para compatibilidade com o form
         endereco: '',

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { CarrinhoItens, ItemCarrinho } from "@/components/forms/CarrinhoItens";
 import { usePermissions } from "@/hooks/usePermissions";
 import { StatusBadge, PriorityBadge } from "@/components/ui/status-badge";
+import { useAuth } from "@/contexts/AuthContext";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
@@ -84,6 +85,7 @@ type RequisicaoFormData = z.infer<typeof requisicaoSchema>;
 
 const Requisicoes = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingRequisicao, setEditingRequisicao] = useState<RequisicaoItem | null>(null);
@@ -110,8 +112,14 @@ const Requisicoes = () => {
   // Query para obras (para dropdown)
   const { data: obras = [] } = useSupabaseQuery<any>('OBRAS');
 
-  // Query para funcionários (para dropdown)
+  // Query para funcionários (para dropdown e identificar usuário logado)
   const { data: funcionarios = [] } = useSupabaseQuery<any>('FUNCIONARIOS');
+
+  // Encontrar o funcionário correspondente ao usuário logado
+  const funcionarioLogado = useMemo(() => {
+    if (!user?.id || !funcionarios.length) return null;
+    return funcionarios.find((f: any) => f.user_id === user.id);
+  }, [user?.id, funcionarios]);
 
   const handleDelete = async () => {
     if (deleteId) {
@@ -175,7 +183,7 @@ const Requisicoes = () => {
     resolver: zodResolver(requisicaoSchema),
     defaultValues: {
       obra_id: "",
-      funcionario_solicitante_id: "",
+      funcionario_solicitante_id: funcionarioLogado?.id || "",
       titulo: "",
       descricao: "",
       prioridade: "media",
@@ -183,6 +191,13 @@ const Requisicoes = () => {
       observacoes: "",
     },
   });
+
+  // Atualizar o funcionario_solicitante_id quando o funcionário logado for identificado
+  useEffect(() => {
+    if (funcionarioLogado?.id && !editingRequisicao) {
+      form.setValue('funcionario_solicitante_id', funcionarioLogado.id);
+    }
+  }, [funcionarioLogado?.id, editingRequisicao, form]);
 
   const onSubmit = (data: RequisicaoFormData) => {
     console.log('onSubmit - itensCarrinho:', itensCarrinho);
@@ -860,7 +875,7 @@ const Requisicoes = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            <span><strong>Solicitante:</strong> {req.funcionario_solicitante?.nome || 'Funcionário não encontrado'}</span>
+                            <span><strong>Solicitante:</strong> {req.funcionario_solicitante?.nome || 'Não definido'}</span>
                           </div>
                         </div>
                         {req.funcionario_responsavel && (
@@ -1014,7 +1029,7 @@ const Requisicoes = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Solicitante</label>
-                      <p className="font-semibold">{requisicao.funcionario_solicitante?.nome || 'Funcionário não encontrado'}</p>
+                      <p className="font-semibold">{requisicao.funcionario_solicitante?.nome || 'Não definido'}</p>
                     </div>
                     {requisicao.funcionario_responsavel && (
                       <div>

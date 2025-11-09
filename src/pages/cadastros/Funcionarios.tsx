@@ -243,7 +243,6 @@ const Funcionarios = () => {
           telefone: data.telefone,
           funcao_id: data.funcao_id,
           user_id: authData.user.id,
-          foto: fotoPreview,
           ativo: true,
         };
 

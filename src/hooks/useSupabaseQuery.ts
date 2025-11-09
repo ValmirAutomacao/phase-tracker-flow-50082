@@ -94,8 +94,10 @@ export const cacheStrategies = {
     gcTime: 30 * 60 * 1000,
   },
   funcionarios: {
-    staleTime: 10 * 60 * 1000, // 10 minutos
-    gcTime: 20 * 60 * 1000,
+    staleTime: 30 * 1000,      // 30 segundos - cache muito curto para debugging
+    gcTime: 2 * 60 * 1000,     // 2 minutos
+    refetchOnMount: true,      // Sempre busca ao montar
+    refetchOnWindowFocus: true, // Busca ao voltar para a janela
   },
 
   // Dados que mudam com frequência - cache mais curto

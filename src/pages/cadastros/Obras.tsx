@@ -49,6 +49,30 @@ interface Obra {
 
 const Obras = () => {
   const { toast } = useToast();
+
+  // Função para formatar datas de forma segura
+  const formatDateSafe = (dateValue: any): string => {
+    if (!dateValue) return ''
+
+    try {
+      // Se já é uma string formatada, retorna
+      if (typeof dateValue === 'string' && dateValue.includes('/')) {
+        return dateValue
+      }
+
+      // Tenta criar uma data
+      const date = new Date(dateValue)
+
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        return 'Data inválida'
+      }
+
+      return date.toLocaleDateString('pt-BR')
+    } catch (error) {
+      return 'Data inválida'
+    }
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -373,7 +397,10 @@ const Obras = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="text-nowrap">{new Date(obra.dataInicio).toLocaleDateString('pt-BR')} - {new Date(obra.dataPrevisao).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-nowrap">
+                            {formatDateSafe(obra.dataInicio)}
+                            {obra.dataPrevisao && obra.dataPrevisao !== '' && ` - ${formatDateSafe(obra.dataPrevisao)}`}
+                          </span>
                         </div>
                       </div>
                     </div>
