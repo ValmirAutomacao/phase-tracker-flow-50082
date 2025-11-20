@@ -791,7 +791,6 @@ const Videos = () => {
             obraName={selectedVideo.obra?.nome || 'Obra não encontrada'}
             driveFolderId={selectedVideo.drive_pasta_id}
             driveSubFolderId={selectedVideo.drive_subpasta_id}
-            currentPhotoCount={selectedVideo.quantidade_fotos || 0}
             onRenderComplete={handleRenderComplete}
           />
 

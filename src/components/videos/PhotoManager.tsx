@@ -17,7 +17,6 @@ interface PhotoManagerProps {
   obraName: string;
   driveFolderId: string | null;
   driveSubFolderId: string | null;
-  currentPhotoCount: number;
   onRenderComplete: (videoUrl: string) => void;
 }
 
@@ -42,7 +41,6 @@ export function PhotoManager({
   obraName,
   driveFolderId,
   driveSubFolderId,
-  currentPhotoCount,
   onRenderComplete
 }: PhotoManagerProps) {
   const { toast } = useToast();
@@ -169,7 +167,8 @@ export function PhotoManager({
   };
 
   const startRender = async () => {
-    if (photos.filter(p => p.uploaded).length === 0 && currentPhotoCount === 0) {
+    const uploadedPhotos = photos.filter(p => p.uploaded).length;
+    if (uploadedPhotos === 0) {
       toast({
         title: "Nenhuma foto disponível",
         description: "Faça upload de pelo menos uma foto antes de renderizar",
@@ -194,7 +193,7 @@ export function PhotoManager({
           videoId,
           obraName,
           driveFolderId: driveSubFolderId,
-          photoCount: photos.filter(p => p.uploaded).length + currentPhotoCount
+          photoCount: photos.filter(p => p.uploaded).length
         })
       });
 
@@ -258,7 +257,7 @@ export function PhotoManager({
     }
   };
 
-  const totalPhotos = photos.filter(p => p.uploaded).length + currentPhotoCount;
+  const totalPhotos = photos.filter(p => p.uploaded).length;
   const pendingPhotos = photos.filter(p => !p.uploaded).length;
 
   return (
