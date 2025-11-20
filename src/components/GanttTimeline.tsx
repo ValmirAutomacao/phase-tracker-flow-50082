@@ -78,8 +78,7 @@ export default function GanttTimeline({ obra }: GanttTimelineProps) {
       duration: calculateDaysBetween(etapa.dataInicio, etapa.dataPrevisao),
       progress: etapa.progresso || 0,
       weight: weight,
-      dependsOn: index > 0 ? [obra.etapas[index - 1].id || `task-${index}`] : [],
-      responsavel: etapa.responsavel || 'Não definido'
+      dependsOn: index > 0 ? [obra.etapas[index - 1].id || `task-${index}`] : []
     }));
 
     return [

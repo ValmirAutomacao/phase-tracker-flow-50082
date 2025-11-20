@@ -154,8 +154,8 @@ export class SupabaseService {
 
       if (data.length > 0) {
         const { error: insertError } = await supabase
-          .from(tableName)
-          .insert(data as unknown as TablesInsert<TableName>[])
+          .from(tableName as any)
+          .insert(data as any[])
 
         if (insertError) {
           console.error(`Error inserting data to ${tableName}:`, insertError)
@@ -336,9 +336,9 @@ export class SupabaseService {
       // Transforma os dados para o formato esperado pelo Supabase
       const transformedItem = this.transformDataForSupabase(tableName, item)
 
-      const { data, error } = await supabase
-        .from(tableName)
-        .insert(transformedItem as unknown as TablesInsert<TableName>)
+      const { data, error} = await supabase
+        .from(tableName as any)
+        .insert(transformedItem as any)
         .select()
         .single()
 
@@ -376,8 +376,8 @@ export class SupabaseService {
       const transformedUpdates = this.transformDataForSupabase(tableName, updates)
 
       const { data, error } = await supabase
-        .from(tableName)
-        .update(transformedUpdates as TablesUpdate<TableName>)
+        .from(tableName as any)
+        .update(transformedUpdates as any)
         .eq('id', id)
         .select()
         .single()
@@ -406,12 +406,12 @@ export class SupabaseService {
    */
   async deleteFromSupabase(key: string, id: string): Promise<void> {
     try {
-      const tableName = this.getTableName(key)
+    const tableName = this.getTableName(key)
 
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id)
+    const { error } = await supabase
+      .from(tableName as any)
+      .delete()
+      .eq('id', id)
 
       if (error) {
         console.error(`Error deleting from ${tableName}:`, error)
