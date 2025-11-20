@@ -47,6 +47,16 @@ All colors MUST be HSL.
     --input: 240 5.9% 90%;
     --ring: 240 5% 64.9%;
  
+    /* Sidebar and Header colors */
+    --sidebar-background: 210 15% 20%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 210 15% 25%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 210 15% 30%;
+    --sidebar-accent-foreground: 210 80% 60%;
+    --sidebar-border: 210 15% 25%;
+    --sidebar-ring: 210 80% 60%;
+
     --radius: 0.5rem;
   }
 
@@ -78,6 +88,16 @@ All colors MUST be HSL.
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+
+    /* Sidebar and Header colors - dark mode */
+    --sidebar-background: 210 15% 18%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 210 15% 23%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 210 15% 28%;
+    --sidebar-accent-foreground: 210 80% 60%;
+    --sidebar-border: 210 15% 23%;
+    --sidebar-ring: 210 80% 60%;
   }
 }
 
