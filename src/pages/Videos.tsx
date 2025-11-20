@@ -19,7 +19,9 @@ import {
   Download,
   Share2,
   Plus,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Edit,
+  Trash
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
@@ -125,13 +127,13 @@ const Videos = () => {
 
   const handleOpenUpload = (video: VideoItem) => {
     setSelectedVideo(video);
-    setUploadDialogOpen(true);
+    setDriveUploadDialogOpen(true);
   };
 
   const handleUploadComplete = (photoCount: number) => {
     if (selectedVideo) {
       // Remover campos que não devem ser enviados no update
-      const { obra, progresso, quantidadeFotos, prompt, ...videoData } = selectedVideo;
+      const { obra, ...videoData } = selectedVideo;
       
       const updatedVideo = {
         ...videoData,
@@ -168,7 +170,7 @@ const Videos = () => {
   const handleDriveUploadSuccess = (folderId: string, folderName: string) => {
     if (selectedVideo) {
       // Remover campos que não devem ser enviados no update
-      const { obra, progresso, quantidadeFotos, prompt, ...videoData } = selectedVideo;
+      const { obra, ...videoData } = selectedVideo;
       
       const updatedVideo = {
         ...videoData,
@@ -205,15 +207,78 @@ const Videos = () => {
     setRenderDialogOpen(true);
   };
 
+  const handleEdit = (video: VideoItem) => {
+    setSelectedVideo(video);
+    form.reset({
+      obra_id: video.obra_id,
+      nome: video.nome,
+    });
+    setEditOpen(true);
+  };
+
+  const handleDelete = (video: VideoItem) => {
+    if (confirm(`Tem certeza que deseja excluir o vídeo "${video.nome}"?`)) {
+      deleteVideo.mutate(video.id, {
+        onSuccess: () => {
+          toast({
+            title: "Vídeo excluído!",
+            description: "O vídeo foi removido com sucesso.",
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao excluir vídeo",
+            description: error.message || "Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+    }
+  };
+
+  const handleEditSubmit = (data: VideoFormData) => {
+    if (!selectedVideo) return;
+    
+    const { obra, ...cleanedVideo } = selectedVideo;
+    
+    update.mutate(
+      {
+        id: selectedVideo.id,
+        updates: {
+          ...cleanedVideo,
+          obra_id: data.obra_id,
+          nome: data.nome,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Vídeo atualizado!",
+            description: "As informações foram atualizadas com sucesso.",
+          });
+          setEditOpen(false);
+          setSelectedVideo(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro ao atualizar vídeo",
+            description: error.message || "Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
   const handleRenderComplete = (videoData: { duration: string; size: string; url: string }) => {
     if (selectedVideo) {
+      const { obra, ...cleanedVideo } = selectedVideo;
+      
       const updatedVideo = {
-        ...selectedVideo,
+        ...cleanedVideo,
         status_renderizacao: "concluido" as const,
         arquivo_renderizado_url: videoData.url,
         duracao_segundos: parseInt(videoData.duration) || null,
-        // Campos calculados para compatibilidade
-        progresso: 100,
       };
 
       update.mutate(
@@ -248,6 +313,11 @@ const Videos = () => {
         label: "Processando",
         className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
         icon: Clock
+      },
+      upload_realizado: {
+        label: "Pronto para Renderizar",
+        className: "bg-purple-100 text-purple-700 hover:bg-purple-100",
+        icon: PlayCircle
       },
       pendente: {
         label: "Pendente",
@@ -359,10 +429,75 @@ const Videos = () => {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="dialog-content-mobile">
+            <DialogHeader className="dialog-header">
+              <DialogTitle>Editar Vídeo</DialogTitle>
+              <DialogDescription>
+                Atualize as informações do vídeo
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleEditSubmit)} className="flex flex-col h-full">
+                <div className="dialog-form-container space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="obra_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Obra</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a obra" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {obras.map(obra => (
+                              <SelectItem key={obra.id} value={obra.id}>{obra.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="nome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome/Prompt do Vídeo</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Descreva como você quer que o vídeo seja gerado..."
+                            rows={4}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="form-actions">
+                  <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Salvar Alterações</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Vídeos</CardTitle>
@@ -380,7 +515,18 @@ const Videos = () => {
             <div className="text-2xl font-bold text-yellow-600">
               {videos.filter(v => v.status_renderizacao === "pendente").length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">aguardando processo</p>
+            <p className="text-xs text-muted-foreground mt-1">aguardando upload</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Upload Realizado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {videos.filter(v => v.status_renderizacao === "upload_realizado").length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">pronto p/ renderizar</p>
           </CardContent>
         </Card>
         <Card>
@@ -486,26 +632,20 @@ const Videos = () => {
                       {getStatusBadge(video.status_renderizacao)}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{video.nome}</p>
-                    {video.status_renderizacao === "processando" && (
+                    {video.status_renderizacao === "processando" && video.quantidade_fotos && (
                       <div className="space-y-1 mb-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Progresso</span>
-                          <span className="font-semibold">{video.progresso || 0}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className="bg-blue-500 h-2 rounded-full transition-all"
-                            style={{ width: `${video.progresso || 0}%` }}
-                          />
+                          <span className="text-muted-foreground">Processando</span>
+                          <span className="font-semibold">{video.quantidade_fotos} fotos</span>
                         </div>
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground flex flex-wrap gap-1">
                       <span>Data: {new Date(video.created_at || Date.now()).toLocaleDateString('pt-BR')}</span>
-                      {video.quantidadeFotos !== undefined && (
+                      {video.quantidade_fotos !== undefined && (
                         <>
                           <span>•</span>
-                          <span>Fotos: {video.quantidadeFotos}</span>
+                          <span>Fotos: {video.quantidade_fotos}</span>
                         </>
                       )}
                       <span>•</span>
@@ -521,15 +661,66 @@ const Videos = () => {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                   {video.status_renderizacao === "pendente" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenUpload(video)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Upload className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Upload Fotos</span>
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenUpload(video)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Upload className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Upload Fotos</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(video)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Edit className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Editar</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(video)}
+                        className="w-full sm:w-auto text-destructive hover:text-destructive"
+                      >
+                        <Trash className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
+                    </>
+                  )}
+                  {video.status_renderizacao === "upload_realizado" && (
+                    <>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleOpenRender(video)}
+                        className="w-full sm:w-auto"
+                      >
+                        <PlayCircle className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Renderizar</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(video)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Edit className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Editar</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(video)}
+                        className="w-full sm:w-auto text-destructive hover:text-destructive"
+                      >
+                        <Trash className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
+                    </>
                   )}
                   {video.status_renderizacao === "processando" && (
                     <Button
@@ -558,6 +749,15 @@ const Videos = () => {
                         <Share2 className="h-4 w-4 sm:mr-1" />
                         <span className="hidden sm:inline">Compartilhar</span>
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(video)}
+                        className="w-full sm:w-auto text-destructive hover:text-destructive"
+                      >
+                        <Trash className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -571,20 +771,12 @@ const Videos = () => {
       {/* Dialogs */}
       {selectedVideo && (
         <>
-          <PhotoUpload
-            open={uploadDialogOpen}
-            onOpenChange={setUploadDialogOpen}
-            videoId={selectedVideo.id}
-            obraName={selectedVideo.obra?.nome || 'Obra não encontrada'}
-            onUploadComplete={handleUploadComplete}
-          />
-
           <VideoRenderer
             open={renderDialogOpen}
             onOpenChange={setRenderDialogOpen}
             videoId={selectedVideo.id}
             obraName={selectedVideo.obra?.nome || 'Obra não encontrada'}
-            photoCount={selectedVideo.quantidadeFotos || 0}
+            photoCount={selectedVideo.quantidade_fotos || 0}
             prompt={selectedVideo.nome}
             onRenderComplete={handleRenderComplete}
           />
@@ -596,6 +788,7 @@ const Videos = () => {
             projectName={selectedVideo.obra?.nome || 'Obra'}
             videoPrompt={selectedVideo.nome}
             photos={uploadedPhotos}
+            onPhotosChange={setUploadedPhotos}
             onSuccess={handleDriveUploadSuccess}
           />
         </>
