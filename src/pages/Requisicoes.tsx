@@ -405,6 +405,8 @@ const Requisicoes = () => {
       id: item.id,
       nome: item.descricao,
       quantidade: item.quantidade,
+      unidade: item.unidade_medida || 'Un',
+      status: item.comprado ? 'comprado' as const : 'pendente' as const,
       valor_unitario: item.valor_unitario || 0
     }));
     setItensCarrinho(itensCarrinhoFormat);
