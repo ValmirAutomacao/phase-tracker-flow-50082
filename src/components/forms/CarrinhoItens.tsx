@@ -21,6 +21,7 @@ export interface ItemCarrinho {
   unidade: string;
   descricao?: string;
   status: 'pendente' | 'comprado';
+  valor_unitario?: number;
 }
 
 // Schema de validação para item

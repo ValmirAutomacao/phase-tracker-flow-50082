@@ -556,7 +556,7 @@ const Financeiro = () => {
         observacao: data.observacao || null,
       };
 
-      await update(editingDespesa.id, despesaAtualizada);
+      await update.mutateAsync({ id: editingDespesa.id, updates: despesaAtualizada });
 
       toast({
         title: "Despesa atualizada",
@@ -1123,7 +1123,7 @@ const Financeiro = () => {
                   <div key={categoria} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{categoria}</span>
                     <span className="font-medium">
-                      {formatCurrency(valor)}
+                      {formatCurrency(Number(valor))}
                     </span>
                   </div>
                 ))
@@ -1146,7 +1146,7 @@ const Financeiro = () => {
                   <div key={cliente} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{cliente}</span>
                     <span className="font-medium">
-                      {formatCurrency(valor)}
+                      {formatCurrency(Number(valor))}
                     </span>
                   </div>
                 ))
@@ -1348,7 +1348,7 @@ const Financeiro = () => {
                         onClick={async () => {
                           if (window.confirm('Tem certeza que deseja excluir esta despesa?')) {
                             try {
-                              await deleteDespesa(despesa.id);
+                              await deleteDespesa.mutateAsync(despesa.id);
                               toast({
                                 title: "Despesa excluída",
                                 description: "A despesa foi excluída com sucesso.",
