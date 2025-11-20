@@ -24,7 +24,6 @@ export const initializeGoogleDrive = (): Promise<boolean> => {
       try {
         // @ts-ignore
         await gapi.client.init({
-          apiKey: API_KEY,
           discoveryDocs: [DISCOVERY_DOC],
         });
         gapiInited = true;
