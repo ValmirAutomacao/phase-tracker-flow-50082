@@ -133,11 +133,12 @@ const Videos = () => {
 
   const handleUploadComplete = (photoCount: number) => {
     if (selectedVideo) {
+      // Remover campos que não devem ser enviados no update
+      const { obra, progresso, quantidadeFotos, prompt, ...videoData } = selectedVideo;
+      
       const updatedVideo = {
-        ...selectedVideo,
+        ...videoData,
         status_renderizacao: "processando" as const,
-        // Campos calculados para compatibilidade
-        quantidadeFotos: photoCount,
       };
 
       update.mutate(
@@ -169,12 +170,14 @@ const Videos = () => {
 
   const handleDriveUploadSuccess = (folderId: string, folderName: string) => {
     if (selectedVideo) {
+      // Remover campos que não devem ser enviados no update
+      const { obra, progresso, quantidadeFotos, prompt, ...videoData } = selectedVideo;
+      
       const updatedVideo = {
-        ...selectedVideo,
+        ...videoData,
         drive_pasta_id: folderId,
         drive_subpasta_id: folderName,
         status_renderizacao: "processando" as const,
-        quantidadeFotos: uploadedPhotos.length,
       };
 
       update.mutate(
