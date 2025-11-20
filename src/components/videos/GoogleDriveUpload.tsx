@@ -19,6 +19,7 @@ interface GoogleDriveUploadProps {
   projectName: string;
   videoPrompt: string;
   photos: File[];
+  onPhotosChange: (photos: File[]) => void;
   onSuccess: (folderId: string, folderName: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function GoogleDriveUpload({
   projectName,
   videoPrompt,
   photos,
+  onPhotosChange,
   onSuccess
 }: GoogleDriveUploadProps) {
   const { toast } = useToast();
@@ -157,12 +159,38 @@ export function GoogleDriveUpload({
         
         <div className="space-y-4">
           {uploadStatus === 'idle' && (
-            <div className="text-sm text-muted-foreground">
-              <p>As fotos serão organizadas em:</p>
-              <p className="font-mono text-xs mt-2 p-2 bg-muted rounded">
-                /video-projetos/{projectName}_AAAAMMDD/
-              </p>
-            </div>
+            <>
+              <div className="text-sm text-muted-foreground">
+                <p>As fotos serão organizadas em:</p>
+                <p className="font-mono text-xs mt-2 p-2 bg-muted rounded">
+                  /video-projetos/{projectName}_AAAAMMDD/
+                </p>
+              </div>
+              
+              {/* Seletor de fotos */}
+              <div className="border-2 border-dashed rounded-lg p-4">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    onPhotosChange(files);
+                  }}
+                  className="hidden"
+                  id="photo-input"
+                />
+                <label
+                  htmlFor="photo-input"
+                  className="flex flex-col items-center gap-2 cursor-pointer"
+                >
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {photos.length > 0 ? `${photos.length} foto(s) selecionada(s)` : 'Clique para selecionar fotos'}
+                  </span>
+                </label>
+              </div>
+            </>
           )}
           
           {uploadStatus === 'uploading' && (
