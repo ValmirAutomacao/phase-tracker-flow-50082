@@ -124,22 +124,22 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarHeader className="border-b border-border px-4 md:px-6 py-4">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
+      <SidebarHeader className="border-b border-sidebar-border px-4 md:px-6 py-4 bg-sidebar">
         <div className="flex items-center gap-2 min-w-0">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0">
             <img src="/favicon.png" alt="Sec Engenharia" className="h-8 w-8 rounded-lg" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-lg truncate">Sec Engenharia</h2>
-            <p className="text-xs text-muted-foreground truncate">Gestão de Obras</p>
+            <h2 className="font-bold text-lg truncate text-sidebar-foreground">Sec Engenharia</h2>
+            <p className="text-xs text-sidebar-accent-foreground truncate">Gestão de Obras</p>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="bg-sidebar">
         <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
@@ -150,8 +150,8 @@ export function AppSidebar() {
                       end={item.url === "/"}
                       className={({ isActive }) =>
                         isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted/50"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
                       }
                     >
                       <item.icon className="h-4 w-4" />
@@ -166,7 +166,7 @@ export function AppSidebar() {
 
         {filteredCadastrosItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Cadastros</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredCadastrosItems.map((item) => (
@@ -176,8 +176,8 @@ export function AppSidebar() {
                       to={item.url}
                       className={({ isActive }) =>
                         isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted/50"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
                       }
                     >
                       <item.icon className="h-4 w-4" />
@@ -193,7 +193,7 @@ export function AppSidebar() {
 
         {filteredComprasItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>Compras</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Compras</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredComprasItems.map((item) => (
@@ -203,8 +203,8 @@ export function AppSidebar() {
                       to={item.url}
                       className={({ isActive }) =>
                         isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted/50"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
                       }
                     >
                       <item.icon className="h-4 w-4" />

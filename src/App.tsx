@@ -33,16 +33,16 @@ function AppHeader() {
   const { user, signOut } = useAuth();
   
   return (
-    <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card shrink-0">
+    <header className="h-14 border-b border-sidebar-border flex items-center justify-between px-4 bg-sidebar shrink-0">
       <div className="flex items-center">
-        <SidebarTrigger className="mr-2 md:mr-4" />
-        <h1 className="text-base md:text-lg font-semibold truncate">
+        <SidebarTrigger className="mr-2 md:mr-4 text-sidebar-foreground" />
+        <h1 className="text-base md:text-lg font-semibold truncate text-sidebar-foreground">
           <span className="hidden sm:inline">SecEngenharia - Sistema de Gestão</span>
           <span className="sm:hidden">SecEngenharia</span>
         </h1>
       </div>
       {user && (
-        <Button variant="ghost" size="sm" onClick={signOut}>
+        <Button variant="ghost" size="sm" onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-primary hover:text-sidebar-accent-foreground">
           <LogOut className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Sair</span>
         </Button>
