@@ -723,15 +723,26 @@ const Videos = () => {
                     </>
                   )}
                   {video.status_renderizacao === "processando" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenRender(video)}
-                      className="w-full sm:w-auto"
-                      disabled
-                    >
-                      Processando...
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenRender(video)}
+                        className="w-full sm:w-auto"
+                        disabled
+                      >
+                        Processando...
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(video)}
+                        className="w-full sm:w-auto text-destructive hover:text-destructive"
+                      >
+                        <Trash className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
+                    </>
                   )}
                   {video.status_renderizacao === "concluido" && (
                     <>
