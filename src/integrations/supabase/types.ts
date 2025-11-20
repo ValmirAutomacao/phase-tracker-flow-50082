@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      categorias: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           contato: Json | null
@@ -201,6 +228,59 @@ export type Database = {
             columns: ["setor_id"]
             isOneToOne: false
             referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_requisicao: {
+        Row: {
+          comprado: boolean | null
+          created_at: string | null
+          descricao: string
+          id: string
+          numero: number
+          observacoes: string | null
+          quantidade: number
+          quantidade_comprada: number | null
+          requisicao_id: string
+          unidade_medida: string
+          updated_at: string | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          comprado?: boolean | null
+          created_at?: string | null
+          descricao: string
+          id?: string
+          numero: number
+          observacoes?: string | null
+          quantidade?: number
+          quantidade_comprada?: number | null
+          requisicao_id: string
+          unidade_medida?: string
+          updated_at?: string | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          comprado?: boolean | null
+          created_at?: string | null
+          descricao?: string
+          id?: string
+          numero?: number
+          observacoes?: string | null
+          quantidade?: number
+          quantidade_comprada?: number | null
+          requisicao_id?: string
+          unidade_medida?: string
+          updated_at?: string | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_requisicao_requisicao_id_fkey"
+            columns: ["requisicao_id"]
+            isOneToOne: false
+            referencedRelation: "requisicoes"
             referencedColumns: ["id"]
           },
         ]
@@ -462,7 +542,6 @@ export type Database = {
           funcionario_responsavel_id: string | null
           funcionario_solicitante_id: string | null
           id: string
-          itens_produtos: Json | null
           obra_id: string | null
           observacoes: string | null
           prioridade: string | null
@@ -478,7 +557,6 @@ export type Database = {
           funcionario_responsavel_id?: string | null
           funcionario_solicitante_id?: string | null
           id?: string
-          itens_produtos?: Json | null
           obra_id?: string | null
           observacoes?: string | null
           prioridade?: string | null
@@ -494,7 +572,6 @@ export type Database = {
           funcionario_responsavel_id?: string | null
           funcionario_solicitante_id?: string | null
           id?: string
-          itens_produtos?: Json | null
           obra_id?: string | null
           observacoes?: string | null
           prioridade?: string | null
@@ -641,7 +718,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_employee: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      is_manager: { Args: never; Returns: boolean }
       obter_permissoes_funcionario: {
         Args: { _user_id: string }
         Returns: Json

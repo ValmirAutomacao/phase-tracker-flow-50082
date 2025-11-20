@@ -25,12 +25,13 @@ interface CategoriaItem {
   ativa: boolean;
   created_at?: string;
   updated_at?: string;
+  [key: string]: any;
 }
 
 const categoriaSchema = z.object({
   nome: z.string().min(3, "O nome deve ter no mínimo 3 caracteres").max(100, "O nome deve ter no máximo 100 caracteres"),
   descricao: z.string().optional(),
-  ativa: z.boolean().default(true),
+  ativa: z.boolean(),
 });
 
 type CategoriaFormData = z.infer<typeof categoriaSchema>;

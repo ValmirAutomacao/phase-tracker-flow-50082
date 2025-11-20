@@ -26,6 +26,7 @@ import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
+import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
@@ -72,8 +73,10 @@ const Videos = () => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [driveUploadDialogOpen, setDriveUploadDialogOpen] = useState(false);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
 
   // Hooks Supabase para substituir localStorage
   const { data: videos = [], isLoading, error } = useOptimizedSupabaseQuery<any>('VIDEOS');
@@ -150,6 +153,45 @@ const Videos = () => {
             toast({
               title: "Erro no upload",
               description: error.message || "Tente novamente em alguns instantes.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    }
+  };
+
+  const handleOpenDriveUpload = (video: VideoItem, photos: File[]) => {
+    setSelectedVideo(video);
+    setUploadedPhotos(photos);
+    setDriveUploadDialogOpen(true);
+  };
+
+  const handleDriveUploadSuccess = (folderId: string, folderName: string) => {
+    if (selectedVideo) {
+      const updatedVideo = {
+        ...selectedVideo,
+        drive_pasta_id: folderId,
+        drive_subpasta_id: folderName,
+        status_renderizacao: "processando" as const,
+        quantidadeFotos: uploadedPhotos.length,
+      };
+
+      update.mutate(
+        { id: selectedVideo.id, updates: updatedVideo as any },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Fotos enviadas!",
+              description: `${uploadedPhotos.length} fotos foram enviadas para o Google Drive.`,
+            });
+            setDriveUploadDialogOpen(false);
+            setUploadedPhotos([]);
+          },
+          onError: (error) => {
+            toast({
+              title: "Erro ao atualizar registro",
+              description: error.message || "Tente novamente.",
               variant: "destructive",
             });
           },
@@ -545,6 +587,16 @@ const Videos = () => {
             photoCount={selectedVideo.quantidadeFotos || 0}
             prompt={selectedVideo.nome}
             onRenderComplete={handleRenderComplete}
+          />
+
+          <GoogleDriveUpload
+            open={driveUploadDialogOpen}
+            onOpenChange={setDriveUploadDialogOpen}
+            videoId={selectedVideo.id}
+            projectName={selectedVideo.obra?.nome || 'Obra'}
+            videoPrompt={selectedVideo.nome}
+            photos={uploadedPhotos}
+            onSuccess={handleDriveUploadSuccess}
           />
         </>
       )}
