@@ -40,7 +40,7 @@ interface VideoItem {
   id: string;
   obra_id: string; // FK para obras
   nome: string; // nome do vídeo/prompt
-  status_renderizacao: 'pendente' | 'processando' | 'concluido' | 'erro';
+  status_renderizacao: 'pendente' | 'upload_realizado' | 'processando' | 'concluido' | 'erro';
   arquivo_original_url?: string;
   arquivo_renderizado_url?: string;
   duracao_segundos?: number;
@@ -48,6 +48,7 @@ interface VideoItem {
   drive_pasta_id?: string;
   drive_subpasta_id?: string;
   n8n_job_id?: string;
+  quantidade_fotos?: number;
   // Timestamps
   created_at?: string;
   updated_at?: string;
@@ -56,10 +57,6 @@ interface VideoItem {
     id: string;
     nome: string;
   };
-  // Campos calculados para compatibilidade com UI
-  progresso?: number;
-  quantidadeFotos?: number;
-  prompt?: string;
 }
 
 const videoSchema = z.object({
@@ -72,7 +69,7 @@ type VideoFormData = z.infer<typeof videoSchema>;
 const Videos = () => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [driveUploadDialogOpen, setDriveUploadDialogOpen] = useState(false);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
