@@ -29,6 +29,7 @@ import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
 import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
+import { PhotoManager } from "@/components/videos/PhotoManager";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
@@ -74,6 +75,7 @@ const Videos = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [driveUploadDialogOpen, setDriveUploadDialogOpen] = useState(false);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
+  const [photoManagerOpen, setPhotoManagerOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
 
@@ -202,10 +204,6 @@ const Videos = () => {
     }
   };
 
-  const handleOpenRender = (video: VideoItem) => {
-    setSelectedVideo(video);
-    setRenderDialogOpen(true);
-  };
 
   const handleEdit = (video: VideoItem) => {
     setSelectedVideo(video);
@@ -270,36 +268,40 @@ const Videos = () => {
     );
   };
 
-  const handleRenderComplete = (videoData: { duration: string; size: string; url: string }) => {
-    if (selectedVideo) {
-      const { obra, ...cleanedVideo } = selectedVideo;
-      
-      const updatedVideo = {
-        ...cleanedVideo,
-        status_renderizacao: "concluido" as const,
-        arquivo_renderizado_url: videoData.url,
-        duracao_segundos: parseInt(videoData.duration) || null,
-      };
+  const handleRenderComplete = async (videoUrl: string) => {
+    if (!selectedVideo) return;
 
-      update.mutate(
-        { id: selectedVideo.id, updates: updatedVideo as any },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Renderização concluída!",
-              description: "O vídeo foi processado com sucesso e está pronto para visualização.",
-            });
-          },
-          onError: (error) => {
-            toast({
-              title: "Erro na renderização",
-              description: error.message || "Tente novamente em alguns instantes.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
-    }
+    const { obra, ...cleanedVideo } = selectedVideo;
+    
+    const updatedVideo = {
+      ...cleanedVideo,
+      status_renderizacao: "concluido" as const,
+      arquivo_renderizado_url: videoUrl,
+    };
+
+    update.mutate(
+      { id: selectedVideo.id, updates: updatedVideo as any },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Renderização concluída!",
+            description: "O vídeo foi processado com sucesso e está pronto para visualização.",
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Erro na renderização",
+            description: error.message || "Tente novamente em alguns instantes.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  const handleOpenRender = (video: VideoItem) => {
+    setSelectedVideo(video);
+    setPhotoManagerOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -782,13 +784,14 @@ const Videos = () => {
       {/* Dialogs */}
       {selectedVideo && (
         <>
-          <VideoRenderer
-            open={renderDialogOpen}
-            onOpenChange={setRenderDialogOpen}
+          <PhotoManager
+            open={photoManagerOpen}
+            onOpenChange={setPhotoManagerOpen}
             videoId={selectedVideo.id}
             obraName={selectedVideo.obra?.nome || 'Obra não encontrada'}
-            photoCount={selectedVideo.quantidade_fotos || 0}
-            prompt={selectedVideo.nome}
+            driveFolderId={selectedVideo.drive_pasta_id}
+            driveSubFolderId={selectedVideo.drive_subpasta_id}
+            currentPhotoCount={selectedVideo.quantidade_fotos || 0}
             onRenderComplete={handleRenderComplete}
           />
 
