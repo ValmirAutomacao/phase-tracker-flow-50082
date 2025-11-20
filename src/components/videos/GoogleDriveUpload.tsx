@@ -10,7 +10,8 @@ import {
   uploadMetadata,
   requestAuthorization
 } from '@/services/googleDrive';
-import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface GoogleDriveUploadProps {
   open: boolean;
@@ -38,6 +39,21 @@ export function GoogleDriveUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [driveInitialized, setDriveInitialized] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [photoPreviews, setPhotoPreviews] = useState<{ file: File; preview: string }[]>([]);
+
+  useEffect(() => {
+    // Criar previews das fotos
+    const previews = photos.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    setPhotoPreviews(previews);
+
+    // Cleanup: revogar URLs quando o componente desmontar ou fotos mudarem
+    return () => {
+      previews.forEach(p => URL.revokeObjectURL(p.preview));
+    };
+  }, [photos]);
 
   useEffect(() => {
     const init = async () => {
@@ -147,6 +163,11 @@ export function GoogleDriveUpload({
     }
   };
 
+  const handleRemovePhoto = (index: number) => {
+    const newPhotos = photos.filter((_, i) => i !== index);
+    onPhotosChange(newPhotos);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -175,7 +196,7 @@ export function GoogleDriveUpload({
                   accept="image/*"
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
-                    onPhotosChange(files);
+                    onPhotosChange([...photos, ...files]);
                   }}
                   className="hidden"
                   id="photo-input"
@@ -190,6 +211,47 @@ export function GoogleDriveUpload({
                   </span>
                 </label>
               </div>
+
+              {/* Grid de previews das fotos */}
+              {photoPreviews.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Fotos selecionadas:</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onPhotosChange([])}
+                      className="text-xs"
+                    >
+                      Limpar todas
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      {photoPreviews.map((photo, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={photo.preview}
+                            alt={`Foto ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemovePhoto(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <span className="absolute bottom-1 left-1 bg-background/80 text-xs px-1 rounded">
+                            {index + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </>
           )}
           
