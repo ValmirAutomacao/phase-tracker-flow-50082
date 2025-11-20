@@ -1,6 +1,6 @@
 // Configuração do Google Drive API
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const PARENT_FOLDER_ID = import.meta.env.VITE_DRIVE_FOLDER_ID || '1Y06FFvPPVIjxeu9P2M7HjPL3CDQsIvgB';
