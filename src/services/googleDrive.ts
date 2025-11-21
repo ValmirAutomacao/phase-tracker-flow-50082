@@ -239,6 +239,35 @@ export const deleteFile = async (fileId: string): Promise<void> => {
   }
 };
 
+// Listar APENAS pastas de projetos na pasta principal
+export const listProjectFolders = async (): Promise<any[]> => {
+  try {
+    console.log('📁 Listando pastas de projetos na pasta principal...');
+
+    // @ts-ignore
+    if (typeof gapi === 'undefined' || !gapi.client) {
+      throw new Error('Google API não inicializado');
+    }
+
+    // @ts-ignore
+    const response = await gapi.client.drive.files.list({
+      q: `'${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+      fields: 'files(id, name, webViewLink, createdTime, modifiedTime)',
+      orderBy: 'modifiedTime desc',
+      key: API_KEY
+    });
+
+    console.log('📋 Pastas de projetos encontradas:', response.result);
+    const folders = response.result.files || [];
+    console.log('📂 Total de projetos:', folders.length, folders);
+
+    return folders;
+  } catch (error) {
+    console.error('❌ Erro ao listar pastas de projetos:', error);
+    return [];
+  }
+};
+
 // Listar arquivos de uma pasta (SEM autenticação OAuth - usa API Key)
 export const listFilesInFolder = async (folderId: string): Promise<any[]> => {
   try {

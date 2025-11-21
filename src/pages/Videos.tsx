@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { getFromStorage, addToStorage, updateInStorage, deleteFromStorage, STORAGE_KEYS } from "@/lib/localStorage";
+import { initializeGoogleDrive, listProjectFolders } from "@/services/googleDrive";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
 import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
@@ -85,23 +85,56 @@ const Videos = () => {
   // Query APENAS para obras (para dropdown) - vem do Supabase
   const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
 
-  // Carregar vídeos do localStorage
+  // Carregar projetos do Google Drive
   useEffect(() => {
-    setIsLoading(true);
-    try {
-      const videosData = getFromStorage<VideoItem>(STORAGE_KEYS.VIDEOS);
-      // Relacionar vídeos com obras (obras vêm do Supabase, vídeos do localStorage)
-      const videosWithObras = videosData.map(video => ({
-        ...video,
-        obra: obras.find(obra => obra.id === video.obra_id)
-      }));
-      setVideos(videosWithObras);
-    } catch (error) {
-      console.error('Erro ao carregar vídeos:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [obras]);
+    const loadProjectsFromDrive = async () => {
+      if (obras.length === 0) return; // Esperar obras carregarem
+
+      setIsLoading(true);
+      try {
+        console.log('🚀 Inicializando Google Drive...');
+        await initializeGoogleDrive();
+
+        console.log('📁 Carregando projetos do Google Drive...');
+        const projectFolders = await listProjectFolders();
+
+        // Converter pastas do Drive em objetos VideoItem
+        const videosFromDrive = projectFolders.map(folder => {
+          // Tentar extrair informações do nome da pasta
+          const folderName = folder.name || '';
+
+          return {
+            id: folder.id,
+            obra_id: '', // Vai ser preenchido pela correlação com obras
+            nome: folderName,
+            status_renderizacao: 'processando' as const,
+            drive_pasta_id: folder.id,
+            drive_subpasta_id: folder.id,
+            arquivo_original_url: folder.webViewLink,
+            created_at: folder.createdTime,
+            updated_at: folder.modifiedTime,
+            // Tentar encontrar obra relacionada pelo nome
+            obra: obras.find(obra => folderName.includes(obra.nome))
+          } as VideoItem;
+        });
+
+        console.log('✅ Projetos carregados do Drive:', videosFromDrive.length);
+        setVideos(videosFromDrive);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar projetos do Drive:', error);
+        toast({
+          title: "Erro ao carregar projetos",
+          description: "Não foi possível carregar os projetos do Google Drive.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProjectsFromDrive();
+  }, [obras, toast]);
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
@@ -122,12 +155,12 @@ const Videos = () => {
         updated_at: new Date().toISOString(),
       };
 
-      const updatedVideos = addToStorage(STORAGE_KEYS.VIDEOS, novoVideo);
-      // Atualizar estado local com relacionamento
-      setVideos(updatedVideos.map(video => ({
-        ...video,
-        obra: obras.find(obra => obra.id === video.obra_id)
-      })));
+      // Apenas atualizar estado local - dados ficam no Google Drive
+      const videoComObra = {
+        ...novoVideo,
+        obra: obras.find(obra => obra.id === novoVideo.obra_id)
+      };
+      setVideos([...videos, videoComObra]);
 
       toast({
         title: "Vídeo criado!",
@@ -153,17 +186,17 @@ const Videos = () => {
   const handleUploadComplete = (photoCount: number) => {
     if (selectedVideo) {
       try {
-        const updates = {
+        // Atualizar apenas estado local - dados ficam no Google Drive
+        const updatedVideo = {
+          ...selectedVideo,
           status_renderizacao: "processando" as const,
           quantidade_fotos: photoCount,
           updated_at: new Date().toISOString(),
         };
 
-        const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
-        setVideos(updatedVideos.map(video => ({
-          ...video,
-          obra: obras.find(obra => obra.id === video.obra_id)
-        })));
+        setVideos(videos.map(video =>
+          video.id === selectedVideo.id ? updatedVideo : video
+        ));
 
         toast({
           title: "Upload concluído!",
@@ -241,12 +274,8 @@ const Videos = () => {
           driveDeleteSuccess = await deleteDriveFolder(video.drive_pasta_id);
         }
 
-        // Excluir o vídeo do localStorage
-        const updatedVideos = deleteFromStorage(STORAGE_KEYS.VIDEOS, video.id);
-        setVideos(updatedVideos.map(video => ({
-          ...video,
-          obra: obras.find(obra => obra.id === video.obra_id)
-        })));
+        // Remover apenas do estado local - dados ficam no Google Drive
+        setVideos(videos.filter(v => v.id !== video.id));
 
         toast({
           title: "Vídeo excluído!",
@@ -270,17 +299,18 @@ const Videos = () => {
     if (!selectedVideo) return;
 
     try {
-      const updates = {
+      // Atualizar apenas estado local - dados ficam no Google Drive
+      const updatedVideo = {
+        ...selectedVideo,
         obra_id: data.obra_id,
         nome: data.nome,
         updated_at: new Date().toISOString(),
+        obra: obras.find(obra => obra.id === data.obra_id)
       };
 
-      const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
-      setVideos(updatedVideos.map(video => ({
-        ...video,
-        obra: obras.find(obra => obra.id === video.obra_id)
-      })));
+      setVideos(videos.map(video =>
+        video.id === selectedVideo.id ? updatedVideo : video
+      ));
 
       toast({
         title: "Vídeo atualizado!",
@@ -302,17 +332,17 @@ const Videos = () => {
     if (!selectedVideo) return;
 
     try {
-      const updates = {
+      // Atualizar apenas estado local - dados ficam no Google Drive
+      const updatedVideo = {
+        ...selectedVideo,
         status_renderizacao: "concluido" as const,
         arquivo_renderizado_url: videoUrl,
         updated_at: new Date().toISOString(),
       };
 
-      const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
-      setVideos(updatedVideos.map(video => ({
-        ...video,
-        obra: obras.find(obra => obra.id === video.obra_id)
-      })));
+      setVideos(videos.map(video =>
+        video.id === selectedVideo.id ? updatedVideo : video
+      ));
 
       toast({
         title: "Renderização concluída!",
