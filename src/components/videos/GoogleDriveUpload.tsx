@@ -8,7 +8,8 @@ import {
   createProjectFolder,
   uploadFileToDrive,
   uploadMetadata,
-  requestAuthorization
+  requestAuthorization,
+  hasValidToken
 } from '@/services/googleDrive';
 import { Upload, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -99,8 +100,10 @@ export function GoogleDriveUpload({
     setUploadStatus('uploading');
 
     try {
-      // 1. Autorizar acesso ao Drive
-      await requestAuthorization();
+      // 1. Verificar/Autorizar acesso ao Drive
+      if (!hasValidToken()) {
+        await requestAuthorization();
+      }
       toast({
         title: "Autorizado",
         description: "Acesso ao Google Drive autorizado."

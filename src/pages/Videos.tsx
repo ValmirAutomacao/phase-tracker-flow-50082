@@ -30,6 +30,7 @@ import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
 import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
 import { PhotoManager } from "@/components/videos/PhotoManager";
+import { deleteDriveFolder } from "@/services/googleDrive";
 import "@/styles/responsive.css";
 
 // Interface para Obra (para relacionamento)
@@ -43,7 +44,7 @@ interface VideoItem {
   id: string;
   obra_id: string; // FK para obras
   nome: string; // nome do vídeo/prompt
-  status_renderizacao: 'pendente' | 'upload_realizado' | 'processando' | 'concluido' | 'erro';
+  status_renderizacao: 'pendente' | 'processando' | 'concluido' | 'erro';
   arquivo_original_url?: string;
   arquivo_renderizado_url?: string;
   duracao_segundos?: number;
@@ -176,8 +177,8 @@ const Videos = () => {
       
       const updatedVideo = {
         ...videoData,
-        drive_pasta_id: folderId,
-        drive_subpasta_id: folderName,
+        drive_pasta_id: folderId, // ID da pasta criada no Google Drive
+        drive_subpasta_id: folderId, // Mesmo ID - pasta específica deste projeto
         status_renderizacao: "processando" as const,
       };
 
@@ -214,13 +215,24 @@ const Videos = () => {
     setEditOpen(true);
   };
 
-  const handleDelete = (video: VideoItem) => {
-    if (confirm(`Tem certeza que deseja excluir o vídeo "${video.nome}"?`)) {
+  const handleDelete = async (video: VideoItem) => {
+    if (confirm(`Tem certeza que deseja excluir o vídeo "${video.nome}"?\n\nIsso também excluirá a pasta e todas as fotos do Google Drive.`)) {
+      // Primeiro, tentar excluir a pasta do Drive
+      let driveDeleteSuccess = true;
+      if (video.drive_pasta_id) {
+        console.log('🗑️ Excluindo pasta do Drive:', video.drive_pasta_id);
+        driveDeleteSuccess = await deleteDriveFolder(video.drive_pasta_id);
+      }
+
+      // Excluir o vídeo do banco de dados
       deleteVideo.mutate(video.id, {
         onSuccess: () => {
           toast({
             title: "Vídeo excluído!",
-            description: "O vídeo foi removido com sucesso.",
+            description: driveDeleteSuccess
+              ? "O vídeo e a pasta do Google Drive foram removidos com sucesso."
+              : "O vídeo foi removido, mas houve um problema ao excluir a pasta do Drive.",
+            variant: driveDeleteSuccess ? "default" : "destructive"
           });
         },
         onError: (error) => {
@@ -316,11 +328,6 @@ const Videos = () => {
         className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
         icon: Clock
       },
-      upload_realizado: {
-        label: "Pronto para Renderizar",
-        className: "bg-purple-100 text-purple-700 hover:bg-purple-100",
-        icon: PlayCircle
-      },
       pendente: {
         label: "Pendente",
         className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
@@ -381,7 +388,7 @@ const Videos = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {obras.map(obra => (
+                          {obras.filter(obra => obra.id && obra.id !== '').map(obra => (
                             <SelectItem key={obra.id} value={obra.id}>{obra.nome}</SelectItem>
                           ))}
                         </SelectContent>
@@ -457,7 +464,7 @@ const Videos = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {obras.map(obra => (
+                            {obras.filter(obra => obra.id && obra.id !== '').map(obra => (
                               <SelectItem key={obra.id} value={obra.id}>{obra.nome}</SelectItem>
                             ))}
                           </SelectContent>
@@ -526,7 +533,7 @@ const Videos = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {videos.filter(v => v.status_renderizacao === "upload_realizado").length}
+              {videos.filter(v => v.status_renderizacao === "processando").length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">pronto p/ renderizar</p>
           </CardContent>
@@ -693,7 +700,7 @@ const Videos = () => {
                       </Button>
                     </>
                   )}
-                  {video.status_renderizacao === "upload_realizado" && (
+                  {video.status_renderizacao === "processando" && (
                     <>
                       <Button
                         variant="default"
@@ -712,28 +719,6 @@ const Videos = () => {
                       >
                         <Edit className="h-4 w-4 sm:mr-1" />
                         <span className="hidden sm:inline">Editar</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(video)}
-                        className="w-full sm:w-auto text-destructive hover:text-destructive"
-                      >
-                        <Trash className="h-4 w-4 sm:mr-1" />
-                        <span className="hidden sm:inline">Excluir</span>
-                      </Button>
-                    </>
-                  )}
-                  {video.status_renderizacao === "processando" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenRender(video)}
-                        className="w-full sm:w-auto"
-                        disabled
-                      >
-                        Processando...
                       </Button>
                       <Button
                         variant="outline"
@@ -791,6 +776,7 @@ const Videos = () => {
             obraName={selectedVideo.obra?.nome || 'Obra não encontrada'}
             driveFolderId={selectedVideo.drive_pasta_id}
             driveSubFolderId={selectedVideo.drive_subpasta_id}
+            currentPhotoCount={selectedVideo.quantidade_fotos || 0}
             onRenderComplete={handleRenderComplete}
           />
 

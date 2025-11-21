@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Play, X, Plus, Video, Sparkles, Clock, CheckCircle, 
-  Upload, Download, Share2, Image as ImageIcon 
+import {
+  Play, X, Plus, Video, Sparkles, Clock, CheckCircle,
+  Upload, Download, Share2, Image as ImageIcon
 } from "lucide-react";
-import { initializeGoogleDrive, requestAuthorization, uploadFileToDrive } from "@/services/googleDrive";
+import { initializeGoogleDrive, requestAuthorization, uploadFileToDrive, listFilesInFolder, deleteFile, hasValidToken } from "@/services/googleDrive";
 
 interface PhotoManagerProps {
   open: boolean;
@@ -17,6 +17,7 @@ interface PhotoManagerProps {
   obraName: string;
   driveFolderId: string | null;
   driveSubFolderId: string | null;
+  currentPhotoCount?: number;
   onRenderComplete: (videoUrl: string) => void;
 }
 
@@ -41,10 +42,13 @@ export function PhotoManager({
   obraName,
   driveFolderId,
   driveSubFolderId,
+  currentPhotoCount = 0,
   onRenderComplete
 }: PhotoManagerProps) {
   const { toast } = useToast();
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
+  const [drivePhotos, setDrivePhotos] = useState<any[]>([]);
+  const [loadingDrivePhotos, setLoadingDrivePhotos] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -85,9 +89,46 @@ export function PhotoManager({
 
   useEffect(() => {
     if (open) {
-      initializeGoogleDrive();
+      initializeGoogleDrive().then((success) => {
+        if (success) {
+          loadDrivePhotos();
+        }
+      });
     }
-  }, [open]);
+  }, [open, driveSubFolderId]);
+
+  const loadDrivePhotos = async () => {
+    if (!driveSubFolderId) {
+      console.log('DriveSubFolderId não fornecido');
+      return;
+    }
+
+    setLoadingDrivePhotos(true);
+    try {
+      console.log('Carregando fotos do Drive para pasta:', driveSubFolderId);
+
+      // Tentar listar arquivos SEM autorização primeiro (usa API Key)
+      const files = await listFilesInFolder(driveSubFolderId);
+      console.log('Arquivos encontrados na pasta:', files);
+
+      // Filtrar apenas imagens
+      const imageFiles = files.filter((file: any) =>
+        file.mimeType && file.mimeType.startsWith('image/')
+      );
+
+      console.log('Imagens filtradas:', imageFiles);
+      setDrivePhotos(imageFiles);
+    } catch (error) {
+      console.error('Erro ao carregar fotos do Drive:', error);
+      toast({
+        title: "Erro ao carregar fotos",
+        description: "Não foi possível carregar as fotos do Google Drive",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingDrivePhotos(false);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -113,6 +154,27 @@ export function PhotoManager({
     });
   };
 
+  const removeDrivePhoto = async (fileId: string) => {
+    try {
+      if (!hasValidToken()) {
+        await requestAuthorization();
+      }
+      await deleteFile(fileId);
+      setDrivePhotos(prev => prev.filter(f => f.id !== fileId));
+      toast({
+        title: "Foto removida",
+        description: "A foto foi removida do Google Drive",
+      });
+    } catch (error) {
+      console.error('Erro ao remover foto:', error);
+      toast({
+        title: "Erro ao remover foto",
+        description: "Não foi possível remover a foto do Google Drive",
+        variant: "destructive"
+      });
+    }
+  };
+
   const uploadNewPhotos = async () => {
     if (!driveSubFolderId) {
       toast({
@@ -136,13 +198,16 @@ export function PhotoManager({
     setUploadProgress(0);
 
     try {
-      await requestAuthorization();
+      // Verificar token antes de upload
+      if (!hasValidToken()) {
+        await requestAuthorization();
+      }
 
       for (let i = 0; i < photosToUpload.length; i++) {
         const photo = photosToUpload[i];
         await uploadFileToDrive(photo.file, driveSubFolderId, photo.file.name);
-        
-        setPhotos(prev => prev.map(p => 
+
+        setPhotos(prev => prev.map(p =>
           p.id === photo.id ? { ...p, uploaded: true } : p
         ));
 
@@ -153,6 +218,12 @@ export function PhotoManager({
         title: "Upload concluído!",
         description: `${photosToUpload.length} foto(s) enviada(s) com sucesso`,
       });
+
+      // Recarregar fotos do Drive
+      await loadDrivePhotos();
+
+      // Limpar fotos locais após upload bem-sucedido
+      setPhotos([]);
     } catch (error) {
       console.error('Erro no upload:', error);
       toast({
@@ -180,22 +251,19 @@ export function PhotoManager({
     setRendering(true);
 
     // Simular chamada para n8n webhook
-    const n8nWebhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || "https://n8n.example.com/webhook/render-video";
-    
+    const n8nWebhookUrl = import.meta.env.VITE_N8N_RENDER_WEBHOOK || "https://n8n.example.com/webhook/render-video";
+
     try {
-      // Aqui será a chamada real para o n8n
-      const response = await fetch(n8nWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          videoId,
-          obraName,
-          driveFolderId: driveSubFolderId,
-          photoCount: photos.filter(p => p.uploaded).length
-        })
+      // TODO: Implementar chamada real para o n8n quando webhook estiver configurado
+      console.log('🎬 Iniciando renderização simulada para:', {
+        videoId,
+        obraName,
+        driveFolderId: driveSubFolderId,
+        photoCount: drivePhotos.length
       });
+
+      // Por enquanto, apenas simular sem chamar webhook
+      // const response = await fetch(n8nWebhookUrl, ...);
 
       // Simular progresso de renderização
       for (let stageIndex = 0; stageIndex < stages.length; stageIndex++) {
@@ -225,7 +293,7 @@ export function PhotoManager({
       }
 
       const videoUrl = `https://drive.google.com/file/d/${driveSubFolderId}/video_renderizado.mp4`;
-      
+
       toast({
         title: "Vídeo renderizado com sucesso!",
         description: `O vídeo da obra "${obraName}" está pronto.`,
@@ -257,7 +325,7 @@ export function PhotoManager({
     }
   };
 
-  const totalPhotos = photos.filter(p => p.uploaded).length;
+  const totalPhotos = photos.filter(p => p.uploaded).length + drivePhotos.length;
   const pendingPhotos = photos.filter(p => !p.uploaded).length;
 
   return (
@@ -313,33 +381,97 @@ export function PhotoManager({
                 />
               </div>
 
-              {/* Grid de fotos */}
+              {/* Grid de fotos locais */}
               {photos.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {photos.map((photo) => (
-                    <div key={photo.id} className="relative group">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-border">
-                        <img
-                          src={photo.preview}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-muted-foreground">Fotos para Upload</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {photos.map((photo) => (
+                      <div key={photo.id} className="relative group">
+                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-border">
+                          <img
+                            src={photo.preview}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          onClick={() => removePhoto(photo.id)}
+                          className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={uploading || rendering}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        {photo.uploaded && (
+                          <Badge className="absolute bottom-2 left-2 bg-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Enviada
+                          </Badge>
+                        )}
                       </div>
-                      <button
-                        onClick={() => removePhoto(photo.id)}
-                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        disabled={uploading || rendering}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                      {photo.uploaded && (
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Grid de fotos do Google Drive */}
+              {drivePhotos.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Fotos no Google Drive ({drivePhotos.length})
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {drivePhotos.map((file) => (
+                      <div key={file.id} className="relative group">
+                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-green-200 bg-green-50 flex items-center justify-center relative">
+                          {/* Fallback com nome da foto sempre visível */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-center p-2">
+                            <div>
+                              <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-1" />
+                              <div className="text-xs text-muted-foreground font-medium">
+                                {file.name.replace(/\.(jpg|jpeg|png|gif)$/i, '')}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Imagem que carrega por cima */}
+                          <img
+                            src={`https://drive.google.com/thumbnail?id=${file.id}&sz=200`}
+                            alt={file.name}
+                            className="absolute inset-0 w-full h-full object-cover z-10"
+                            crossOrigin="anonymous"
+                            onLoad={(e) => {
+                              console.log('✅ Thumbnail carregada:', file.name);
+                            }}
+                            onError={(e) => {
+                              console.log('❌ Erro ao carregar thumbnail:', file.name, 'URL:', e.currentTarget.src);
+                              // Se falhar, só remove a imagem (deixa o fallback)
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => removeDrivePhoto(file.id)}
+                          className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={uploading || rendering}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                         <Badge className="absolute bottom-2 left-2 bg-green-600">
                           <CheckCircle className="h-3 w-3 mr-1" />
-                          Enviada
+                          No Drive
                         </Badge>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {loadingDrivePhotos && (
+                <div className="text-center py-8">
+                  <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Carregando fotos do Google Drive...</p>
                 </div>
               )}
 
