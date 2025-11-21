@@ -14,6 +14,10 @@ const TABLE_MAP = {
   'engflow_requisicoes': 'requisicoes',
   'engflow_categorias': 'categorias',
   'engflow_itens_requisicao': 'itens_requisicao',
+  'JORNADAS_TRABALHO': 'jornadas_trabalho',
+  'FUNCIONARIOS': 'funcionarios',
+  'FUNCOES': 'funcoes',
+  'SETORES': 'setores',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
@@ -542,4 +546,5 @@ export const SUPABASE_KEYS = {
   VIDEOS: 'engflow_videos',
   CATEGORIAS: 'engflow_categorias',
   ITENS_REQUISICAO: 'engflow_itens_requisicao',
+  JORNADAS_TRABALHO: 'JORNADAS_TRABALHO',
 } as const

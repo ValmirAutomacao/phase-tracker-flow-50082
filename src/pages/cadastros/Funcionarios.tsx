@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Users, Plus, Search, Edit, Mail, Phone, Upload, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Edit, Mail, Phone, Upload, Trash2, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
@@ -23,7 +23,11 @@ const funcionarioSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
+  cpf: z.string().min(11, "CPF é obrigatório").regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF deve ter formato válido"),
+  ctps: z.string().min(1, "CTPS é obrigatório"),
+  data_admissao: z.string().min(1, "Data de admissão é obrigatória"),
   funcao_id: z.string().min(1, "Selecione uma função"),
+  jornada_trabalho_id: z.string().optional(),
   senha: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional().or(z.literal("")),
 });
 
@@ -34,12 +38,16 @@ interface Funcionario {
   nome: string;
   email: string;
   telefone: string;
+  cpf?: string;
+  ctps?: string;
+  data_admissao?: string;
   funcao_id: string; // FK para funções
+  jornada_trabalho_id?: string; // FK para jornadas
   senha?: string;
   foto?: string;
   status?: string;
-  dataAdmissao?: string;
   observacoes?: string;
+  ativo?: boolean;
   // Campos de relacionamento
   funcao?: {
     id: string;
@@ -50,6 +58,11 @@ interface Funcionario {
       id: string;
       nome: string;
     };
+  };
+  jornada?: {
+    id: string;
+    nome: string;
+    carga_horaria_diaria: number;
   };
   created_at?: string;
   updated_at?: string;
@@ -87,6 +100,7 @@ const Funcionarios = () => {
   // Hooks para carregar dados hierárquicos
   const { data: funcoes = [] } = useOptimizedSupabaseQuery<any>('FUNCOES');
   const { data: setores = [] } = useOptimizedSupabaseQuery<any>('SETORES');
+  const { data: jornadas = [] } = useOptimizedSupabaseQuery<any>('JORNADAS_TRABALHO');
 
   const form = useForm<FuncionarioFormData>({
     resolver: zodResolver(funcionarioSchema),
@@ -94,7 +108,11 @@ const Funcionarios = () => {
       nome: "",
       email: "",
       telefone: "",
+      cpf: "",
+      ctps: "",
+      data_admissao: "",
       funcao_id: "",
+      jornada_trabalho_id: "sem_jornada",
       senha: undefined,
     },
   });
@@ -130,7 +148,11 @@ const Funcionarios = () => {
         nome: editingFuncionario.nome,
         email: editingFuncionario.email,
         telefone: editingFuncionario.telefone,
+        cpf: editingFuncionario.cpf || "",
+        ctps: editingFuncionario.ctps || "",
+        data_admissao: editingFuncionario.data_admissao || "",
         funcao_id: editingFuncionario.funcao_id,
+        jornada_trabalho_id: editingFuncionario.jornada_trabalho_id || "sem_jornada",
         senha: undefined,
       });
       setFotoPreview(editingFuncionario.foto || "");
@@ -139,7 +161,11 @@ const Funcionarios = () => {
         nome: "",
         email: "",
         telefone: "",
+        cpf: "",
+        ctps: "",
+        data_admissao: "",
         funcao_id: "",
+        jornada_trabalho_id: "sem_jornada",
         senha: undefined,
       });
       setFotoPreview("");
@@ -165,8 +191,12 @@ const Funcionarios = () => {
         nome: data.nome,
         email: data.email,
         telefone: data.telefone,
+        cpf: data.cpf,
+        ctps: data.ctps,
+        data_admissao: data.data_admissao,
         funcao_id: data.funcao_id,
-        foto: fotoPreview,
+        jornada_trabalho_id: data.jornada_trabalho_id === "sem_jornada" ? null : data.jornada_trabalho_id || null,
+        // foto: fotoPreview, // Campo removido - não existe na tabela do banco
       };
 
       update.mutate(
@@ -202,16 +232,28 @@ const Funcionarios = () => {
         return;
       }
 
-      // Ao criar, primeiro cria usuário no Supabase Auth
+      // Ao criar, primeiro cria usuário no Supabase Auth SEM fazer login
       try {
         const { supabase } = await import('@/integrations/supabase/client');
-        
-        // Criar usuário no Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        const { createClient } = await import('@supabase/supabase-js');
+
+        // CLAUDE-NOTE: Criar cliente temporário para evitar interferência na sessão atual
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        // Cliente temporário apenas para criação de usuário
+        const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false, // Não persistir sessão
+          }
+        });
+
+        // Criar usuário no cliente temporário (não afeta sessão principal)
+        const { data: authData, error: authError } = await tempClient.auth.signUp({
           email: data.email,
           password: data.senha,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
             data: {
               nome: data.nome,
             }
@@ -241,7 +283,11 @@ const Funcionarios = () => {
           nome: data.nome,
           email: data.email,
           telefone: data.telefone,
+          cpf: data.cpf,
+          ctps: data.ctps,
+          data_admissao: data.data_admissao,
           funcao_id: data.funcao_id,
+          jornada_trabalho_id: data.jornada_trabalho_id === "sem_jornada" ? null : data.jornada_trabalho_id || null,
           user_id: authData.user.id,
           ativo: true,
         };
@@ -352,29 +398,7 @@ const Funcionarios = () => {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
                 <div className="dialog-form-container space-y-4">
-                <div className="flex flex-col items-center gap-4">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={fotoPreview} />
-                    <AvatarFallback><Users className="h-12 w-12" /></AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFotoChange}
-                      className="hidden"
-                      id="foto-upload"
-                    />
-                    <label htmlFor="foto-upload">
-                      <Button type="button" variant="outline" size="sm" asChild>
-                        <span className="cursor-pointer">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Foto
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                </div>
+                {/* Avatar/Foto removido temporariamente - coluna não existe no banco */}
 
                 <FormField
                   control={form.control}
@@ -412,6 +436,48 @@ const Funcionarios = () => {
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
                           <Input placeholder="(11) 98765-4321" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF</FormLabel>
+                        <FormControl>
+                          <Input placeholder="000.000.000-00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="ctps"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CTPS</FormLabel>
+                        <FormControl>
+                          <Input placeholder="12345678" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="data_admissao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Admissão</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -465,6 +531,35 @@ const Funcionarios = () => {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="jornada_trabalho_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jornada de Trabalho (Opcional)</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a jornada de trabalho" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="sem_jornada">Sem jornada definida</SelectItem>
+                          {jornadas.filter(j => j.ativo).map(jornada => (
+                            <SelectItem key={jornada.id} value={jornada.id}>
+                              {jornada.nome} ({jornada.carga_horaria_diaria}h/dia)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {!editingFuncionario && (
                   <FormField
@@ -634,7 +729,6 @@ const Funcionarios = () => {
                 >
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={funcionario.foto} />
                       <AvatarFallback>
                         <Users className="h-6 w-6" />
                       </AvatarFallback>
@@ -647,14 +741,19 @@ const Funcionarios = () => {
                       <p className="text-sm text-muted-foreground mb-2">
                         {funcionario.funcao?.nome || 'Função não definida'} • {funcionario.funcao?.setor?.nome || 'Setor não definido'}
                       </p>
-                      {funcionario.funcao?.nivel && (
-                        <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        {funcionario.funcao?.nivel && (
                           <Badge variant="outline" className="text-xs">
                             {funcionario.funcao.nivel}
                           </Badge>
-                        </div>
-                      )}
-                      <div className="flex gap-4 text-sm text-muted-foreground">
+                        )}
+                        {funcionario.jornada && (
+                          <Badge variant="secondary" className="text-xs">
+                            {funcionario.jornada.nome}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
                           {funcionario.email}
@@ -663,6 +762,18 @@ const Funcionarios = () => {
                           <Phone className="h-3 w-3" />
                           {funcionario.telefone}
                         </div>
+                        {funcionario.cpf && (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            CPF: {funcionario.cpf}
+                          </div>
+                        )}
+                        {funcionario.data_admissao && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Admissão: {new Date(funcionario.data_admissao).toLocaleDateString('pt-BR')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

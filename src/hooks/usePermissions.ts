@@ -104,4 +104,10 @@ export const PERMISSIONS = {
   // Equipe
   GERENCIAR_EQUIPE: 'gerenciar_equipe',
   VISUALIZAR_EQUIPE: 'visualizar_equipe',
+
+  // Controle de Ponto
+  REGISTRAR_PONTO: 'registrar_ponto',
+  VISUALIZAR_PONTO_PROPRIO: 'visualizar_ponto_proprio',
+  GERENCIAR_PONTO: 'gerenciar_ponto',
+  CONFIGURAR_JORNADAS: 'configurar_jornadas',
 } as const;

@@ -11,7 +11,9 @@ import {
   Kanban as KanbanIcon,
   Tag,
   UserPlus,
-  UsersRound
+  UsersRound,
+  Clock,
+  ClipboardCheck
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -65,6 +67,12 @@ const menuItems = [
     icon: UserPlus,
     permissions: [], // Livre para todos
   },
+  {
+    title: "Registrar Ponto",
+    url: "/ponto",
+    icon: Clock,
+    permissions: ["registrar_ponto"], // Funcionários podem registrar ponto
+  },
 ];
 
 const cadastrosItems = [
@@ -104,12 +112,6 @@ const cadastrosItems = [
     icon: Tag,
     permissions: ["visualizar_financeiro"],
   },
-  {
-    title: "Currículos Recebidos",
-    url: "/admin/curriculos",
-    icon: UsersRound,
-    permissions: ["gerenciar_equipe"],
-  },
 ];
 
 const comprasItems = [
@@ -118,6 +120,27 @@ const comprasItems = [
     url: "/requisicoes",
     icon: FileText,
     permissions: ["visualizar_compras"],
+  },
+];
+
+const rhItems = [
+  {
+    title: "Controle de Ponto",
+    url: "/rh/controle-ponto",
+    icon: ClipboardCheck,
+    permissions: ["gerenciar_ponto"],
+  },
+  {
+    title: "Jornadas de Trabalho",
+    url: "/rh/jornadas",
+    icon: Clock,
+    permissions: ["configurar_jornadas"],
+  },
+  {
+    title: "Currículos Recebidos",
+    url: "/rh/curriculos",
+    icon: UsersRound,
+    permissions: ["gerenciar_equipe"],
   },
 ];
 
@@ -134,6 +157,10 @@ export function AppSidebar() {
   );
 
   const filteredComprasItems = comprasItems.filter(item =>
+    hasAnyPermission(item.permissions)
+  );
+
+  const filteredRhItems = rhItems.filter(item =>
     hasAnyPermission(item.permissions)
   );
 
@@ -213,7 +240,34 @@ export function AppSidebar() {
                 {filteredComprasItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink 
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {filteredRhItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Recursos Humanos</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredRhItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
                       to={item.url}
                       className={({ isActive }) =>
                         isActive

@@ -198,6 +198,36 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         module: 'equipe'
       }
     ]
+  },
+  {
+    id: 'ponto',
+    label: 'Controle de Ponto',
+    permissions: [
+      {
+        id: 'registrar_ponto',
+        label: 'Registrar Ponto',
+        description: 'Permite registrar entrada/saída no controle de ponto',
+        module: 'ponto'
+      },
+      {
+        id: 'visualizar_ponto_proprio',
+        label: 'Visualizar Próprio Ponto',
+        description: 'Permite visualizar próprios registros de ponto',
+        module: 'ponto'
+      },
+      {
+        id: 'gerenciar_ponto',
+        label: 'Gerenciar Controle de Ponto',
+        description: 'Permite visualizar e gerenciar registros de todos os funcionários',
+        module: 'ponto'
+      },
+      {
+        id: 'configurar_jornadas',
+        label: 'Configurar Jornadas',
+        description: 'Permite criar e editar jornadas de trabalho',
+        module: 'ponto'
+      }
+    ]
   }
 ];
 

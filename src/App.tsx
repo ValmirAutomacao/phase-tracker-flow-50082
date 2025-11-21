@@ -26,6 +26,9 @@ import Requisicoes from "./pages/Requisicoes";
 import Kanban from "./pages/Kanban";
 import TrabalheConosco from "./pages/TrabalheConosco";
 import CurriculosAdmin from "./pages/CurriculosAdmin";
+import RegistroPonto from "./pages/RegistroPonto";
+import ControlePonto from "./pages/RH/ControlePonto";
+import Jornadas from "./pages/RH/Jornadas";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +36,7 @@ const queryClient = new QueryClient();
 
 function AppHeader() {
   const { user, signOut } = useAuth();
-  
+
   return (
     <header className="h-14 border-b border-sidebar-border flex items-center justify-between px-4 bg-sidebar shrink-0">
       <div className="flex items-center">
@@ -44,10 +47,23 @@ function AppHeader() {
         </h1>
       </div>
       {user && (
-        <Button variant="ghost" size="sm" onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-primary hover:text-sidebar-accent-foreground">
-          <LogOut className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Sair</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 text-sm text-sidebar-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-medium text-xs">
+                {user.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-medium leading-none">{user.email}</span>
+                <span className="text-xs text-sidebar-accent-foreground opacity-70">Usuário logado</span>
+              </div>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-primary hover:text-sidebar-accent-foreground">
+            <LogOut className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Sair</span>
+          </Button>
+        </div>
       )}
     </header>
   );
@@ -150,10 +166,34 @@ function AppLayout() {
 
               <Route path="/trabalhe-conosco" element={<TrabalheConosco />} />
 
-              <Route path="/admin/curriculos" element={
+              <Route path="/ponto" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.REGISTRAR_PONTO}>
+                    <RegistroPonto />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/rh/controle-ponto" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_PONTO}>
+                    <ControlePonto />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/rh/curriculos" element={
                 <ProtectedRoute>
                   <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
                     <CurriculosAdmin />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/rh/jornadas" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.CONFIGURAR_JORNADAS}>
+                    <Jornadas />
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
