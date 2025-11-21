@@ -9,7 +9,9 @@ import {
   FolderKanban,
   FileText,
   Kanban as KanbanIcon,
-  Tag
+  Tag,
+  UserPlus,
+  UsersRound
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -57,6 +59,12 @@ const menuItems = [
     icon: KanbanIcon,
     permissions: ["visualizar_clientes"], // CRM relacionado a clientes
   },
+  {
+    title: "Trabalhe Conosco",
+    url: "/trabalhe-conosco",
+    icon: UserPlus,
+    permissions: [], // Livre para todos
+  },
 ];
 
 const cadastrosItems = [
@@ -95,6 +103,12 @@ const cadastrosItems = [
     url: "/categorias",
     icon: Tag,
     permissions: ["visualizar_financeiro"],
+  },
+  {
+    title: "Currículos Recebidos",
+    url: "/admin/curriculos",
+    icon: UsersRound,
+    permissions: ["gerenciar_equipe"],
   },
 ];
 

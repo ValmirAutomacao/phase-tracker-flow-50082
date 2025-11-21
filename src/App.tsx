@@ -24,6 +24,8 @@ import Setores from "./pages/cadastros/Setores";
 import Categorias from "./pages/Categorias";
 import Requisicoes from "./pages/Requisicoes";
 import Kanban from "./pages/Kanban";
+import TrabalheConosco from "./pages/TrabalheConosco";
+import CurriculosAdmin from "./pages/CurriculosAdmin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -145,7 +147,17 @@ function AppLayout() {
               } />
               
               <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
-              
+
+              <Route path="/trabalhe-conosco" element={<TrabalheConosco />} />
+
+              <Route path="/admin/curriculos" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                    <CurriculosAdmin />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
