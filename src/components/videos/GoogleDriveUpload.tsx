@@ -100,10 +100,20 @@ export function GoogleDriveUpload({
     setUploadStatus('uploading');
 
     try {
-      // 1. Verificar/Autorizar acesso ao Drive
+      // 1. Verificar se já temos token válido (evitar popup desnecessário)
+      console.log('🔍 Verificando token antes do upload...');
+      const tokenExists = localStorage.getItem('google_drive_token');
+
       if (!hasValidToken()) {
+        console.log('⚠️ Token inválido, solicitando autorização...');
+        if (tokenExists) {
+          console.log('📱 Token existe no localStorage mas pode estar expirado');
+        }
         await requestAuthorization();
+      } else {
+        console.log('✅ Token válido encontrado, prosseguindo com upload');
       }
+
       toast({
         title: "Autorizado",
         description: "Acesso ao Google Drive autorizado."

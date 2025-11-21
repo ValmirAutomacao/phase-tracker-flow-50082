@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
-import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
+import { getFromStorage, addToStorage, updateInStorage, deleteFromStorage, STORAGE_KEYS } from "@/lib/localStorage";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
 import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
@@ -79,13 +79,29 @@ const Videos = () => {
   const [photoManagerOpen, setPhotoManagerOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Hooks Supabase para substituir localStorage
-  const { data: videos = [], isLoading, error } = useOptimizedSupabaseQuery<any>('VIDEOS');
-  const { add, update, delete: deleteVideo } = useSupabaseCRUD<any>('VIDEOS');
-
-  // Query para obras (para dropdown)
+  // Query APENAS para obras (para dropdown) - vem do Supabase
   const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
+
+  // Carregar vídeos do localStorage
+  useEffect(() => {
+    setIsLoading(true);
+    try {
+      const videosData = getFromStorage<VideoItem>(STORAGE_KEYS.VIDEOS);
+      // Relacionar vídeos com obras (obras vêm do Supabase, vídeos do localStorage)
+      const videosWithObras = videosData.map(video => ({
+        ...video,
+        obra: obras.find(obra => obra.id === video.obra_id)
+      }));
+      setVideos(videosWithObras);
+    } catch (error) {
+      console.error('Erro ao carregar vídeos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [obras]);
 
   const form = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
@@ -96,36 +112,37 @@ const Videos = () => {
   });
 
   const onSubmit = (data: VideoFormData) => {
-    const novoVideo = {
-      obra_id: data.obra_id,
-      nome: data.nome,
-      status_renderizacao: "pendente" as const,
-      arquivo_original_url: null,
-      arquivo_renderizado_url: null,
-      duracao_segundos: null,
-      // Campos preparatórios n8n/Google Drive
-      drive_pasta_id: null,
-      drive_subpasta_id: null,
-      n8n_job_id: null,
-    };
+    try {
+      const novoVideo: VideoItem = {
+        id: crypto.randomUUID(),
+        obra_id: data.obra_id,
+        nome: data.nome,
+        status_renderizacao: "pendente",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    add.mutate(novoVideo, {
-      onSuccess: () => {
-        toast({
-          title: "Vídeo criado!",
-          description: "Agora você pode fazer upload de até 150 fotos. A automação será acionada quando você iniciar o vídeo.",
-        });
-        setOpen(false);
-        form.reset();
-      },
-      onError: (error) => {
-        toast({
-          title: "Erro ao criar vídeo",
-          description: error.message || "Tente novamente em alguns instantes.",
-          variant: "destructive",
-        });
-      },
-    });
+      const updatedVideos = addToStorage(STORAGE_KEYS.VIDEOS, novoVideo);
+      // Atualizar estado local com relacionamento
+      setVideos(updatedVideos.map(video => ({
+        ...video,
+        obra: obras.find(obra => obra.id === video.obra_id)
+      })));
+
+      toast({
+        title: "Vídeo criado!",
+        description: "Agora você pode fazer upload de até 150 fotos para o Google Drive.",
+      });
+      setOpen(false);
+      form.reset();
+    } catch (error) {
+      console.error('Erro ao criar vídeo:', error);
+      toast({
+        title: "Erro ao criar vídeo",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenUpload = (video: VideoItem) => {
@@ -135,32 +152,31 @@ const Videos = () => {
 
   const handleUploadComplete = (photoCount: number) => {
     if (selectedVideo) {
-      // Remover campos que não devem ser enviados no update
-      const { obra, ...videoData } = selectedVideo;
-      
-      const updatedVideo = {
-        ...videoData,
-        status_renderizacao: "processando" as const,
-      };
+      try {
+        const updates = {
+          status_renderizacao: "processando" as const,
+          quantidade_fotos: photoCount,
+          updated_at: new Date().toISOString(),
+        };
 
-      update.mutate(
-        { id: selectedVideo.id, updates: updatedVideo as any },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Upload concluído!",
-              description: `${photoCount} fotos foram enviadas. O vídeo está pronto para renderização.`,
-            });
-          },
-          onError: (error) => {
-            toast({
-              title: "Erro no upload",
-              description: error.message || "Tente novamente em alguns instantes.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
+        const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
+        setVideos(updatedVideos.map(video => ({
+          ...video,
+          obra: obras.find(obra => obra.id === video.obra_id)
+        })));
+
+        toast({
+          title: "Upload concluído!",
+          description: `${photoCount} fotos foram enviadas. O vídeo está pronto para renderização.`,
+        });
+      } catch (error) {
+        console.error('Erro no upload:', error);
+        toast({
+          title: "Erro no upload",
+          description: "Tente novamente em alguns instantes.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -172,36 +188,36 @@ const Videos = () => {
 
   const handleDriveUploadSuccess = (folderId: string, folderName: string) => {
     if (selectedVideo) {
-      // Remover campos que não devem ser enviados no update
-      const { obra, ...videoData } = selectedVideo;
-      
-      const updatedVideo = {
-        ...videoData,
-        drive_pasta_id: folderId, // ID da pasta criada no Google Drive
-        drive_subpasta_id: folderId, // Mesmo ID - pasta específica deste projeto
-        status_renderizacao: "processando" as const,
-      };
+      try {
+        // Atualizar apenas o estado local - dados ficam no Google Drive
+        const updatedVideo = {
+          ...selectedVideo,
+          drive_pasta_id: folderId,
+          drive_subpasta_id: folderId,
+          status_renderizacao: "processando" as const,
+          quantidade_fotos: uploadedPhotos.length,
+          arquivo_original_url: `https://drive.google.com/drive/folders/${folderId}`,
+          updated_at: new Date().toISOString(),
+        };
 
-      update.mutate(
-        { id: selectedVideo.id, updates: updatedVideo as any },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Fotos enviadas!",
-              description: `${uploadedPhotos.length} fotos foram enviadas para o Google Drive.`,
-            });
-            setDriveUploadDialogOpen(false);
-            setUploadedPhotos([]);
-          },
-          onError: (error) => {
-            toast({
-              title: "Erro ao atualizar registro",
-              description: error.message || "Tente novamente.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
+        setVideos(videos.map(video =>
+          video.id === selectedVideo.id ? updatedVideo : video
+        ));
+
+        toast({
+          title: "Fotos enviadas!",
+          description: `${uploadedPhotos.length} fotos foram enviadas para o Google Drive.`,
+        });
+        setDriveUploadDialogOpen(false);
+        setUploadedPhotos([]);
+      } catch (error) {
+        console.error('Erro ao atualizar registro:', error);
+        toast({
+          title: "Erro ao atualizar registro",
+          description: "Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -217,98 +233,99 @@ const Videos = () => {
 
   const handleDelete = async (video: VideoItem) => {
     if (confirm(`Tem certeza que deseja excluir o vídeo "${video.nome}"?\n\nIsso também excluirá a pasta e todas as fotos do Google Drive.`)) {
-      // Primeiro, tentar excluir a pasta do Drive
-      let driveDeleteSuccess = true;
-      if (video.drive_pasta_id) {
-        console.log('🗑️ Excluindo pasta do Drive:', video.drive_pasta_id);
-        driveDeleteSuccess = await deleteDriveFolder(video.drive_pasta_id);
-      }
+      try {
+        // Primeiro, tentar excluir a pasta do Drive
+        let driveDeleteSuccess = true;
+        if (video.drive_pasta_id) {
+          console.log('🗑️ Excluindo pasta do Drive:', video.drive_pasta_id);
+          driveDeleteSuccess = await deleteDriveFolder(video.drive_pasta_id);
+        }
 
-      // Excluir o vídeo do banco de dados
-      deleteVideo.mutate(video.id, {
-        onSuccess: () => {
-          toast({
-            title: "Vídeo excluído!",
-            description: driveDeleteSuccess
-              ? "O vídeo e a pasta do Google Drive foram removidos com sucesso."
-              : "O vídeo foi removido, mas houve um problema ao excluir a pasta do Drive.",
-            variant: driveDeleteSuccess ? "default" : "destructive"
-          });
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro ao excluir vídeo",
-            description: error.message || "Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
+        // Excluir o vídeo do localStorage
+        const updatedVideos = deleteFromStorage(STORAGE_KEYS.VIDEOS, video.id);
+        setVideos(updatedVideos.map(video => ({
+          ...video,
+          obra: obras.find(obra => obra.id === video.obra_id)
+        })));
+
+        toast({
+          title: "Vídeo excluído!",
+          description: driveDeleteSuccess
+            ? "O vídeo e a pasta do Google Drive foram removidos com sucesso."
+            : "O vídeo foi removido, mas houve um problema ao excluir a pasta do Drive.",
+          variant: driveDeleteSuccess ? "default" : "destructive"
+        });
+      } catch (error) {
+        console.error('Erro ao excluir vídeo:', error);
+        toast({
+          title: "Erro ao excluir vídeo",
+          description: "Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleEditSubmit = (data: VideoFormData) => {
     if (!selectedVideo) return;
-    
-    const { obra, ...cleanedVideo } = selectedVideo;
-    
-    update.mutate(
-      {
-        id: selectedVideo.id,
-        updates: {
-          ...cleanedVideo,
-          obra_id: data.obra_id,
-          nome: data.nome,
-        },
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Vídeo atualizado!",
-            description: "As informações foram atualizadas com sucesso.",
-          });
-          setEditOpen(false);
-          setSelectedVideo(null);
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro ao atualizar vídeo",
-            description: error.message || "Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
+
+    try {
+      const updates = {
+        obra_id: data.obra_id,
+        nome: data.nome,
+        updated_at: new Date().toISOString(),
+      };
+
+      const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
+      setVideos(updatedVideos.map(video => ({
+        ...video,
+        obra: obras.find(obra => obra.id === video.obra_id)
+      })));
+
+      toast({
+        title: "Vídeo atualizado!",
+        description: "As informações foram atualizadas com sucesso.",
+      });
+      setEditOpen(false);
+      setSelectedVideo(null);
+    } catch (error) {
+      console.error('Erro ao atualizar vídeo:', error);
+      toast({
+        title: "Erro ao atualizar vídeo",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRenderComplete = async (videoUrl: string) => {
     if (!selectedVideo) return;
 
-    const { obra, ...cleanedVideo } = selectedVideo;
-    
-    const updatedVideo = {
-      ...cleanedVideo,
-      status_renderizacao: "concluido" as const,
-      arquivo_renderizado_url: videoUrl,
-    };
+    try {
+      const updates = {
+        status_renderizacao: "concluido" as const,
+        arquivo_renderizado_url: videoUrl,
+        updated_at: new Date().toISOString(),
+      };
 
-    update.mutate(
-      { id: selectedVideo.id, updates: updatedVideo as any },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Renderização concluída!",
-            description: "O vídeo foi processado com sucesso e está pronto para visualização.",
-          });
-        },
-        onError: (error) => {
-          toast({
-            title: "Erro na renderização",
-            description: error.message || "Tente novamente em alguns instantes.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
+      const updatedVideos = updateInStorage(STORAGE_KEYS.VIDEOS, selectedVideo.id, updates);
+      setVideos(updatedVideos.map(video => ({
+        ...video,
+        obra: obras.find(obra => obra.id === video.obra_id)
+      })));
+
+      toast({
+        title: "Renderização concluída!",
+        description: "O vídeo foi processado com sucesso e está pronto para visualização.",
+      });
+    } catch (error) {
+      console.error('Erro na renderização:', error);
+      toast({
+        title: "Erro na renderização",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenRender = (video: VideoItem) => {
@@ -616,10 +633,6 @@ const Videos = () => {
                   </div>
                 </div>
               ))
-            ) : error ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Erro ao carregar vídeos: {error.message}</p>
-              </div>
             ) : videos.length === 0 ? (
               <div className="text-center py-8">
                 <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

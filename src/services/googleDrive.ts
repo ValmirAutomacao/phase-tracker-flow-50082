@@ -395,29 +395,31 @@ export const hasValidToken = (): boolean => {
       return false;
     }
 
-    // Primeiro, verificar token no gapi.client
-    // @ts-ignore
-    let token = gapi.client.getToken();
+    // Primeiro, tentar restaurar do localStorage se disponível
+    const storedToken = localStorage.getItem('google_drive_token');
+    let token = null;
 
-    // Se não encontrou no gapi.client, verificar localStorage
-    if (!token || !token.access_token) {
-      console.log('🔍 Token não encontrado no gapi, verificando localStorage...');
-      const storedToken = localStorage.getItem('google_drive_token');
+    if (storedToken) {
+      try {
+        token = JSON.parse(storedToken);
+        console.log('📱 Token recuperado do localStorage:', token);
 
-      if (storedToken) {
-        try {
-          token = JSON.parse(storedToken);
-          console.log('📱 Token recuperado do localStorage:', token);
-
-          // Restaurar token no gapi.client
-          // @ts-ignore
-          gapi.client.setToken(token);
-        } catch (error) {
-          console.log('❌ Erro ao parsear token do localStorage:', error);
-          localStorage.removeItem('google_drive_token');
-          return false;
-        }
+        // Restaurar token no gapi.client
+        // @ts-ignore
+        gapi.client.setToken(token);
+      } catch (error) {
+        console.log('❌ Erro ao parsear token do localStorage:', error);
+        localStorage.removeItem('google_drive_token');
+        return false;
       }
+    }
+
+    // Verificar token no gapi.client após restauração
+    // @ts-ignore
+    const gapiToken = gapi.client.getToken();
+    if (gapiToken && gapiToken.access_token) {
+      token = gapiToken;
+      console.log('✅ Token confirmado no gapi.client');
     }
 
     if (!token || !token.access_token) {
