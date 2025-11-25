@@ -24,13 +24,23 @@ const tryRestoreSavedToken = (): boolean => {
       const token = JSON.parse(storedToken);
       const now = Date.now();
 
+      // Margem de segurança de 5 minutos antes da expiração
+      const safetyMargin = 5 * 60 * 1000; // 5 minutos
+      const willExpireSoon = token.expires_at && (now + safetyMargin) >= token.expires_at;
+
       if (token.access_token && token.expires_at && now < token.expires_at) {
         // @ts-ignore
         if (typeof gapi !== 'undefined' && gapi.client) {
           // @ts-ignore
           gapi.client.setToken(token);
-          console.log('🔄 Token restaurado automaticamente do localStorage');
-          console.log('⏰ Token válido até:', new Date(token.expires_at));
+
+          if (willExpireSoon) {
+            console.log('⚠️ Token próximo ao vencimento, será necessário renovar em breve');
+          } else {
+            console.log('🔄 Token restaurado automaticamente do localStorage');
+            console.log('⏰ Token válido até:', new Date(token.expires_at));
+          }
+
           return true;
         }
       } else {
@@ -45,6 +55,37 @@ const tryRestoreSavedToken = (): boolean => {
   }
 
   return false;
+};
+
+// Função para verificar se token está próximo da expiração
+export const isTokenExpiringSoon = (): boolean => {
+  try {
+    const storedToken = localStorage.getItem('google_drive_token');
+    if (storedToken) {
+      const token = JSON.parse(storedToken);
+      const now = Date.now();
+      const safetyMargin = 10 * 60 * 1000; // 10 minutos de margem
+      return token.expires_at && (now + safetyMargin) >= token.expires_at;
+    }
+  } catch (error) {
+    console.log('⚠️ Erro ao verificar expiração do token:', error);
+  }
+  return true; // Se não conseguir verificar, assumir que precisa renovar
+};
+
+// Função para renovar token automaticamente se necessário
+export const refreshTokenIfNeeded = async (): Promise<boolean> => {
+  try {
+    if (isTokenExpiringSoon()) {
+      console.log('🔄 Token expirando em breve, renovando automaticamente...');
+      await requestAuthorization();
+      return true;
+    }
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao renovar token automaticamente:', error);
+    return false;
+  }
 };
 
 // Função para forçar restauração do token quando necessário
@@ -249,6 +290,9 @@ export const listProjectFolders = async (): Promise<any[]> => {
       throw new Error('Google API não inicializado');
     }
 
+    // Verificar e renovar token se necessário
+    await refreshTokenIfNeeded();
+
     // @ts-ignore
     const response = await gapi.client.drive.files.list({
       q: `'${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -264,6 +308,28 @@ export const listProjectFolders = async (): Promise<any[]> => {
     return folders;
   } catch (error) {
     console.error('❌ Erro ao listar pastas de projetos:', error);
+
+    // Se falhou, tentar com autenticação OAuth como fallback
+    if (error.status === 403 || error.status === 401) {
+      console.log('🔐 Erro de autenticação, tentando com OAuth...');
+      try {
+        await requestAuthorization();
+
+        // @ts-ignore
+        const retryResponse = await gapi.client.drive.files.list({
+          q: `'${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields: 'files(id, name, webViewLink, createdTime, modifiedTime)',
+          orderBy: 'modifiedTime desc'
+        });
+
+        console.log('📋 Pastas encontradas após OAuth:', retryResponse.result);
+        return retryResponse.result.files || [];
+      } catch (oauthError) {
+        console.error('❌ Falha também no OAuth:', oauthError);
+        return [];
+      }
+    }
+
     return [];
   }
 };

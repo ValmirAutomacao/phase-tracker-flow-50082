@@ -20,10 +20,14 @@ export function clearAllLocalStorage(): void {
 
   // Lista de chaves que NÃO devem ser removidas (whitelist)
   const preserveKeys = [
-    'google_drive_token', // CRÍTICO: Preservar token do Google Drive
-    'sb-',                // Preservar tokens do Supabase (começam com sb-)
-    '_supabase_',         // Preservar dados do Supabase
-    'supabase.'           // Preservar configurações do Supabase
+    'google_drive_token',     // CRÍTICO: Preservar token do Google Drive
+    'sb-',                    // Preservar tokens do Supabase (começam com sb-)
+    '_supabase_',             // Preservar dados do Supabase
+    'supabase.',              // Preservar configurações do Supabase
+    'supabase.auth.token',    // Token específico do Supabase
+    'auth-token',             // Token genérico de auth
+    'access_token',           // Access token
+    'refresh_token'           // Refresh token
   ];
 
   console.log('🧹 Limpando localStorage (preservando tokens importantes)...');
@@ -39,18 +43,20 @@ export function clearAllLocalStorage(): void {
   // Remove todas as outras chaves que começam com 'engflow_' mas preserva chaves importantes
   const allKeys = Object.keys(localStorage);
   allKeys.forEach(key => {
-    if (key.startsWith('engflow_')) {
-      // Verificar se não é uma chave a ser preservada
-      const shouldPreserve = preserveKeys.some(preserveKey =>
-        key.startsWith(preserveKey) || key.includes(preserveKey)
-      );
+    // Verificar se não é uma chave a ser preservada
+    const shouldPreserve = preserveKeys.some(preserveKey =>
+      key.startsWith(preserveKey) || key.includes(preserveKey)
+    );
 
+    if (key.startsWith('engflow_')) {
       if (!shouldPreserve) {
-        console.log(`❌ Removendo localStorage extra: ${key}`);
+        console.log(`❌ Removendo localStorage EngFlow: ${key}`);
         localStorage.removeItem(key);
       } else {
-        console.log(`✅ Preservando chave importante: ${key}`);
+        console.log(`✅ Preservando chave importante EngFlow: ${key}`);
       }
+    } else if (shouldPreserve) {
+      console.log(`✅ Preservando token/auth: ${key}`);
     }
   });
 

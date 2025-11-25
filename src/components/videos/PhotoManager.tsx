@@ -9,6 +9,7 @@ import {
   Upload, Download, Share2, Image as ImageIcon
 } from "lucide-react";
 import { initializeGoogleDrive, requestAuthorization, uploadFileToDrive, listFilesInFolder, deleteFile, hasValidToken } from "@/services/googleDrive";
+import { useVideoRenderer } from "@/hooks/useVideoRenderer";
 
 interface PhotoManagerProps {
   open: boolean;
@@ -49,43 +50,14 @@ export function PhotoManager({
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
   const [drivePhotos, setDrivePhotos] = useState<any[]>([]);
   const [loadingDrivePhotos, setLoadingDrivePhotos] = useState(false);
-  const [rendering, setRendering] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [renderProgress, setRenderProgress] = useState(0);
-  const [currentStage, setCurrentStage] = useState(0);
-  const [stages, setStages] = useState<RenderStage[]>([
-    {
-      name: "Análise das Fotos",
-      description: "Analisando e organizando as fotos enviadas",
-      progress: 0,
-      status: "pending"
-    },
-    {
-      name: "Processamento IA",
-      description: "Aplicando inteligência artificial",
-      progress: 0,
-      status: "pending"
-    },
-    {
-      name: "Geração de Frames",
-      description: "Criando frames intermediários e transições",
-      progress: 0,
-      status: "pending"
-    },
-    {
-      name: "Renderização Final",
-      description: "Compilando o vídeo final",
-      progress: 0,
-      status: "pending"
-    },
-    {
-      name: "Finalização",
-      description: "Salvando no Google Drive",
-      progress: 0,
-      status: "pending"
-    }
-  ]);
+
+  // Proteção contra cliques duplos no botão de renderização
+  const [isRenderingLocally, setIsRenderingLocally] = useState(false);
+
+  // Hook de renderização N8N
+  const videoRenderer = useVideoRenderer();
 
   useEffect(() => {
     if (open) {
@@ -238,8 +210,15 @@ export function PhotoManager({
   };
 
   const startRender = async () => {
-    const uploadedPhotos = photos.filter(p => p.uploaded).length;
-    if (uploadedPhotos === 0) {
+    // PROTEÇÃO 1: Evitar múltiplos cliques
+    if (isRenderingLocally) {
+      console.log('⚠️ Renderização já está em execução localmente, ignorando clique');
+      return;
+    }
+
+    // Validar se há fotos suficientes
+    const totalPhotos = photos.filter(p => p.uploaded).length + drivePhotos.length;
+    if (totalPhotos === 0) {
       toast({
         title: "Nenhuma foto disponível",
         description: "Faça upload de pelo menos uma foto antes de renderizar",
@@ -248,69 +227,49 @@ export function PhotoManager({
       return;
     }
 
-    setRendering(true);
-
-    // Simular chamada para n8n webhook
-    const n8nWebhookUrl = import.meta.env.VITE_N8N_RENDER_WEBHOOK || "https://n8n.example.com/webhook/render-video";
-
-    try {
-      // TODO: Implementar chamada real para o n8n quando webhook estiver configurado
-      console.log('🎬 Iniciando renderização simulada para:', {
-        videoId,
-        obraName,
-        driveFolderId: driveSubFolderId,
-        photoCount: drivePhotos.length
-      });
-
-      // Por enquanto, apenas simular sem chamar webhook
-      // const response = await fetch(n8nWebhookUrl, ...);
-
-      // Simular progresso de renderização
-      for (let stageIndex = 0; stageIndex < stages.length; stageIndex++) {
-        setCurrentStage(stageIndex);
-
-        setStages(prev => prev.map((stage, index) => ({
-          ...stage,
-          status: index === stageIndex ? "active" : index < stageIndex ? "completed" : "pending"
-        })));
-
-        for (let progress = 0; progress <= 100; progress += 5) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          setStages(prev => prev.map((stage, index) =>
-            index === stageIndex ? { ...stage, progress } : stage
-          ));
-
-          const stageWeight = 100 / stages.length;
-          const stageProgress = (progress / 100) * stageWeight;
-          const previousStagesProgress = stageIndex * stageWeight;
-          setRenderProgress(previousStagesProgress + stageProgress);
-        }
-
-        setStages(prev => prev.map((stage, index) =>
-          index === stageIndex ? { ...stage, status: "completed" } : stage
-        ));
-      }
-
-      const videoUrl = `https://drive.google.com/file/d/${driveSubFolderId}/video_renderizado.mp4`;
-
+    // Validar se folderId existe
+    if (!driveSubFolderId) {
       toast({
-        title: "Vídeo renderizado com sucesso!",
-        description: `O vídeo da obra "${obraName}" está pronto.`,
-      });
-
-      onRenderComplete(videoUrl);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Erro na renderização:', error);
-      toast({
-        title: "Erro na renderização",
-        description: "Não foi possível renderizar o vídeo. Tente novamente.",
+        title: "Pasta não configurada",
+        description: "ID da pasta do Google Drive não está disponível",
         variant: "destructive"
       });
+      return;
+    }
+
+    console.log('🎬 Iniciando renderização N8N para:', {
+      videoId,
+      obraName,
+      folderId: driveSubFolderId,
+      photoCount: totalPhotos
+    });
+
+    // PROTEÇÃO 2: Marcar como em execução local
+    setIsRenderingLocally(true);
+
+    try {
+      // Usar o hook de renderização
+      const renderedVideo = await videoRenderer.startRender({
+        projectName: obraName,
+        folderId: driveSubFolderId
+      });
+
+      if (renderedVideo) {
+        console.log('✅ Renderização concluída:', renderedVideo);
+        onRenderComplete(renderedVideo.video_url);
+
+        // Fechar modal após sucesso
+        setTimeout(() => {
+          onOpenChange(false);
+          videoRenderer.resetState();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('❌ Erro na renderização:', error);
+      // Erro já tratado pelo hook via toast
     } finally {
-      setRendering(false);
-      setRenderProgress(0);
+      // PROTEÇÃO 3: Sempre resetar estado local
+      setIsRenderingLocally(false);
     }
   };
 
@@ -359,7 +318,7 @@ export function PhotoManager({
           </div>
 
           {/* Upload de novas fotos */}
-          {!rendering && (
+          {!videoRenderer.isLoading && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">Adicionar Fotos</h3>
@@ -398,7 +357,7 @@ export function PhotoManager({
                         <button
                           onClick={() => removePhoto(photo.id)}
                           className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          disabled={uploading || rendering}
+                          disabled={uploading || videoRenderer.isLoading || isRenderingLocally}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -454,7 +413,7 @@ export function PhotoManager({
                         <button
                           onClick={() => removeDrivePhoto(file.id)}
                           className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          disabled={uploading || rendering}
+                          disabled={uploading || videoRenderer.isLoading || isRenderingLocally}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -480,7 +439,7 @@ export function PhotoManager({
                 <div className="space-y-2">
                   <Button
                     onClick={uploadNewPhotos}
-                    disabled={uploading}
+                    disabled={uploading || isRenderingLocally}
                     className="w-full"
                   >
                     <Upload className="h-4 w-4 mr-2" />
@@ -495,48 +454,84 @@ export function PhotoManager({
           )}
 
           {/* Progresso de renderização */}
-          {rendering && (
+          {videoRenderer.isLoading && (
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Progresso Geral</span>
-                  <span className="text-sm font-mono">{Math.round(renderProgress)}%</span>
+                  <span className="font-medium">Progresso da Renderização</span>
+                  <span className="text-sm font-mono">{Math.round(videoRenderer.progress)}%</span>
                 </div>
-                <Progress value={renderProgress} className="w-full h-3" />
+                <Progress value={videoRenderer.progress} className="w-full h-3" />
               </div>
 
-              {/* Estágios */}
-              <div className="space-y-2">
-                {stages.map((stage, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg border transition-colors ${
-                      stage.status === "active" ? "bg-blue-50 border-blue-200" :
-                      stage.status === "completed" ? "bg-green-50 border-green-200" :
-                      "bg-muted/30"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {getStageIcon(stage.status)}
-                        <span className="font-medium text-sm">{stage.name}</span>
-                      </div>
-                      {stage.status === "active" && (
-                        <span className="text-xs font-mono">{stage.progress}%</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{stage.description}</p>
-                    {stage.status === "active" && (
-                      <Progress value={stage.progress} className="w-full h-1 mt-2" />
-                    )}
-                  </div>
-                ))}
+              {/* Estado atual */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-blue-600 animate-spin" />
+                  <span className="font-medium text-blue-900">
+                    {videoRenderer.isValidating && "Validando dados..."}
+                    {videoRenderer.isRendering && "Processando vídeo via N8N..."}
+                    {videoRenderer.isSaving && "Salvando resultado..."}
+                  </span>
+                </div>
+                <p className="text-sm text-blue-800">
+                  {videoRenderer.isValidating && "Verificando fotos e configurações da pasta"}
+                  {videoRenderer.isRendering && "O vídeo está sendo gerado automaticamente. Aguarde 2-3 minutos."}
+                  {videoRenderer.isSaving && "Salvando vídeo renderizado na base de dados"}
+                </p>
+              </div>
+
+              {/* Informações técnicas */}
+              <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
+                <p>📁 Pasta: {driveSubFolderId}</p>
+                <p>📸 Fotos: {photos.filter(p => p.uploaded).length + drivePhotos.length}</p>
+                <p>🎬 Projeto: {obraName}</p>
+                <p>⏱️ Tempo estimado: 2-3 minutos</p>
               </div>
             </div>
           )}
 
+          {/* Estado de erro */}
+          {videoRenderer.isError && (
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="flex items-center gap-2 mb-2">
+                <X className="h-4 w-4 text-red-600" />
+                <span className="font-medium text-red-900">Erro na Renderização</span>
+              </div>
+              <p className="text-sm text-red-800 mb-3">{videoRenderer.error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={videoRenderer.resetState}
+                className="border-red-200 text-red-700 hover:bg-red-100"
+              >
+                Tentar Novamente
+              </Button>
+            </div>
+          )}
+
+          {/* Estado de sucesso */}
+          {videoRenderer.isSuccess && (
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="font-medium text-green-900">Renderização Concluída!</span>
+              </div>
+              <p className="text-sm text-green-800 mb-3">
+                O vídeo foi processado com sucesso e está sendo direcionado para a seção de vídeos renderizados.
+              </p>
+              {videoRenderer.renderedVideo && (
+                <div className="text-xs text-green-700">
+                  <p>🎬 ID do vídeo: {videoRenderer.renderedVideo.video_id}</p>
+                  <p>📏 Tamanho: {videoRenderer.renderedVideo.file_size}</p>
+                  <p>⏱️ Duração: {videoRenderer.renderedVideo.duration}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Informações N8N */}
-          {!rendering && (
+          {!videoRenderer.isLoading && (
             <div className="bg-blue-50 p-4 rounded-lg space-y-2">
               <h4 className="font-medium text-blue-900 flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
@@ -544,8 +539,9 @@ export function PhotoManager({
               </h4>
               <div className="text-sm text-blue-800 space-y-1">
                 <p>✓ Pasta Google Drive: {driveSubFolderId ? 'Configurada' : 'Não configurada'}</p>
-                <p>✓ Total de fotos: {totalPhotos}</p>
-                <p>✓ Webhook configurado para renderização automática</p>
+                <p>✓ Total de fotos: {photos.filter(p => p.uploaded).length + drivePhotos.length}</p>
+                <p>✓ Webhook: https://secengenharia-n8n.j8jnyd.easypanel.host</p>
+                <p>✓ Integração Supabase para persistência automática</p>
               </div>
             </div>
           )}
@@ -554,27 +550,44 @@ export function PhotoManager({
           <div className="flex flex-col sm:flex-row justify-end gap-3">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={rendering || uploading}
+              onClick={() => {
+                if (videoRenderer.isSuccess) {
+                  videoRenderer.resetState();
+                }
+                onOpenChange(false);
+              }}
+              disabled={videoRenderer.isLoading || uploading || isRenderingLocally}
             >
-              {rendering ? "Renderizando..." : "Fechar"}
+              {videoRenderer.isLoading ? "Processando..." : "Fechar"}
             </Button>
-            <Button
-              onClick={startRender}
-              disabled={rendering || uploading || (totalPhotos === 0)}
-            >
-              {rendering ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Renderizando...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Iniciar Renderização
-                </>
-              )}
-            </Button>
+
+            {!videoRenderer.isSuccess && (
+              <Button
+                onClick={startRender}
+                disabled={
+                  videoRenderer.isLoading ||
+                  isRenderingLocally ||
+                  uploading ||
+                  (photos.filter(p => p.uploaded).length + drivePhotos.length === 0) ||
+                  !driveSubFolderId
+                }
+              >
+                {(videoRenderer.isLoading || isRenderingLocally) ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    {videoRenderer.isValidating && "Validando..."}
+                    {videoRenderer.isRendering && "Renderizando..."}
+                    {videoRenderer.isSaving && "Salvando..."}
+                    {isRenderingLocally && !videoRenderer.isLoading && "Preparando..."}
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Iniciar Renderização
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -13,5 +13,28 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  }
+});
+
+// Listener para detectar problemas de autenticação
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('🔐 Supabase Auth Event:', event);
+
+  if (event === 'SIGNED_OUT') {
+    console.log('📤 Usuário deslogado do Supabase');
+  } else if (event === 'SIGNED_IN') {
+    console.log('📥 Usuário logado no Supabase');
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('🔄 Token Supabase renovado automaticamente');
+  } else if (event === 'PASSWORD_RECOVERY') {
+    console.log('🔑 Recuperação de senha iniciada');
+  }
+
+  if (!session) {
+    console.log('⚠️ Sessão Supabase não encontrada');
+  } else {
+    console.log('✅ Sessão Supabase ativa até:', new Date(session.expires_at * 1000));
   }
 });

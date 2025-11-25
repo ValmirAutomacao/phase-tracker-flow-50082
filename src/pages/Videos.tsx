@@ -30,6 +30,7 @@ import { PhotoUpload } from "@/components/PhotoUpload";
 import { VideoRenderer } from "@/components/VideoRenderer";
 import { GoogleDriveUpload } from "@/components/videos/GoogleDriveUpload";
 import { PhotoManager } from "@/components/videos/PhotoManager";
+import { RenderedVideos } from "@/components/videos/RenderedVideos";
 import { deleteDriveFolder } from "@/services/googleDrive";
 import "@/styles/responsive.css";
 
@@ -81,6 +82,7 @@ const Videos = () => {
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'projetos' | 'renderizados'>('projetos');
 
   // Query APENAS para obras (para dropdown) - vem do Supabase
   const { data: obras = [] } = useOptimizedSupabaseQuery<any>('OBRAS');
@@ -346,8 +348,14 @@ const Videos = () => {
 
       toast({
         title: "Renderização concluída!",
-        description: "O vídeo foi processado com sucesso e está pronto para visualização.",
+        description: "O vídeo foi processado com sucesso. Redirecionando para vídeos renderizados...",
       });
+
+      // Redirecionar para aba de vídeos renderizados após 2 segundos
+      setTimeout(() => {
+        setActiveTab('renderizados');
+      }, 2000);
+
     } catch (error) {
       console.error('Erro na renderização:', error);
       toast({
@@ -539,7 +547,7 @@ const Videos = () => {
                     )}
                   />
                 </div>
-                
+
                 <div className="form-actions">
                   <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                     Cancelar
@@ -552,8 +560,39 @@ const Videos = () => {
         </Dialog>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Navegação por abas */}
+      <div className="border-b border-border">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('projetos')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'projetos'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            <Upload className="h-4 w-4 inline-block mr-2" />
+            Projetos e Upload
+          </button>
+          <button
+            onClick={() => setActiveTab('renderizados')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'renderizados'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            <PlayCircle className="h-4 w-4 inline-block mr-2" />
+            Vídeos Renderizados
+          </button>
+        </nav>
+      </div>
+
+      {/* Conteúdo da aba ativa */}
+      {activeTab === 'projetos' && (
+        <>
+          {/* Stats */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total de Vídeos</CardTitle>
@@ -808,8 +847,15 @@ const Videos = () => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
 
-      {/* Dialogs */}
+      {/* Aba de vídeos renderizados */}
+      {activeTab === 'renderizados' && (
+        <RenderedVideos />
+      )}
+
+      {/* Dialogs (sempre disponíveis) */}
       {selectedVideo && (
         <>
           <PhotoManager

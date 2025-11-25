@@ -14,7 +14,17 @@ const DEFAULT_CACHE_CONFIG = {
   gcTime: 10 * 60 * 1000,   // 10 minutos (anteriormente cacheTime)
   refetchOnWindowFocus: false,
   refetchOnMount: true,
-  retry: 1, // Retry limitado pois temos retry no supabaseService
+  retry: (failureCount, error) => {
+    // Se é erro de autenticação, não retry
+    if (error.message?.includes('Invalid Refresh Token') ||
+        error.message?.includes('JWT') ||
+        error.status === 401) {
+      console.log('🚫 Erro de autenticação detectado, não fazendo retry');
+      return false;
+    }
+    // Para outros erros, retry até 2 vezes
+    return failureCount < 2;
+  },
 }
 
 /**
