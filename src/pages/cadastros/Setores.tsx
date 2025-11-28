@@ -1,15 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { UserCog, Plus, Search, Edit, Trash2 } from "lucide-react";
+import { UserCog, Plus, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SetoresForm, SetorFormData } from "./SetoresForm";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DataTable, Column } from "@/components/ui/DataTable";
 
 interface Setor {
   id: string;
@@ -24,7 +22,6 @@ interface Setor {
 
 const Setores = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingSetor, setEditingSetor] = useState<Setor | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -32,17 +29,6 @@ const Setores = () => {
   // Hooks Supabase para substituir localStorage
   const { data: setores = [], isLoading, error } = useOptimizedSupabaseQuery<any>('SETORES');
   const { add, update, delete: deleteSetor } = useSupabaseCRUD<any>('SETORES');
-
-  // Filtro de busca memoizado para performance
-  const filteredSetores = useMemo(() => {
-    if (!searchTerm.trim()) return setores;
-
-    const searchLower = searchTerm.toLowerCase();
-    return setores.filter(setor =>
-      setor.nome.toLowerCase().includes(searchLower) ||
-      (setor.descricao && setor.descricao.toLowerCase().includes(searchLower))
-    );
-  }, [setores, searchTerm]);
 
   const onSubmit = (data: SetorFormData) => {
     if (editingSetor) {
@@ -122,6 +108,67 @@ const Setores = () => {
     }
   };
 
+  // Definir colunas da tabela
+  const columns: Column<Setor>[] = [
+    {
+      key: 'nome',
+      title: 'Nome do Setor',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <UserCog className="h-4 w-4 text-primary" />
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-xs text-muted-foreground">Departamento</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'descricao',
+      title: 'Descrição',
+      filterable: true,
+      filterType: 'text',
+      render: (value) => (
+        <div className="text-sm max-w-md">
+          {value || 'Sem descrição'}
+        </div>
+      )
+    },
+    {
+      key: 'totalColaboradores',
+      title: 'Colaboradores',
+      sortable: true,
+      render: (value) => (
+        <div className="text-center">
+          <span className="font-medium">{value || 0}</span>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      filterable: true,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'ativo', label: 'Ativo' },
+        { value: 'inativo', label: 'Inativo' }
+      ],
+      render: (value) => (
+        <span className="text-sm text-green-600 font-medium">
+          {value || 'Ativo'}
+        </span>
+      )
+    }
+  ];
+
+  const handleDeleteConfirm = (setor: Setor) => {
+    setDeleteId(setor.id);
+  };
+
 
   return (
     <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -150,121 +197,28 @@ const Setores = () => {
         </Card>
       </div>
 
-      {/* List */}
+      {/* Lista de Setores com DataTable */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Lista de Setores</CardTitle>
-              <CardDescription>Todos os departamentos cadastrados</CardDescription>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar setor..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
-              />
-            </div>
+          <div>
+            <CardTitle>Lista de Setores</CardTitle>
+            <CardDescription>Todos os departamentos cadastrados no sistema</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <Skeleton className="h-12 w-12 rounded-lg" />
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Skeleton className="h-6 w-32" />
-                            <Skeleton className="h-5 w-16" />
-                          </div>
-                          <Skeleton className="h-4 w-48" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-5 w-8" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 flex-1" />
-                      <Skeleton className="h-8 w-10" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : error ? (
-              // Error state
-              <div className="col-span-2 text-center py-8">
-                <UserCog className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Erro ao carregar setores: {error.message}</p>
-                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : filteredSetores.length === 0 ? (
-              // Empty state
-              <div className="col-span-2 text-center py-8">
-                <UserCog className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "Nenhum setor encontrado para a pesquisa." : "Nenhum setor cadastrado ainda."}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    className="mt-4"
-                    onClick={() => { setEditingSetor(null); setOpen(true); }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar primeiro setor
-                  </Button>
-                )}
-              </div>
-            ) : (
-              filteredSetores.map((setor) => (
-              <Card key={setor.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <UserCog className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-base">{setor.nome}</CardTitle>
-                          </div>
-                        <CardDescription className="text-sm">
-                          {setor.descricao}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(setor)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(setor.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )))}
-          </div>
+          <DataTable
+            data={setores}
+            columns={columns}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDeleteConfirm}
+            searchPlaceholder="Buscar por nome, descrição..."
+            emptyMessage="Nenhum setor cadastrado ainda."
+            showSelection={false}
+            showActions={true}
+            globalSearch={true}
+            hideFilters={false}
+          />
         </CardContent>
       </Card>
 

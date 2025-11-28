@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,13 +10,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Users, Plus, Search, Edit, Mail, Phone, Upload, Trash2, User, Calendar } from "lucide-react";
+import { Users, Plus, Edit, Mail, Phone, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import "@/styles/responsive.css";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { DataTable, Column } from "@/components/ui/DataTable";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const funcionarioSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -86,7 +88,6 @@ interface Setor {
 
 const Funcionarios = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string>("");
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
@@ -122,19 +123,6 @@ const Funcionarios = () => {
     if (!selectedSetor) return funcoes;
     return funcoes.filter(funcao => funcao.setor_id === selectedSetor);
   }, [funcoes, selectedSetor]);
-
-  // Filtro de busca memoizado para performance
-  const filteredFuncionarios = useMemo(() => {
-    if (!searchTerm.trim()) return funcionarios;
-
-    const searchLower = searchTerm.toLowerCase();
-    return funcionarios.filter(funcionario =>
-      funcionario.nome.toLowerCase().includes(searchLower) ||
-      funcionario.email.toLowerCase().includes(searchLower) ||
-      (funcionario.funcao?.nome && funcionario.funcao.nome.toLowerCase().includes(searchLower)) ||
-      (funcionario.funcao?.setor?.nome && funcionario.funcao.setor.nome.toLowerCase().includes(searchLower))
-    );
-  }, [funcionarios, searchTerm]);
 
   useEffect(() => {
     if (editingFuncionario) {
@@ -347,20 +335,129 @@ const Funcionarios = () => {
     }
   };
 
-  // Status badge memoizado para performance
   const getStatusBadge = useCallback((status: string) => {
-    const variants: Record<string, { label: string; className: string }> = {
-      ativo: { label: "Ativo", className: "bg-green-100 text-green-700" },
-      inativo: { label: "Inativo", className: "bg-gray-100 text-gray-700" },
-      ferias: { label: "Férias", className: "bg-blue-100 text-blue-700" },
+    const variants: Record<string, { label: string; variant: any }> = {
+      ativo: { label: "Ativo", variant: "default" },
+      inativo: { label: "Inativo", variant: "secondary" },
+      ferias: { label: "Férias", variant: "outline" },
     };
 
+    const config = variants[status] || { label: status, variant: "outline" };
     return (
-      <Badge className={variants[status]?.className || ""}>
-        {variants[status]?.label || status}
+      <Badge variant={config.variant}>
+        {config.label}
       </Badge>
     );
   }, []);
+
+  // Definir colunas da tabela
+  const columns: Column<Funcionario>[] = [
+    {
+      key: 'nome',
+      title: 'Funcionário',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>
+              <User className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-xs text-muted-foreground">
+              {row.email}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'funcao.nome',
+      title: 'Função/Setor',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div>
+          <div className="font-medium">{value || 'Função não definida'}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.funcao?.setor?.nome || 'Setor não definido'}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      filterable: true,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'ativo', label: 'Ativo' },
+        { value: 'inativo', label: 'Inativo' },
+        { value: 'ferias', label: 'Férias' }
+      ],
+      render: (value) => getStatusBadge(value || 'ativo')
+    },
+    {
+      key: 'telefone',
+      title: 'Contato',
+      filterable: true,
+      filterType: 'text',
+      render: (telefone, row) => (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1">
+            <Phone className="h-3 w-3 text-muted-foreground" />
+            <span className="text-sm">{telefone}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Mail className="h-3 w-3 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{row.email}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'data_admissao',
+      title: 'Data Admissão',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+      render: (value) => value ? (
+        <div className="flex items-center gap-1">
+          <Calendar className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm">
+            {format(new Date(value), 'dd/MM/yyyy', { locale: ptBR })}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+    {
+      key: 'jornada.nome',
+      title: 'Jornada',
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => value ? (
+        <div>
+          <div className="text-sm">{value}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.jornada?.carga_horaria_diaria}h/dia
+          </div>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">Não definida</span>
+      )
+    }
+  ];
+
+  const handleDeleteConfirm = (funcionario: Funcionario) => {
+    setDeleteId(funcionario.id);
+  };
 
   // Função para limpar formulário quando fechar dialog
   const handleDialogChange = (isOpen: boolean) => {
@@ -644,155 +741,28 @@ const Funcionarios = () => {
         </Card>
       </div>
 
-      {/* List */}
+      {/* Lista de Funcionários com DataTable */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Lista de Funcionários</CardTitle>
-              <CardDescription>Todos os colaboradores cadastrados</CardDescription>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar funcionário..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
-              />
-            </div>
+          <div>
+            <CardTitle>Lista de Funcionários</CardTitle>
+            <CardDescription>Todos os colaboradores cadastrados no sistema</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-6 w-32" />
-                          <Skeleton className="h-5 w-16" />
-                        </div>
-                        <Skeleton className="h-4 w-48" />
-                        <div className="flex gap-4">
-                          <Skeleton className="h-4 w-24" />
-                          <Skeleton className="h-4 w-20" />
-                        </div>
-                        <div className="flex gap-2">
-                          <Skeleton className="h-5 w-20" />
-                          <Skeleton className="h-5 w-16" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 w-16" />
-                      <Skeleton className="h-8 w-16" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : error ? (
-              // Error state
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Erro ao carregar funcionários: {error.message}</p>
-                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : filteredFuncionarios.length === 0 ? (
-              // Empty state
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "Nenhum funcionário encontrado para a pesquisa." : "Nenhum funcionário cadastrado ainda."}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    className="mt-4"
-                    onClick={() => setOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar primeiro funcionário
-                  </Button>
-                )}
-              </div>
-            ) : (
-              filteredFuncionarios.map((funcionario) => (
-                <div
-                  key={funcionario.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        <Users className="h-6 w-6" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{funcionario.nome}</h4>
-                        {getStatusBadge(funcionario.status || "ativo")}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {funcionario.funcao?.nome || 'Função não definida'} • {funcionario.funcao?.setor?.nome || 'Setor não definido'}
-                      </p>
-                      <div className="flex items-center gap-2 mb-2">
-                        {funcionario.funcao?.nivel && (
-                          <Badge variant="outline" className="text-xs">
-                            {funcionario.funcao.nivel}
-                          </Badge>
-                        )}
-                        {funcionario.jornada && (
-                          <Badge variant="secondary" className="text-xs">
-                            {funcionario.jornada.nome}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {funcionario.email}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {funcionario.telefone}
-                        </div>
-                        {funcionario.cpf && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            CPF: {funcionario.cpf}
-                          </div>
-                        )}
-                        {funcionario.data_admissao && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Admissão: {new Date(funcionario.data_admissao).toLocaleDateString('pt-BR')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <PermissionGuard permissions={['gerenciar_equipe']}>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(funcionario)}>
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setDeleteId(funcionario.id)}>
-                        <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                        Excluir
-                      </Button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <DataTable
+            data={funcionarios}
+            columns={columns}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDeleteConfirm}
+            searchPlaceholder="Buscar por nome, função, setor, email..."
+            emptyMessage="Nenhum funcionário cadastrado ainda."
+            showSelection={false}
+            showActions={true}
+            globalSearch={true}
+            hideFilters={false}
+          />
         </CardContent>
       </Card>
 

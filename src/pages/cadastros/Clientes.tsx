@@ -1,29 +1,34 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { User, Users, Building2, Plus, Search, Edit, Mail, Phone, Trash2 } from "lucide-react";
+import { User, Building2, Plus, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ClientesForm, ClienteFormData } from "./ClientesForm";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DataTable, Column } from "@/components/ui/DataTable";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Cliente {
   id: string;
   nome: string;
-  tipo: "fisica" | "juridica";
+  tipo: "fisico" | "juridico";
   documento: string;
-  email: string;
-  telefone: string;
-  endereco: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
+  endereco?: {
+    logradouro?: string;
+    numero?: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+    cep?: string;
+  };
+  contato?: {
+    email?: string;
+    telefone?: string;
+  };
   dataCadastro?: string;
   created_at?: string;
   updated_at?: string;
@@ -31,7 +36,6 @@ interface Cliente {
 
 const Clientes = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -113,8 +117,8 @@ const Clientes = () => {
     }
   };
 
-  const getTipoBadge = (tipo: "fisica" | "juridica") => {
-    return tipo === "fisica" ? (
+  const getTipoBadge = (tipo: "fisico" | "juridico") => {
+    return tipo === "fisico" ? (
       <Badge variant="outline" className="gap-1">
         <User className="h-3 w-3" />
         Pessoa Física
@@ -127,10 +131,106 @@ const Clientes = () => {
     );
   };
 
-  const filteredClientes = clientes.filter(cliente =>
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.documento.includes(searchTerm)
-  );
+  // Definir colunas da tabela
+  const columns: Column<Cliente>[] = [
+    {
+      key: 'nome',
+      title: 'Nome',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          {row.tipo === "fisico" ?
+            <User className="h-4 w-4 text-blue-600" /> :
+            <Building2 className="h-4 w-4 text-green-600" />
+          }
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              {getTipoBadge(row.tipo)}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'documento',
+      title: 'CPF/CNPJ',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div>
+          <div className="font-mono">{value}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.tipo === "fisico" ? "CPF" : "CNPJ"}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'contato.email',
+      title: 'E-mail',
+      filterable: true,
+      filterType: 'text',
+      render: (value) => value ? (
+        <div className="flex items-center gap-1">
+          <Mail className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm">{value}</span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+    {
+      key: 'contato.telefone',
+      title: 'Telefone',
+      filterable: true,
+      filterType: 'text',
+      render: (value) => value ? (
+        <div className="flex items-center gap-1">
+          <Phone className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm">{value}</span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+    {
+      key: 'endereco',
+      title: 'Cidade/UF',
+      filterable: true,
+      filterType: 'text',
+      render: (endereco) => endereco ? (
+        <div className="text-sm">
+          <div>{endereco.cidade}</div>
+          <div className="text-xs text-muted-foreground">{endereco.estado}</div>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+    {
+      key: 'created_at',
+      title: 'Data Cadastro',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+      render: (value) => value ? (
+        <div className="text-sm">
+          {format(new Date(value), 'dd/MM/yyyy', { locale: ptBR })}
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    }
+  ];
+
+  // Função de controle da tabela
+  const handleDeleteConfirm = (cliente: Cliente) => {
+    setDeleteId(cliente.id);
+  };
 
   return (
     <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -162,7 +262,7 @@ const Clientes = () => {
             <CardTitle className="text-sm font-medium">Pessoa Física</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clientes.filter(c => c.tipo === "fisica").length}</div>
+            <div className="text-2xl font-bold">{clientes.filter(c => c.tipo === "fisico").length}</div>
             <p className="text-xs text-muted-foreground mt-1">clientes CPF</p>
           </CardContent>
         </Card>
@@ -171,133 +271,34 @@ const Clientes = () => {
             <CardTitle className="text-sm font-medium">Pessoa Jurídica</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clientes.filter(c => c.tipo === "juridica").length}</div>
+            <div className="text-2xl font-bold">{clientes.filter(c => c.tipo === "juridico").length}</div>
             <p className="text-xs text-muted-foreground mt-1">clientes CNPJ</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* List */}
+      {/* Lista de Clientes com DataTable */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Lista de Clientes</CardTitle>
-              <CardDescription>Todos os clientes cadastrados</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-full"
-              />
-            </div>
+          <div>
+            <CardTitle>Lista de Clientes</CardTitle>
+            <CardDescription>Todos os clientes cadastrados no sistema</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Skeleton className="h-12 w-12 rounded-lg" />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-6 w-32" />
-                          <Skeleton className="h-5 w-20" />
-                        </div>
-                        <Skeleton className="h-4 w-48" />
-                        <div className="flex gap-4">
-                          <Skeleton className="h-4 w-40" />
-                          <Skeleton className="h-4 w-32" />
-                        </div>
-                        <Skeleton className="h-4 w-64" />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 w-16" />
-                      <Skeleton className="h-8 w-16" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : error ? (
-              // Error state
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Erro ao carregar clientes: {error.message}</p>
-                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : filteredClientes.length === 0 ? (
-              // Empty state
-              <div className="text-center py-8">
-                <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "Nenhum cliente encontrado para a pesquisa." : "Nenhum cliente cadastrado ainda."}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    className="mt-4"
-                    onClick={() => { setEditingCliente(null); setOpen(true); }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar primeiro cliente
-                  </Button>
-                )}
-              </div>
-            ) : (
-              filteredClientes.map((cliente) => (
-              <div
-                key={cliente.id}
-                className="card-item"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="icon-container">
-                      {cliente.tipo === "fisica" ? <User className="h-6 w-6 text-primary" /> : <Building2 className="h-6 w-6 text-primary" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-truncate-responsive">{cliente.nome}</h4>
-                        {getTipoBadge(cliente.tipo)}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {cliente.tipo === "fisica" ? "CPF" : "CNPJ"}: {cliente.documento}
-                      </p>
-                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 flex-shrink-0" />
-                          <span className="text-truncate-responsive">{cliente.email}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 flex-shrink-0" />
-                          {cliente.telefone}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1 text-truncate-responsive">
-                        Endereço: {cliente.endereco}, {cliente.numero} - {cliente.bairro}, {cliente.cidade}/{cliente.estado} - {cliente.cep}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mobile-action-buttons sm:flex-shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(cliente)}>
-                      <Edit className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Editar</span>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(cliente.id)}>
-                      <Trash2 className="h-4 w-4 sm:mr-1 text-destructive" />
-                      <span className="hidden sm:inline">Excluir</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )))}
-          </div>
+          <DataTable
+            data={clientes}
+            columns={columns}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDeleteConfirm}
+            searchPlaceholder="Buscar por nome, documento, email..."
+            emptyMessage="Nenhum cliente cadastrado ainda."
+            showSelection={false}
+            showActions={true}
+            globalSearch={true}
+            hideFilters={false}
+          />
         </CardContent>
       </Card>
 

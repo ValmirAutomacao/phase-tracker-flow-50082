@@ -83,6 +83,7 @@ export const PERMISSIONS = {
   
   // Financeiro/Despesas
   VISUALIZAR_FINANCEIRO: 'visualizar_financeiro',
+  GERENCIAR_FINANCEIRO: 'gerenciar_financeiro',
   CRIAR_DESPESAS: 'criar_despesas',
   EDITAR_DESPESAS: 'editar_despesas',
   DELETAR_DESPESAS: 'deletar_despesas',

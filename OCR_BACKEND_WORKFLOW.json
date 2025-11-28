@@ -1,0 +1,254 @@
+{
+  "name": "OCR_BACKEND_PROCESSOR",
+  "description": "Processamento OCR backend para upload direto do sistema",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-process",
+        "options": {},
+        "responseMode": "responseNode"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-400, 0],
+      "id": "webhook-upload",
+      "name": "Webhook Upload",
+      "webhookId": "ocr-process"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "fileBase64",
+        "options": {
+          "fileName": "={{ $json.fileName }}",
+          "mimeType": "={{ $json.mimeType }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [-200, 0],
+      "id": "convert-upload",
+      "name": "Convert Upload"
+    },
+    {
+      "parameters": {
+        "options": {
+          "language": "por",
+          "tessedit_pageseg_mode": "6"
+        }
+      },
+      "type": "n8n-nodes-tesseractjs.tesseractNode",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "tesseract-ocr",
+      "name": "Tesseract OCR"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "nome_fornecedor",
+              "description": "Nome completo ou razão social da empresa/pessoa que emitiu o documento fiscal",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "cnpj_fornecedor",
+              "description": "CNPJ do fornecedor no formato XX.XXX.XXX/XXXX-XX ou CPF XXX.XXX.XXX-XX",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "valor_total",
+              "description": "Valor total do documento em formato numérico (ex: 123.45)",
+              "required": true,
+              "type": "number"
+            },
+            {
+              "name": "forma_pagamento",
+              "description": "Como foi pago: PIX, Cartão, Dinheiro, Boleto, etc",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "numero_documento",
+              "description": "Número da nota fiscal, cupom, recibo ou documento",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "data_emissao",
+              "description": "Data de emissão do documento no formato DD/MM/AAAA",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "name": "descricao_itens",
+              "description": "Descrição resumida dos principais itens/serviços",
+              "required": false,
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [200, 0],
+      "id": "extract-data",
+      "name": "Extract Data"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-2024-11-20",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [200, 150],
+      "id": "gpt-model",
+      "name": "GPT Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "VqNafmopBQZDSL2K",
+          "name": "SecEng"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "format-response",
+              "name": "ocr_result",
+              "value": "={\n  \"success\": true,\n  \"dados_extraidos\": {{ $json.output }},\n  \"texto_original\": \"{{ $('Tesseract OCR').item.json.text }}\",\n  \"arquivo_original\": \"{{ $('Webhook Upload').item.json.fileName }}\",\n  \"processado_em\": \"{{ new Date().toISOString() }}\"\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 0],
+      "id": "format-response",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.ocr_result }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [600, 0],
+      "id": "respond-webhook",
+      "name": "Respond Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Erro no processamento OCR\",\n  \"message\": \"{{ $json.error?.message || 'Erro desconhecido' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [600, 200],
+      "id": "respond-error",
+      "name": "Respond Error"
+    }
+  ],
+  "connections": {
+    "Webhook Upload": {
+      "main": [
+        [
+          {
+            "node": "Convert Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Upload": {
+      "main": [
+        [
+          {
+            "node": "Tesseract OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tesseract OCR": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

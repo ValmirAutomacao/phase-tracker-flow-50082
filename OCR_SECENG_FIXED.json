@@ -1,0 +1,363 @@
+{
+  "name": "OCR_SECENG_INTEGRATED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ocr-despesas-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-560, -48],
+      "id": "webhook-ocr",
+      "name": "Webhook OCR",
+      "webhookId": "ocr-despesas-webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.data.message.imageMessage }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists"
+                    },
+                    "id": "image-exists"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Imagem"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [-300, -48],
+      "id": "switch-message-type",
+      "name": "Detectar Tipo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.server_url }}/chat/getBase64FromMediaMessage/{{ $json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "9767487472D3-46D1-87AC-408B2093EFFE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"key\": {\n      \"id\": \"{{ $json.body.data.key.id }}\"\n    }\n  },\n  \"convertToMp4\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-100, -48],
+      "id": "download-image",
+      "name": "Baixar Imagem"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data.base64",
+        "options": {
+          "fileName": "=documento_{{ new Date().getTime() }}.jpg",
+          "mimeType": "image/jpeg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [100, -48],
+      "id": "convert-to-file",
+      "name": "Converter para Arquivo"
+    },
+    {
+      "parameters": {
+        "options": {
+          "language": "por"
+        }
+      },
+      "type": "n8n-nodes-tesseractjs.tesseractNode",
+      "typeVersion": 1,
+      "position": [300, -48],
+      "id": "tesseract-ocr",
+      "name": "Tesseract OCR"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "nome_fornecedor",
+              "description": "Nome/Razão social da empresa fornecedora",
+              "required": true
+            },
+            {
+              "name": "cnpj_fornecedor",
+              "description": "CNPJ da empresa fornecedora (formato: XX.XXX.XXX/XXXX-XX)",
+              "required": true
+            },
+            {
+              "name": "valor_compra",
+              "description": "Valor total da compra/nota fiscal em formato decimal (ex: 123.45)",
+              "required": true
+            },
+            {
+              "name": "forma_pagamento",
+              "description": "Forma de pagamento utilizada (PIX, Cartão, Dinheiro, Boleto, etc)",
+              "required": false
+            },
+            {
+              "name": "numero_documento",
+              "description": "Número da nota fiscal, cupom fiscal ou documento",
+              "required": true
+            },
+            {
+              "name": "data_compra",
+              "type": "date",
+              "description": "Data da compra/emissão do documento",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [500, -48],
+      "id": "extract-info",
+      "name": "Extrair Informações"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-2024-11-20",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-2024-11-20"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [500, 100],
+      "id": "gpt-model",
+      "name": "GPT-4 Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "VqNafmopBQZDSL2K",
+          "name": "SecEng"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "funcionario-dados",
+              "name": "funcionario_nome",
+              "value": "={{ $('Webhook OCR').item.json.body.data.pushName }}",
+              "type": "string"
+            },
+            {
+              "id": "funcionario-telefone",
+              "name": "funcionario_telefone",
+              "value": "={{ $('Webhook OCR').item.json.body.data.key.remoteJid.split('@')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "ocr-data",
+              "name": "dados_extraidos",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [700, -48],
+      "id": "format-data",
+      "name": "Formatar Dados"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/api/despesas-variaveis/ocr",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $('Webhook OCR').item.json.headers.authorization || 'webhook-token' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"funcionario_nome\": \"{{ $json.funcionario_nome }}\",\n  \"funcionario_telefone\": \"{{ $json.funcionario_telefone }}\",\n  \"nome_fornecedor\": \"{{ $json.dados_extraidos.nome_fornecedor }}\",\n  \"cnpj_fornecedor\": \"{{ $json.dados_extraidos.cnpj_fornecedor }}\",\n  \"valor_compra\": \"{{ $json.dados_extraidos.valor_compra }}\",\n  \"forma_pagamento\": \"{{ $json.dados_extraidos.forma_pagamento }}\",\n  \"numero_documento\": \"{{ $json.dados_extraidos.numero_documento }}\",\n  \"data_compra\": \"{{ $json.dados_extraidos.data_compra }}\",\n  \"status_ocr\": \"processado\",\n  \"webhook_origem\": \"whatsapp\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, -48],
+      "id": "send-to-system",
+      "name": "Enviar para Sistema"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook OCR').item.json.body.server_url }}/message/sendText/{{ $('Webhook OCR').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "9767487472D3-46D1-87AC-408B2093EFFE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Webhook OCR').item.json.body.data.key.remoteJid }}\",\n  \"textMessage\": {\n    \"text\": \"✅ *Documento processado com sucesso!*\\n\\n📋 *Dados extraídos:*\\n\\n🏢 **Fornecedor:** {{ $('Format Data').item.json.dados_extraidos.nome_fornecedor }}\\n💼 **CNPJ:** {{ $('Format Data').item.json.dados_extraidos.cnpj_fornecedor }}\\n💰 **Valor:** R$ {{ $('Format Data').item.json.dados_extraidos.valor_compra }}\\n💳 **Pagamento:** {{ $('Format Data').item.json.dados_extraidos.forma_pagamento || 'Não identificado' }}\\n📄 **Documento:** {{ $('Format Data').item.json.dados_extraidos.numero_documento }}\\n📅 **Data:** {{ $('Format Data').item.json.dados_extraidos.data_compra }}\\n\\n➡️ Os dados foram enviados para o sistema EngFlow para análise.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -48],
+      "id": "send-confirmation",
+      "name": "Enviar Confirmação"
+    }
+  ],
+  "connections": {
+    "Webhook OCR": {
+      "main": [
+        [
+          {
+            "node": "Detectar Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Tipo": {
+      "main": [
+        [
+          {
+            "node": "Baixar Imagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Imagem": {
+      "main": [
+        [
+          {
+            "node": "Converter para Arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converter para Arquivo": {
+      "main": [
+        [
+          {
+            "node": "Tesseract OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tesseract OCR": {
+      "main": [
+        [
+          {
+            "node": "Extrair Informações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Informações": {
+      "main": [
+        [
+          {
+            "node": "Formatar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Dados": {
+      "main": [
+        [
+          {
+            "node": "Enviar para Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar para Sistema": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4 Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extrair Informações",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

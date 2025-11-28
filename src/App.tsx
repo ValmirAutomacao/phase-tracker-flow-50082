@@ -14,6 +14,12 @@ import { LogOut } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
 import Financeiro from "./pages/Financeiro";
 import DespesasDetalhes from "./pages/DespesasDetalhes";
+// Novos componentes do módulo financeiro
+import FinanceiroDashboard from "./pages/financeiro/Dashboard";
+import DespesasRequisicao from "./pages/financeiro/DespesasRequisicao";
+import DespesasVariaveis from "./pages/financeiro/DespesasVariaveis";
+import CartoesCredito from "./pages/financeiro/CartoesCredito";
+import FormasPagamento from "./pages/financeiro/FormasPagamento";
 import Projetos from "./pages/Projetos";
 import Videos from "./pages/Videos";
 import Clientes from "./pages/cadastros/Clientes";
@@ -87,7 +93,48 @@ function AppLayout() {
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
-              
+
+              {/* Novas rotas do módulo financeiro */}
+              <Route path="/financeiro/dashboard" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <FinanceiroDashboard />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/financeiro/despesas-requisicao" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <DespesasRequisicao />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/financeiro/despesas-variaveis" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <DespesasVariaveis />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/financeiro/cartoes-credito" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <CartoesCredito />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/financeiro/formas-pagamento" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <FormasPagamento />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
               <Route path="/despesas-detalhes" element={
                 <ProtectedRoute>
                   <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>

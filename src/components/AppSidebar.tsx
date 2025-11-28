@@ -13,7 +13,11 @@ import {
   UserPlus,
   UsersRound,
   Clock,
-  ClipboardCheck
+  ClipboardCheck,
+  CreditCard,
+  Receipt,
+  BarChart3,
+  Wallet
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -36,12 +40,6 @@ const menuItems = [
     url: "/",
     icon: LayoutDashboard,
     permissions: [], // Livre para todos
-  },
-  {
-    title: "Financeiro",
-    url: "/financeiro",
-    icon: DollarSign,
-    permissions: ["visualizar_financeiro"],
   },
   {
     title: "Projetos",
@@ -123,6 +121,39 @@ const comprasItems = [
   },
 ];
 
+const financeiroItems = [
+  {
+    title: "Dashboard Financeiro",
+    url: "/financeiro/dashboard",
+    icon: BarChart3,
+    permissions: ["visualizar_financeiro"],
+  },
+  {
+    title: "Despesas por Requisição",
+    url: "/financeiro/despesas-requisicao",
+    icon: FileText,
+    permissions: ["visualizar_financeiro"],
+  },
+  {
+    title: "Despesas Variáveis",
+    url: "/financeiro/despesas-variaveis",
+    icon: Receipt,
+    permissions: ["visualizar_financeiro"],
+  },
+  {
+    title: "Cartões de Crédito",
+    url: "/financeiro/cartoes-credito",
+    icon: CreditCard,
+    permissions: ["visualizar_financeiro"],
+  },
+  {
+    title: "Formas de Pagamento",
+    url: "/financeiro/formas-pagamento",
+    icon: Wallet,
+    permissions: ["visualizar_financeiro"],
+  },
+];
+
 const rhItems = [
   {
     title: "Controle de Ponto",
@@ -157,6 +188,10 @@ export function AppSidebar() {
   );
 
   const filteredComprasItems = comprasItems.filter(item =>
+    hasAnyPermission(item.permissions)
+  );
+
+  const filteredFinanceiroItems = financeiroItems.filter(item =>
     hasAnyPermission(item.permissions)
   );
 
@@ -238,6 +273,33 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredComprasItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {filteredFinanceiroItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Financeiro</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredFinanceiroItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

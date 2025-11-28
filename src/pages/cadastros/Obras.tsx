@@ -1,15 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Plus, Search, Edit, MapPin, Calendar, Trash2 } from "lucide-react";
+import { Building2, Plus, MapPin, Calendar, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ObrasForm, ObraFormData } from "./ObrasForm";
 import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DataTable, Column } from "@/components/ui/DataTable";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface EtapaObra {
   id?: string;
@@ -49,51 +50,13 @@ interface Obra {
 
 const Obras = () => {
   const { toast } = useToast();
-
-  // Função para formatar datas de forma segura
-  const formatDateSafe = (dateValue: any): string => {
-    if (!dateValue) return ''
-
-    try {
-      // Se já é uma string formatada, retorna
-      if (typeof dateValue === 'string' && dateValue.includes('/')) {
-        return dateValue
-      }
-
-      // Tenta criar uma data
-      const date = new Date(dateValue)
-
-      // Verifica se a data é válida
-      if (isNaN(date.getTime())) {
-        return 'Data inválida'
-      }
-
-      return date.toLocaleDateString('pt-BR')
-    } catch (error) {
-      return 'Data inválida'
-    }
-  };
-  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [editingObra, setEditingObra] = useState<Obra | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Hooks Supabase para substituir localStorage
   const { data: obras = [], isLoading, error } = useOptimizedSupabaseQuery<any>('OBRAS');
   const { add, update, delete: deleteObra } = useSupabaseCRUD<any>('OBRAS');
-
-  const [editingObra, setEditingObra] = useState<Obra | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  // Filtro de busca memoizado para performance
-  const filteredObras = useMemo(() => {
-    if (!searchTerm.trim()) return obras;
-
-    const searchLower = searchTerm.toLowerCase();
-    return obras.filter(obra =>
-      obra.nome.toLowerCase().includes(searchLower) ||
-      (obra.cliente && obra.cliente.toLowerCase().includes(searchLower)) ||
-      (obra.endereco && obra.endereco.toLowerCase().includes(searchLower))
-    );
-  }, [obras, searchTerm]);
 
   // Função helper para transformar dados do formulário para o formato da obra
   const transformFormDataToObra = useCallback((data: ObraFormData, isUpdate = false) => {
@@ -197,23 +160,135 @@ const Obras = () => {
     }
   };
 
-  // Status badge memoizado para performance
   const getStatusBadge = useCallback((status: string) => {
-    const variants: Record<string, { label: string; className: string }> = {
-      planejamento: { label: "Planejamento", className: "bg-yellow-100 text-yellow-700" },
-      execucao: { label: "Execução", className: "bg-green-100 text-green-700" },
-      concluida: { label: "Concluída", className: "bg-blue-100 text-blue-700" },
-      // Manter compatibilidade com status antigos
-      ativa: { label: "Execução", className: "bg-green-100 text-green-700" },
-      pausada: { label: "Pausada", className: "bg-gray-100 text-gray-700" },
+    const variants: Record<string, { label: string; variant: any }> = {
+      planejamento: { label: "Planejamento", variant: "secondary" },
+      execucao: { label: "Execução", variant: "default" },
+      concluida: { label: "Concluída", variant: "outline" },
+      ativa: { label: "Execução", variant: "default" },
+      pausada: { label: "Pausada", variant: "secondary" },
     };
 
+    const config = variants[status] || { label: status, variant: "outline" };
     return (
-      <Badge className={variants[status]?.className || ""}>
-        {variants[status]?.label || status}
+      <Badge variant={config.variant}>
+        {config.label}
       </Badge>
     );
   }, []);
+
+  // Definir colunas da tabela
+  const columns: Column<Obra>[] = [
+    {
+      key: 'nome',
+      title: 'Nome da Obra',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <Building2 className="h-4 w-4 text-primary" />
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-xs text-muted-foreground">
+              Cliente: {row.cliente}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      sortable: true,
+      filterable: true,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'planejamento', label: 'Planejamento' },
+        { value: 'execucao', label: 'Execução' },
+        { value: 'ativa', label: 'Ativa' },
+        { value: 'concluida', label: 'Concluída' },
+        { value: 'pausada', label: 'Pausada' }
+      ],
+      render: (value) => getStatusBadge(value)
+    },
+    {
+      key: 'endereco',
+      title: 'Localização',
+      filterable: true,
+      filterType: 'text',
+      render: (endereco, row) => (
+        <div className="flex items-center gap-1">
+          <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          <div className="text-sm">
+            <div>{endereco}, {row.numero}</div>
+            <div className="text-xs text-muted-foreground">
+              {row.bairro}, {row.cidade}/{row.estado}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'progresso',
+      title: 'Progresso',
+      sortable: true,
+      render: (value) => (
+        <div className="w-full">
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-muted-foreground">Progresso</span>
+            <span className="font-semibold">{value}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${
+                value === 100 ? 'bg-blue-500' :
+                value >= 75 ? 'bg-green-500' :
+                value >= 50 ? 'bg-yellow-500' : 'bg-orange-500'
+              }`}
+              style={{ width: `${value}%` }}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'data_inicio',
+      title: 'Data Início',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+      render: (value) => value ? (
+        <div className="flex items-center gap-1">
+          <Calendar className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm">
+            {format(new Date(value), 'dd/MM/yyyy', { locale: ptBR })}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+    {
+      key: 'orcamento',
+      title: 'Orçamento',
+      sortable: true,
+      render: (value) => value ? (
+        <div className="text-sm font-medium">
+          {new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          }).format(value)}
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    }
+  ];
+
+  const handleDeleteConfirm = (obra: Obra) => {
+    setDeleteId(obra.id);
+  };
 
   return (
     <div className="responsive-container p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -294,148 +369,28 @@ const Obras = () => {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Lista de Obras com DataTable */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Lista de Obras</CardTitle>
-              <CardDescription>Todas as obras cadastradas</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar obra..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-full"
-              />
-            </div>
+          <div>
+            <CardTitle>Lista de Obras</CardTitle>
+            <CardDescription>Todas as obras cadastradas no sistema</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 mb-3">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <Skeleton className="h-12 w-12 rounded-lg" />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-col gap-2">
-                          <Skeleton className="h-6 w-48" />
-                          <Skeleton className="h-5 w-24" />
-                        </div>
-                        <Skeleton className="h-4 w-32" />
-                        <div className="flex flex-col gap-2">
-                          <Skeleton className="h-4 w-64" />
-                          <Skeleton className="h-4 w-40" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 w-16" />
-                      <Skeleton className="h-8 w-16" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-2 w-full" />
-                  </div>
-                </div>
-              ))
-            ) : error ? (
-              // Error state
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Erro ao carregar obras: {error.message}</p>
-                <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : filteredObras.length === 0 ? (
-              // Empty state
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "Nenhuma obra encontrada para a pesquisa." : "Nenhuma obra cadastrada ainda."}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    className="mt-4"
-                    onClick={() => { setEditingObra(null); setOpen(true); }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar primeira obra
-                  </Button>
-                )}
-              </div>
-            ) : (
-              filteredObras.map((obra) => (
-              <div
-                key={obra.id}
-                className="list-item-responsive p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-3">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-lg text-truncate-responsive">{obra.nome}</h4>
-                        {getStatusBadge(obra.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Cliente: {obra.cliente}
-                      </p>
-                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="text-truncate-responsive">{obra.endereco}, {obra.numero} - {obra.bairro}, {obra.cidade}/{obra.estado} - {obra.cep}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="text-nowrap">
-                            {formatDateSafe(obra.dataInicio)}
-                            {obra.dataPrevisao && obra.dataPrevisao !== '' && ` - ${formatDateSafe(obra.dataPrevisao)}`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mobile-action-buttons sm:flex-shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(obra)}>
-                      <Edit className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Editar</span>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(obra.id)}>
-                      <Trash2 className="h-4 w-4 sm:mr-1 text-destructive" />
-                      <span className="hidden sm:inline">Excluir</span>
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progresso Geral</span>
-                    <span className="font-semibold">{obra.progresso}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        obra.progresso === 100 ? 'bg-blue-500' :
-                        obra.progresso >= 75 ? 'bg-green-500' :
-                        obra.progresso >= 50 ? 'bg-yellow-500' : 'bg-orange-500'
-                      }`}
-                      style={{ width: `${obra.progresso}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )))}
-          </div>
+          <DataTable
+            data={obras}
+            columns={columns}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDeleteConfirm}
+            searchPlaceholder="Buscar por nome, cliente, endereço..."
+            emptyMessage="Nenhuma obra cadastrada ainda."
+            showSelection={false}
+            showActions={true}
+            globalSearch={true}
+            hideFilters={false}
+          />
         </CardContent>
       </Card>
 

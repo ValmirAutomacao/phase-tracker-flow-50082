@@ -10,6 +10,9 @@ const TABLE_MAP = {
   'engflow_funcoes': 'funcoes',
   'engflow_setores': 'setores',
   'engflow_despesas': 'despesas',
+  'engflow_despesas_variaveis': 'despesas_variaveis',
+  'engflow_cartoes_credito': 'cartoes_credito',
+  'engflow_formas_pagamento': 'formas_pagamento',
   'engflow_videos': 'videos',
   'engflow_requisicoes': 'requisicoes',
   'engflow_categorias': 'categorias',
@@ -116,6 +119,12 @@ export class SupabaseService {
         *,
         cliente:cliente_id(id, nome),
         obra:obra_id(id, nome)
+      `
+    } else if (tableName === 'despesas_variaveis') {
+      selectQuery = `
+        *,
+        obra:obra_id(id, nome),
+        funcionario:comprador_funcionario_id(id, nome)
       `
     }
 
@@ -246,6 +255,43 @@ export class SupabaseService {
       return transformed
     }
 
+    if (tableName === 'despesas_variaveis') {
+      // Para despesas variáveis, garantir formato correto dos campos
+      const transformed = {
+        nome_fornecedor: item.nome_fornecedor || '',
+        cnpj_fornecedor: item.cnpj_fornecedor || null,
+        valor_compra: item.valor_compra ? parseFloat(item.valor_compra.toString()) : 0,
+        forma_pagamento: item.forma_pagamento || null,
+        numero_parcelas: item.numero_parcelas || 1,
+        nr_documento: item.nr_documento || null,
+        comprovante_url: item.comprovante_url || null,
+        cartao_vinculado_id: item.cartao_vinculado_id || null,
+        categorias: item.categorias || [],
+        descricao: item.descricao || null,
+        data_compra: item.data_compra || null,
+        data_lancamento: item.data_lancamento || null,
+        status_ocr: item.status_ocr || 'pendente',
+        origem_dados: item.origem_dados || 'manual',
+        dados_ocr: item.dados_ocr || {},
+        // Mapeia campos de relacionamento para UUID válidos
+        obra_id: item.obra_id || item.obra || null,
+        comprador_funcionario_id: item.comprador_funcionario_id || item.funcionario_id || item.funcionario || null
+      }
+
+      // Remove campos vazios que podem causar erro de UUID
+      if (!transformed.obra_id || transformed.obra_id === '') {
+        delete transformed.obra_id;
+      }
+      if (!transformed.comprador_funcionario_id || transformed.comprador_funcionario_id === '') {
+        delete transformed.comprador_funcionario_id;
+      }
+      if (!transformed.cartao_vinculado_id || transformed.cartao_vinculado_id === '') {
+        delete transformed.cartao_vinculado_id;
+      }
+
+      return transformed
+    }
+
     if (tableName === 'despesas') {
       // Para despesas, pode precisar converter tipos
       let valorValue = 0;
@@ -321,6 +367,25 @@ export class SupabaseService {
         ...item,
         // Formata valor como string monetária para o frontend
         valor: item.valor ? `R$ ${item.valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : 'R$ 0,00'
+      }
+      return transformed
+    }
+
+    if (tableName === 'despesas_variaveis') {
+      // Para despesas variáveis, formata valores e relacionamentos de volta para o frontend
+      const transformed = {
+        ...item,
+        // Mantém o valor como número para cálculos na interface
+        valor_compra: item.valor_compra || 0,
+        // Garante que arrays não sejam nulos
+        categorias: item.categorias || [],
+        dados_ocr: item.dados_ocr || {},
+        // Mapeia relacionamentos se existirem
+        obra_nome: item.obra?.nome || null,
+        funcionario_nome: item.funcionario?.nome || null,
+        // Formata datas se necessário
+        data_compra: item.data_compra || null,
+        data_lancamento: item.data_lancamento || null
       }
       return transformed
     }
@@ -542,6 +607,9 @@ export const SUPABASE_KEYS = {
   FUNCOES: 'engflow_funcoes',
   SETORES: 'engflow_setores',
   DESPESAS: 'engflow_despesas',
+  DESPESAS_VARIAVEIS: 'engflow_despesas_variaveis',
+  CARTOES_CREDITO: 'engflow_cartoes_credito',
+  FORMAS_PAGAMENTO: 'engflow_formas_pagamento',
   REQUISICOES: 'engflow_requisicoes',
   VIDEOS: 'engflow_videos',
   CATEGORIAS: 'engflow_categorias',

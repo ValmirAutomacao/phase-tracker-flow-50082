@@ -10,9 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Search, Edit, Trash2, Tag } from "lucide-react";
+import { Plus, Edit, Trash2, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { DataTable, Column } from "@/components/ui/DataTable";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import "@/styles/responsive.css";
@@ -38,11 +39,9 @@ type CategoriaFormData = z.infer<typeof categoriaSchema>;
 
 const Categorias = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<CategoriaItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Hooks Supabase para substituir localStorage
   const { data: categorias = [], isLoading, error } = useSupabaseQuery<CategoriaItem>('CATEGORIAS');
@@ -70,26 +69,6 @@ const Categorias = () => {
     }
   };
 
-  // Filtros avançados com memoização para performance
-  const filteredCategorias = useMemo(() => {
-    return categorias.filter(categoria => {
-      // Fallback seguro para evitar erros de propriedades undefined/null
-      const nome = categoria.nome || '';
-      const descricao = categoria.descricao || '';
-
-      const matchesSearch = nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           descricao.toLowerCase().includes(searchTerm.toLowerCase());
-
-      let matchesStatus = true;
-      if (statusFilter === "ativas") {
-        matchesStatus = categoria.ativa;
-      } else if (statusFilter === "inativas") {
-        matchesStatus = !categoria.ativa;
-      }
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [categorias, searchTerm, statusFilter]);
 
   const form = useForm<CategoriaFormData>({
     resolver: zodResolver(categoriaSchema),
@@ -190,6 +169,65 @@ const Categorias = () => {
       </Badge>
     );
   };
+
+  const handleDeleteConfirm = (categoria: CategoriaItem) => {
+    setDeleteId(categoria.id);
+  };
+
+  // Definir colunas da tabela
+  const columns: Column<CategoriaItem>[] = [
+    {
+      key: 'nome',
+      title: 'Nome',
+      sortable: true,
+      filterable: true,
+      filterType: 'text',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Tag className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-xs text-muted-foreground">Categoria</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'descricao',
+      title: 'Descrição',
+      filterable: true,
+      filterType: 'text',
+      render: (value) => (
+        <div className="text-sm max-w-md">
+          {value || 'Sem descrição'}
+        </div>
+      )
+    },
+    {
+      key: 'ativa',
+      title: 'Status',
+      sortable: true,
+      filterable: true,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'true', label: 'Ativa' },
+        { value: 'false', label: 'Inativa' }
+      ],
+      render: (value) => getStatusBadge(value)
+    },
+    {
+      key: 'created_at',
+      title: 'Data de Criação',
+      sortable: true,
+      render: (value) => (
+        <div className="text-sm">
+          {new Date(value || Date.now()).toLocaleDateString('pt-BR')}
+        </div>
+      )
+    },
+  ];
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -339,143 +377,37 @@ const Categorias = () => {
         </div>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-          <CardDescription>Busque e filtre categorias</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="row g-3">
-            <div className="col-12">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome ou descrição..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="col-12 col-sm-6">
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">Todos os Status</option>
-                <option value="ativas">Apenas Ativas</option>
-                <option value="inativas">Apenas Inativas</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Lista de Categorias */}
+      {/* Lista de Categorias com DataTable */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Categorias</CardTitle>
-          <CardDescription>
-            {filteredCategorias.length} de {categorias.length} categorias
-          </CardDescription>
+          <CardDescription>Todas as categorias cadastradas no sistema</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {isLoading ? (
-              // Loading skeletons
-              Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg gap-4"
-                >
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="h-12 w-12 rounded-lg bg-muted animate-pulse shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="h-4 bg-muted rounded animate-pulse" />
-                      <div className="h-3 bg-muted rounded w-3/4 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="h-8 w-20 bg-muted rounded animate-pulse" />
-                  </div>
-                </div>
-              ))
-            ) : error ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Erro ao carregar categorias: {error.message}</p>
-              </div>
-            ) : filteredCategorias.length === 0 ? (
-              <div className="text-center py-8">
-                <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {categorias.length === 0
-                    ? "Nenhuma categoria cadastrada ainda."
-                    : "Nenhuma categoria encontrada com os filtros aplicados."
-                  }
-                </p>
-              </div>
-            ) : (
-              filteredCategorias.map((categoria) => (
-                <div
-                  key={categoria.id}
-                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
-                >
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Tag className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                        <h4 className="font-semibold truncate">{categoria.nome}</h4>
-                        <div className="flex gap-2">
-                          {getStatusBadge(categoria.ativa)}
-                        </div>
-                      </div>
-                      {categoria.descricao && (
-                        <p className="text-sm text-muted-foreground mb-2">{categoria.descricao}</p>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        <span>Criada em: {new Date(categoria.created_at || Date.now()).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-                    {/* Botão de ativar/desativar */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleStatus(categoria)}
-                      className="w-full sm:w-auto"
-                    >
-                      {categoria.ativa ? 'Desativar' : 'Ativar'}
-                    </Button>
-
-                    {/* Botão de editar */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(categoria)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-
-                    {/* Botão de excluir */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteId(categoria.id)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+          <DataTable
+            data={categorias}
+            columns={columns}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDeleteConfirm}
+            searchPlaceholder="Buscar por nome ou descrição..."
+            emptyMessage="Nenhuma categoria cadastrada ainda."
+            showSelection={false}
+            showActions={true}
+            globalSearch={true}
+            hideFilters={false}
+            customActions={(categoria) => (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleToggleStatus(categoria)}
+                className="text-xs"
+              >
+                {categoria.ativa ? 'Desativar' : 'Ativar'}
+              </Button>
             )}
-          </div>
+          />
         </CardContent>
       </Card>
 
