@@ -35,6 +35,10 @@ import CurriculosAdmin from "./pages/CurriculosAdmin";
 import RegistroPonto from "./pages/RegistroPonto";
 import ControlePonto from "./pages/RH/ControlePonto";
 import Jornadas from "./pages/RH/Jornadas";
+// Módulo BI
+import BIDashboard from "./pages/BI/index";
+import BIBuilder from "./pages/BI/Builder";
+import BIVisualizer from "./pages/BI/Visualizer";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -241,6 +245,39 @@ function AppLayout() {
                 <ProtectedRoute>
                   <PermissionGuard requiredPermission={PERMISSIONS.CONFIGURAR_JORNADAS}>
                     <Jornadas />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              {/* Rotas do módulo BI */}
+              <Route path="/bi" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <BIDashboard />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/bi/builder" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <BIBuilder />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/bi/visualizer/:id" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <BIVisualizer />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/bi/visualizer/preview" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                    <BIVisualizer />
                   </PermissionGuard>
                 </ProtectedRoute>
               } />

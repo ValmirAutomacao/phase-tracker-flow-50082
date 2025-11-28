@@ -21,6 +21,7 @@ const TABLE_MAP = {
   'FUNCIONARIOS': 'funcionarios',
   'FUNCOES': 'funcoes',
   'SETORES': 'setores',
+  'RELATORIOS_BI': 'relatorios_bi',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
@@ -315,6 +316,15 @@ export class SupabaseService {
       return transformed
     }
 
+    if (tableName === 'relatorios_bi') {
+      // Para relatórios BI, adiciona o usuario_id automaticamente
+      const transformed = {
+        ...item,
+        usuario_id: this.getCurrentUserId()
+      }
+      return transformed
+    }
+
     // Para outras tabelas, retorna os dados como estão
     return item
   }
@@ -559,6 +569,39 @@ export class SupabaseService {
       return []
     }
   }
+
+  /**
+   * Obtém o ID do usuário atual autenticado de forma síncrona
+   */
+  private getCurrentUserId(): string {
+    // Usando localStorage para obter o token atual de forma síncrona
+    const token = localStorage.getItem('sb-ibnrtvrxogkksldvxici-auth-token')
+    if (token) {
+      try {
+        const session = JSON.parse(token)
+        if (session?.user?.id) {
+          return session.user.id
+        }
+      } catch (e) {
+        // Se falhar ao parsear, tenta a próxima abordagem
+      }
+    }
+
+    // Fallback: busca no localStorage de forma alternativa
+    const storageData = localStorage.getItem('sb-auth-token') || localStorage.getItem('supabase.auth.token')
+    if (storageData) {
+      try {
+        const data = JSON.parse(storageData)
+        if (data?.user?.id) {
+          return data.user.id
+        }
+      } catch (e) {
+        // Se falhar, lança erro
+      }
+    }
+
+    throw new Error('Usuário não autenticado - não foi possível obter ID do usuário')
+  }
 }
 
 // Instância singleton do serviço
@@ -615,4 +658,5 @@ export const SUPABASE_KEYS = {
   CATEGORIAS: 'engflow_categorias',
   ITENS_REQUISICAO: 'engflow_itens_requisicao',
   JORNADAS_TRABALHO: 'JORNADAS_TRABALHO',
+  RELATORIOS_BI: 'RELATORIOS_BI',
 } as const

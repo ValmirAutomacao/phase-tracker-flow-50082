@@ -17,7 +17,8 @@ import {
   CreditCard,
   Receipt,
   BarChart3,
-  Wallet
+  Wallet,
+  TrendingUp
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -175,6 +176,15 @@ const rhItems = [
   },
 ];
 
+const biItems = [
+  {
+    title: "Business Intelligence",
+    url: "/bi",
+    icon: TrendingUp,
+    permissions: ["visualizar_financeiro"],
+  },
+];
+
 export function AppSidebar() {
   const { hasAnyPermission } = usePermissions();
 
@@ -196,6 +206,10 @@ export function AppSidebar() {
   );
 
   const filteredRhItems = rhItems.filter(item =>
+    hasAnyPermission(item.permissions)
+  );
+
+  const filteredBiItems = biItems.filter(item =>
     hasAnyPermission(item.permissions)
   );
 
@@ -327,6 +341,33 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredRhItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "hover:bg-sidebar-primary text-sidebar-foreground"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {filteredBiItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Business Intelligence</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredBiItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
