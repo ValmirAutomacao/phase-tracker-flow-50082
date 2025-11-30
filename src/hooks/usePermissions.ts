@@ -66,7 +66,7 @@ export function usePermissions() {
 
 /**
  * IDs de permissões disponíveis no sistema
- * @deprecated Use PERMISSION_MODULES from @/lib/permissions instead
+ * Recomendado: Use as strings literais definidas em @/lib/permissions para maior clareza
  */
 export const PERMISSIONS = {
   // Obras
@@ -81,20 +81,20 @@ export const PERMISSIONS = {
   EDITAR_CLIENTES: 'editar_clientes',
   DELETAR_CLIENTES: 'deletar_clientes',
   
-  // Financeiro/Despesas
-  VISUALIZAR_FINANCEIRO: 'visualizar_financeiro',
-  GERENCIAR_FINANCEIRO: 'gerenciar_financeiro',
-  CRIAR_DESPESAS: 'criar_despesas',
-  EDITAR_DESPESAS: 'editar_despesas',
-  DELETAR_DESPESAS: 'deletar_despesas',
-  EDITAR_FINANCEIRO: 'editar_financeiro',
+  // Financeiro
+  VISUALIZAR_DASHBOARD_FINANCEIRO: 'visualizar_dashboard_financeiro',
+  VISUALIZAR_DESPESAS_REQUISICAO: 'visualizar_despesas_requisicao',
+  VISUALIZAR_DESPESAS_VARIAVEIS: 'visualizar_despesas_variaveis',
+  VISUALIZAR_CARTOES_CREDITO: 'visualizar_cartoes_credito',
+  VISUALIZAR_FORMAS_PAGAMENTO: 'visualizar_formas_pagamento',
+  VISUALIZAR_CATEGORIAS_FINANCEIRO: 'visualizar_categorias_financeiro',
   
-  // Compras/Requisições
-  VISUALIZAR_COMPRAS: 'visualizar_compras',
-  CRIAR_COMPRAS: 'criar_compras',
-  EDITAR_COMPRAS: 'editar_compras',
-  DELETAR_COMPRAS: 'deletar_compras',
-  APROVAR_COMPRAS: 'aprovar_compras',
+  // Compras
+  VISUALIZAR_REQUISICOES: 'visualizar_requisicoes',
+  CRIAR_REQUISICOES: 'criar_requisicoes',
+  EDITAR_REQUISICOES: 'editar_requisicoes',
+  DELETAR_REQUISICOES: 'deletar_requisicoes',
+  APROVAR_REQUISICOES: 'aprovar_requisicoes',
   
   // Vídeos
   VISUALIZAR_VIDEOS: 'visualizar_videos',
@@ -102,13 +102,39 @@ export const PERMISSIONS = {
   EDITAR_VIDEOS: 'editar_videos',
   DELETAR_VIDEOS: 'deletar_videos',
   
-  // Equipe
-  GERENCIAR_EQUIPE: 'gerenciar_equipe',
-  VISUALIZAR_EQUIPE: 'visualizar_equipe',
+  // Equipe (Granular)
+  VISUALIZAR_FUNCIONARIOS: 'visualizar_funcionarios',
+  VISUALIZAR_FUNCOES: 'visualizar_funcoes',
+  VISUALIZAR_SETORES: 'visualizar_setores',
+  GERENCIAR_PERMISSOES: 'gerenciar_permissoes',
 
-  // Controle de Ponto
+  // Controle de Ponto (Granular)
   REGISTRAR_PONTO: 'registrar_ponto',
   VISUALIZAR_PONTO_PROPRIO: 'visualizar_ponto_proprio',
-  GERENCIAR_PONTO: 'gerenciar_ponto',
-  CONFIGURAR_JORNADAS: 'configurar_jornadas',
+  GERENCIAR_PONTO: 'gerenciar_ponto', // Visão geral
+  
+  // Ajustes de Ponto
+  VISUALIZAR_AJUSTES_PONTO: 'visualizar_ajustes_ponto',
+  CRIAR_AJUSTES_PONTO: 'criar_ajustes_ponto',
+  APROVAR_AJUSTES_PONTO: 'aprovar_ajustes_ponto',
+
+  // Afastamentos
+  VISUALIZAR_AFASTAMENTOS: 'visualizar_afastamentos',
+  CRIAR_AFASTAMENTOS: 'criar_afastamentos',
+  APROVAR_AFASTAMENTOS: 'aprovar_afastamentos',
+
+  // Jornadas
+  VISUALIZAR_JORNADAS: 'visualizar_jornadas',
+  CRIAR_JORNADAS: 'criar_jornadas',
+  EDITAR_JORNADAS: 'editar_jornadas',
+
+  // Tipos
+  VISUALIZAR_TIPOS_JUSTIFICATIVAS: 'visualizar_tipos_justificativas',
+  VISUALIZAR_TIPOS_AFASTAMENTO: 'visualizar_tipos_afastamento',
+  
+  // Curriculos
+  VISUALIZAR_CURRICULOS: 'visualizar_curriculos',
+  
+  // BI
+  VISUALIZAR_DASHBOARD_EXECUTIVO: 'visualizar_dashboard_executivo',
 } as const;

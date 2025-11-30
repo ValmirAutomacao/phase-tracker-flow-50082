@@ -18,7 +18,9 @@ import {
   Receipt,
   BarChart3,
   Wallet,
-  TrendingUp
+  TrendingUp,
+  Calendar,
+  UserMinus
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -91,25 +93,25 @@ const cadastrosItems = [
     title: "Funcionários",
     url: "/cadastros/funcionarios",
     icon: Users,
-    permissions: ["visualizar_equipe"],
+    permissions: ["visualizar_funcionarios"],
   },
   {
     title: "Funções",
     url: "/cadastros/funcoes",
     icon: Briefcase,
-    permissions: ["gerenciar_equipe"],
+    permissions: ["visualizar_funcoes"],
   },
   {
     title: "Setores",
     url: "/cadastros/setores",
     icon: UserCog,
-    permissions: ["gerenciar_equipe"],
+    permissions: ["visualizar_setores"],
   },
   {
     title: "Categorias",
     url: "/categorias",
     icon: Tag,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_categorias_financeiro"],
   },
 ];
 
@@ -118,7 +120,7 @@ const comprasItems = [
     title: "Requisições",
     url: "/requisicoes",
     icon: FileText,
-    permissions: ["visualizar_compras"],
+    permissions: ["visualizar_requisicoes"],
   },
 ];
 
@@ -127,31 +129,31 @@ const financeiroItems = [
     title: "Dashboard Financeiro",
     url: "/financeiro/dashboard",
     icon: BarChart3,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_dashboard_financeiro"],
   },
   {
     title: "Despesas por Requisição",
     url: "/financeiro/despesas-requisicao",
     icon: FileText,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_despesas_requisicao"],
   },
   {
     title: "Despesas Variáveis",
     url: "/financeiro/despesas-variaveis",
     icon: Receipt,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_despesas_variaveis"],
   },
   {
     title: "Cartões de Crédito",
     url: "/financeiro/cartoes-credito",
     icon: CreditCard,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_cartoes_credito"],
   },
   {
     title: "Formas de Pagamento",
     url: "/financeiro/formas-pagamento",
     icon: Wallet,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_formas_pagamento"],
   },
 ];
 
@@ -163,16 +165,34 @@ const rhItems = [
     permissions: ["gerenciar_ponto"],
   },
   {
+    title: "Gerenciar Afastamentos",
+    url: "/rh/afastamentos",
+    icon: UserMinus,
+    permissions: ["visualizar_afastamentos"],
+  },
+  {
     title: "Jornadas de Trabalho",
     url: "/rh/jornadas",
     icon: Clock,
-    permissions: ["configurar_jornadas"],
+    permissions: ["visualizar_jornadas"],
+  },
+  {
+    title: "Tipos de Justificativas",
+    url: "/cadastros/tipos-justificativas",
+    icon: FileText,
+    permissions: ["visualizar_tipos_justificativas"],
+  },
+  {
+    title: "Tipos de Afastamento",
+    url: "/cadastros/tipos-afastamento",
+    icon: Calendar,
+    permissions: ["visualizar_tipos_afastamento"],
   },
   {
     title: "Currículos Recebidos",
     url: "/rh/curriculos",
     icon: UsersRound,
-    permissions: ["gerenciar_equipe"],
+    permissions: ["visualizar_curriculos"],
   },
 ];
 
@@ -181,7 +201,7 @@ const biItems = [
     title: "Business Intelligence",
     url: "/bi",
     icon: TrendingUp,
-    permissions: ["visualizar_financeiro"],
+    permissions: ["visualizar_dashboard_executivo"],
   },
 ];
 

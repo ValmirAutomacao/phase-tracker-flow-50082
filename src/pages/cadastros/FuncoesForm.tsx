@@ -10,7 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { PERMISSION_MODULES } from "@/lib/permissions";
+import { PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/permissions";
+import { CheckSquare, Square } from "lucide-react";
 import "@/styles/responsive.css";
 
 const funcaoSchema = z.object({
@@ -71,6 +72,30 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
   const handleSubmit = (data: FuncaoFormData) => {
     onSubmit(data);
     form.reset();
+  };
+
+  const handleSelectAll = () => {
+    const allPermissionIds = ALL_PERMISSIONS.map(p => p.id);
+    form.setValue('permissoes', allPermissionIds);
+  };
+
+  const handleUnselectAll = () => {
+    form.setValue('permissoes', []);
+  };
+
+  const handleToggleModule = (modulePermissions: string[]) => {
+    const currentPermissions = form.watch('permissoes') || [];
+    const allModuleSelected = modulePermissions.every(id => currentPermissions.includes(id));
+
+    if (allModuleSelected) {
+      // Desmarcar todas do módulo
+      const newPermissions = currentPermissions.filter(id => !modulePermissions.includes(id));
+      form.setValue('permissoes', newPermissions);
+    } else {
+      // Marcar todas do módulo
+      const newPermissions = Array.from(new Set([...currentPermissions, ...modulePermissions]));
+      form.setValue('permissoes', newPermissions);
+    }
   };
 
   return (
@@ -171,6 +196,30 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
                     <FormDescription>
                       Selecione as permissões para esta função organizadas por módulo
                     </FormDescription>
+
+                    {/* Botões de Seleção Global */}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAll}
+                        className="flex items-center gap-2"
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                        Marcar Todas
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUnselectAll}
+                        className="flex items-center gap-2"
+                      >
+                        <Square className="h-4 w-4" />
+                        Desmarcar Todas
+                      </Button>
+                    </div>
                   </div>
                   
                   <Accordion type="multiple" className="w-full" defaultValue={PERMISSION_MODULES.map(m => m.id)}>
@@ -178,17 +227,43 @@ export function FuncoesForm({ open, onOpenChange, onSubmit, editData, setores = 
                       const selectedInModule = form.watch('permissoes')?.filter(
                         p => module.permissions.some(mp => mp.id === p)
                       ).length || 0;
-                      
+                      const modulePermissionIds = module.permissions.map(p => p.id);
+
                       return (
                         <AccordionItem key={module.id} value={module.id}>
                           <AccordionTrigger className="hover:no-underline">
-                            <div className="flex items-center gap-2">
-                              <span>{module.label}</span>
-                              {selectedInModule > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {selectedInModule} de {module.permissions.length}
-                                </Badge>
-                              )}
+                            <div className="flex items-center justify-between w-full mr-4">
+                              <div className="flex items-center gap-2">
+                                <span>{module.label}</span>
+                                {selectedInModule > 0 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {selectedInModule} de {module.permissions.length}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleModule(modulePermissionIds);
+                                }}
+                                className="h-8 px-2"
+                              >
+                                {selectedInModule === module.permissions.length ? (
+                                  <>
+                                    <Square className="h-3 w-3 mr-1" />
+                                    Desmarcar
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckSquare className="h-3 w-3 mr-1" />
+                                    Marcar
+                                  </>
+                                )}
+                              </Button>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent>

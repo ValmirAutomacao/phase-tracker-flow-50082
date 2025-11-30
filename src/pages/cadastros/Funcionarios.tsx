@@ -477,7 +477,7 @@ const Funcionarios = () => {
           <h1 className="page-title">Cadastro de Funcionários</h1>
           <p className="page-description">Gerenciamento de colaboradores</p>
         </div>
-        <PermissionGuard permissions={['gerenciar_equipe']}>
+        <PermissionGuard permissions={['criar_funcionarios']}>
           <Dialog open={open} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
               <Button>

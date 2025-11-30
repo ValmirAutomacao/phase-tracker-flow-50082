@@ -82,6 +82,9 @@ export interface PontoDiario {
   segunda_saida?: string;
   he_inicio?: string;
   he_fim?: string;
+  total_horas?: string;
+  horas_extras?: string;
+  status_dia?: 'presente' | 'ausente' | 'afastado' | 'nao_util';
 }
 
 export const TIPO_REGISTRO_LABELS: Record<TipoRegistroPonto, string> = {
@@ -141,3 +144,104 @@ export const MESES_EXTENSO = [
   'Novembro',
   'Dezembro'
 ] as const;
+
+// CLAUDE-NOTE: Tipos para sistema de ajustes de ponto
+export type TipoAjustePonto = 'entrada' | 'saida' | 'intervalo_entrada' | 'intervalo_saida' | 'exclusao' | 'adicao';
+
+export interface AjustePonto {
+  id: string;
+  registro_ponto_id?: string; // null para adições
+  funcionario_id: string;
+  funcionario_nome: string;
+  data_ajuste: string; // DATE format
+  tipo_ajuste: TipoAjustePonto;
+  tipo_registro: TipoRegistroPonto;
+  hora_original?: string; // TIME format - null para adições
+  hora_ajustada: string; // TIME format
+  justificativa: string;
+  usuario_ajuste_id: string;
+  usuario_ajuste_nome: string;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AjustePontoInsert {
+  registro_ponto_id?: string;
+  funcionario_id: string;
+  data_ajuste: string;
+  tipo_ajuste: TipoAjustePonto;
+  tipo_registro: TipoRegistroPonto;
+  hora_original?: string;
+  hora_ajustada: string;
+  justificativa: string;
+  usuario_ajuste_id: string;
+  observacoes?: string;
+}
+
+// CLAUDE-NOTE: Tipos para sistema de afastamentos
+export type TipoAfastamento = 'atestado' | 'ferias' | 'licenca_maternidade' | 'licenca_paternidade' | 'licenca_sem_vencimento' | 'falta_justificada' | 'falta_injustificada' | 'suspensao' | 'outro';
+
+export interface Afastamento {
+  id: string;
+  funcionario_id: string;
+  funcionario_nome: string;
+  tipo_afastamento: TipoAfastamento;
+  data_inicio: string; // DATE format
+  data_fim: string; // DATE format
+  total_dias: number;
+  motivo: string;
+  observacoes?: string;
+  documento_anexo_url?: string; // Supabase Storage URL
+  documento_anexo_nome?: string;
+  usuario_cadastro_id: string;
+  usuario_cadastro_nome: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AfastamentoInsert {
+  funcionario_id: string;
+  tipo_afastamento: TipoAfastamento;
+  data_inicio: string;
+  data_fim: string;
+  motivo: string;
+  observacoes?: string;
+  documento_anexo_url?: string;
+  documento_anexo_nome?: string;
+  usuario_cadastro_id: string;
+}
+
+export const TIPO_AJUSTE_LABELS: Record<TipoAjustePonto, string> = {
+  'entrada': 'Ajuste de Entrada',
+  'saida': 'Ajuste de Saída',
+  'intervalo_entrada': 'Ajuste Entrada Intervalo',
+  'intervalo_saida': 'Ajuste Saída Intervalo',
+  'exclusao': 'Exclusão de Registro',
+  'adicao': 'Adição de Registro'
+};
+
+export const TIPO_AFASTAMENTO_LABELS: Record<TipoAfastamento, string> = {
+  'atestado': 'Atestado Médico',
+  'ferias': 'Férias',
+  'licenca_maternidade': 'Licença Maternidade',
+  'licenca_paternidade': 'Licença Paternidade',
+  'licenca_sem_vencimento': 'Licença sem Vencimento',
+  'falta_justificada': 'Falta Justificada',
+  'falta_injustificada': 'Falta Injustificada',
+  'suspensao': 'Suspensão',
+  'outro': 'Outro'
+};
+
+export const TIPO_AFASTAMENTO_COLORS: Record<TipoAfastamento, string> = {
+  'atestado': 'bg-blue-500 hover:bg-blue-600',
+  'ferias': 'bg-green-500 hover:bg-green-600',
+  'licenca_maternidade': 'bg-pink-500 hover:bg-pink-600',
+  'licenca_paternidade': 'bg-cyan-500 hover:bg-cyan-600',
+  'licenca_sem_vencimento': 'bg-gray-500 hover:bg-gray-600',
+  'falta_justificada': 'bg-yellow-500 hover:bg-yellow-600',
+  'falta_injustificada': 'bg-red-500 hover:bg-red-600',
+  'suspensao': 'bg-red-700 hover:bg-red-800',
+  'outro': 'bg-purple-500 hover:bg-purple-600'
+};

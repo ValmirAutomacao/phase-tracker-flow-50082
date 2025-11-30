@@ -27,6 +27,8 @@ import Obras from "./pages/cadastros/Obras";
 import Funcionarios from "./pages/cadastros/Funcionarios";
 import Funcoes from "./pages/cadastros/Funcoes";
 import Setores from "./pages/cadastros/Setores";
+import TiposJustificativas from "./pages/cadastros/TiposJustificativas";
+import TiposAfastamento from "./pages/cadastros/TiposAfastamento";
 import Categorias from "./pages/Categorias";
 import Requisicoes from "./pages/Requisicoes";
 import Kanban from "./pages/Kanban";
@@ -35,6 +37,7 @@ import CurriculosAdmin from "./pages/CurriculosAdmin";
 import RegistroPonto from "./pages/RegistroPonto";
 import ControlePonto from "./pages/RH/ControlePonto";
 import Jornadas from "./pages/RH/Jornadas";
+import GerenciarAfastamentos from "./pages/RH/GerenciarAfastamentos";
 // Módulo BI
 import BIDashboard from "./pages/BI/index";
 import BIBuilder from "./pages/BI/Builder";
@@ -92,7 +95,7 @@ function AppLayout() {
               
               <Route path="/financeiro" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_financeiro">
                     <Financeiro />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -101,7 +104,7 @@ function AppLayout() {
               {/* Novas rotas do módulo financeiro */}
               <Route path="/financeiro/dashboard" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_financeiro">
                     <FinanceiroDashboard />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -109,7 +112,7 @@ function AppLayout() {
 
               <Route path="/financeiro/despesas-requisicao" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_despesas_requisicao">
                     <DespesasRequisicao />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -117,7 +120,7 @@ function AppLayout() {
 
               <Route path="/financeiro/despesas-variaveis" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_despesas_variaveis">
                     <DespesasVariaveis />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -125,7 +128,7 @@ function AppLayout() {
 
               <Route path="/financeiro/cartoes-credito" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_cartoes_credito">
                     <CartoesCredito />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -133,7 +136,7 @@ function AppLayout() {
 
               <Route path="/financeiro/formas-pagamento" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_formas_pagamento">
                     <FormasPagamento />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -141,7 +144,7 @@ function AppLayout() {
 
               <Route path="/despesas-detalhes" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_financeiro">
                     <DespesasDetalhes />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -149,7 +152,7 @@ function AppLayout() {
               
               <Route path="/projetos" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_OBRAS}>
+                  <PermissionGuard requiredPermission="visualizar_obras">
                     <Projetos />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -159,7 +162,7 @@ function AppLayout() {
               
               <Route path="/cadastros/clientes" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_CLIENTES}>
+                  <PermissionGuard requiredPermission="visualizar_clientes">
                     <Clientes />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -167,7 +170,7 @@ function AppLayout() {
               
               <Route path="/cadastros/obras" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.EDITAR_OBRAS}>
+                  <PermissionGuard requiredPermission="visualizar_obras">
                     <Obras />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -175,7 +178,7 @@ function AppLayout() {
               
               <Route path="/cadastros/funcionarios" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                  <PermissionGuard requiredPermission="visualizar_funcionarios">
                     <Funcionarios />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -183,7 +186,7 @@ function AppLayout() {
               
               <Route path="/cadastros/funcoes" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                  <PermissionGuard requiredPermission="visualizar_funcoes">
                     <Funcoes />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -191,15 +194,31 @@ function AppLayout() {
               
               <Route path="/cadastros/setores" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                  <PermissionGuard requiredPermission="visualizar_setores">
                     <Setores />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/cadastros/tipos-justificativas" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission="visualizar_tipos_justificativas">
+                    <TiposJustificativas />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/cadastros/tipos-afastamento" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission="visualizar_tipos_afastamento">
+                    <TiposAfastamento />
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
 
               <Route path="/categorias" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_categorias_financeiro">
                     <Categorias />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -207,7 +226,7 @@ function AppLayout() {
 
               <Route path="/requisicoes" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_COMPRAS}>
+                  <PermissionGuard requiredPermission="visualizar_requisicoes">
                     <Requisicoes />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -219,7 +238,7 @@ function AppLayout() {
 
               <Route path="/ponto" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.REGISTRAR_PONTO}>
+                  <PermissionGuard requiredPermission="registrar_ponto">
                     <RegistroPonto />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -227,7 +246,7 @@ function AppLayout() {
 
               <Route path="/rh/controle-ponto" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_PONTO}>
+                  <PermissionGuard requiredPermission="gerenciar_ponto">
                     <ControlePonto />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -235,7 +254,7 @@ function AppLayout() {
 
               <Route path="/rh/curriculos" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.GERENCIAR_EQUIPE}>
+                  <PermissionGuard requiredPermission="visualizar_curriculos">
                     <CurriculosAdmin />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -243,8 +262,16 @@ function AppLayout() {
 
               <Route path="/rh/jornadas" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.CONFIGURAR_JORNADAS}>
+                  <PermissionGuard requiredPermission="visualizar_jornadas">
                     <Jornadas />
+                  </PermissionGuard>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/rh/afastamentos" element={
+                <ProtectedRoute>
+                  <PermissionGuard requiredPermission="visualizar_afastamentos">
+                    <GerenciarAfastamentos />
                   </PermissionGuard>
                 </ProtectedRoute>
               } />
@@ -252,7 +279,7 @@ function AppLayout() {
               {/* Rotas do módulo BI */}
               <Route path="/bi" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_executivo">
                     <BIDashboard />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -260,7 +287,7 @@ function AppLayout() {
 
               <Route path="/bi/builder" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="criar_relatorios_bi">
                     <BIBuilder />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -268,7 +295,7 @@ function AppLayout() {
 
               <Route path="/bi/visualizer/:id" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_executivo">
                     <BIVisualizer />
                   </PermissionGuard>
                 </ProtectedRoute>
@@ -276,7 +303,7 @@ function AppLayout() {
 
               <Route path="/bi/visualizer/preview" element={
                 <ProtectedRoute>
-                  <PermissionGuard requiredPermission={PERMISSIONS.VISUALIZAR_FINANCEIRO}>
+                  <PermissionGuard requiredPermission="visualizar_dashboard_executivo">
                     <BIVisualizer />
                   </PermissionGuard>
                 </ProtectedRoute>

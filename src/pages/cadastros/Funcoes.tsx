@@ -10,6 +10,8 @@ import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DataTable, Column } from "@/components/ui/DataTable";
 
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+
 interface Funcao {
   id: string;
   setor_id: string; // FK para setores
@@ -235,10 +237,12 @@ const Funcoes = () => {
           <h1 className="page-title">Cadastro de Funções</h1>
           <p className="page-description">Gerenciamento de cargos e permissões</p>
         </div>
-        <Button onClick={() => { setEditingFuncao(null); setOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Função
-        </Button>
+        <PermissionGuard permissions={['criar_funcoes']}>
+          <Button onClick={() => { setEditingFuncao(null); setOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Função
+          </Button>
+        </PermissionGuard>
         <FuncoesForm
           open={open}
           onOpenChange={setOpen}

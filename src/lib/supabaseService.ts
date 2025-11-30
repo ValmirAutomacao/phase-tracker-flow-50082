@@ -22,6 +22,8 @@ const TABLE_MAP = {
   'FUNCOES': 'funcoes',
   'SETORES': 'setores',
   'RELATORIOS_BI': 'relatorios_bi',
+  'tipos_justificativas_ponto': 'tipos_justificativas_ponto',
+  'tipos_afastamento_ponto': 'tipos_afastamento',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
@@ -659,4 +661,6 @@ export const SUPABASE_KEYS = {
   ITENS_REQUISICAO: 'engflow_itens_requisicao',
   JORNADAS_TRABALHO: 'JORNADAS_TRABALHO',
   RELATORIOS_BI: 'RELATORIOS_BI',
+  TIPOS_JUSTIFICATIVAS_PONTO: 'tipos_justificativas_ponto',
+  TIPOS_AFASTAMENTO_PONTO: 'tipos_afastamento_ponto',
 } as const

@@ -8,6 +8,7 @@ import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DataTable, Column } from "@/components/ui/DataTable";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 interface Setor {
   id: string;
@@ -177,10 +178,12 @@ const Setores = () => {
           <h1 className="page-title">Cadastro de Setores</h1>
           <p className="page-description">Gerenciamento de departamentos e áreas</p>
         </div>
-        <Button onClick={() => { setEditingSetor(null); setOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Setor
-        </Button>
+        <PermissionGuard permissions={['criar_setores']}>
+          <Button onClick={() => { setEditingSetor(null); setOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Setor
+          </Button>
+        </PermissionGuard>
         <SetoresForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingSetor ? { ...editingSetor } as any : undefined} />
       </div>
 
