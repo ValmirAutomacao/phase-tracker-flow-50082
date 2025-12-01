@@ -90,24 +90,6 @@ const cadastrosItems = [
     permissions: ["visualizar_obras"],
   },
   {
-    title: "Funcionários",
-    url: "/cadastros/funcionarios",
-    icon: Users,
-    permissions: ["visualizar_funcionarios"],
-  },
-  {
-    title: "Funções",
-    url: "/cadastros/funcoes",
-    icon: Briefcase,
-    permissions: ["visualizar_funcoes"],
-  },
-  {
-    title: "Setores",
-    url: "/cadastros/setores",
-    icon: UserCog,
-    permissions: ["visualizar_setores"],
-  },
-  {
     title: "Categorias",
     url: "/categorias",
     icon: Tag,
@@ -159,6 +141,12 @@ const financeiroItems = [
 
 const rhItems = [
   {
+    title: "Funcionários",
+    url: "/cadastros/funcionarios",
+    icon: Users,
+    permissions: ["visualizar_funcionarios"],
+  },
+  {
     title: "Controle de Ponto",
     url: "/rh/controle-ponto",
     icon: ClipboardCheck,
@@ -175,6 +163,18 @@ const rhItems = [
     url: "/rh/jornadas",
     icon: Clock,
     permissions: ["visualizar_jornadas"],
+  },
+  {
+    title: "Funções",
+    url: "/cadastros/funcoes",
+    icon: Briefcase,
+    permissions: ["visualizar_funcoes"],
+  },
+  {
+    title: "Setores",
+    url: "/cadastros/setores",
+    icon: UserCog,
+    permissions: ["visualizar_setores"],
   },
   {
     title: "Tipos de Justificativas",
