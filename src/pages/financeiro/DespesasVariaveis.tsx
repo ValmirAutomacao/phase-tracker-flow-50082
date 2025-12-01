@@ -263,40 +263,42 @@ const DespesasVariaveis = () => {
 
         const formaPagamentoMapeada = mapearFormaPagamento(dadosNormalizados.forma_pagamento || '');
 
-        // Formatar valor_compra corretamente para o input
-        const valorFormatado = dadosNormalizados.valor_compra
-          ? typeof dadosNormalizados.valor_compra === 'number'
-            ? dadosNormalizados.valor_compra.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : dadosNormalizados.valor_compra
-          : prev.valor_compra;
+        setFormData(prev => {
+          // Formatar valor_compra corretamente para o input
+          const valorFormatado = dadosNormalizados.valor_compra
+            ? typeof dadosNormalizados.valor_compra === 'number'
+              ? dadosNormalizados.valor_compra.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : dadosNormalizados.valor_compra
+            : prev.valor_compra;
 
-        // Formatar data da compra do OCR para o formato YYYY-MM-DD
-        const dataCompraFormatada = dadosNormalizados.data_compra
-          ? typeof dadosNormalizados.data_compra === 'string'
-            ? dadosNormalizados.data_compra // Já formatada como YYYY-MM-DD pelo normalizeData
-            : dadosNormalizados.data_compra instanceof Date
-            ? dadosNormalizados.data_compra.toISOString().split('T')[0]
-            : prev.data_compra
-          : prev.data_compra;
+          // Formatar data da compra do OCR para o formato YYYY-MM-DD
+          const dataCompraFormatada = dadosNormalizados.data_compra
+            ? typeof dadosNormalizados.data_compra === 'string'
+              ? dadosNormalizados.data_compra // Já formatada como YYYY-MM-DD pelo normalizeData
+              : dadosNormalizados.data_compra instanceof Date
+              ? dadosNormalizados.data_compra.toISOString().split('T')[0]
+              : prev.data_compra
+            : prev.data_compra;
 
-        console.log('📅 Data da compra processada:', {
-          original: dadosNormalizados.data_compra,
-          formatada: dataCompraFormatada
+          console.log('📅 Data da compra processada:', {
+            original: dadosNormalizados.data_compra,
+            formatada: dataCompraFormatada
+          });
+
+          return {
+            ...prev,
+            nome_fornecedor: dadosNormalizados.nome_fornecedor || prev.nome_fornecedor,
+            cnpj_fornecedor: dadosNormalizados.cnpj_fornecedor || prev.cnpj_fornecedor,
+            valor_compra: valorFormatado,
+            forma_pagamento: formaPagamentoMapeada,
+            nr_documento: dadosNormalizados.nr_documento || prev.nr_documento,
+            descricao: dadosNormalizados.descricao || prev.descricao,
+            data_compra: dataCompraFormatada, // Incluir data da compra do OCR
+            // Pré-selecionar obra e funcionário se não estiverem preenchidos
+            obra_id: prev.obra_id || (obras.length > 0 ? obras[0].id : ''),
+            comprador_funcionario_id: prev.comprador_funcionario_id || (funcionarios.length > 0 ? funcionarios[0].id : '')
+          };
         });
-
-        setFormData(prev => ({
-          ...prev,
-          nome_fornecedor: dadosNormalizados.nome_fornecedor || prev.nome_fornecedor,
-          cnpj_fornecedor: dadosNormalizados.cnpj_fornecedor || prev.cnpj_fornecedor,
-          valor_compra: valorFormatado,
-          forma_pagamento: formaPagamentoMapeada,
-          nr_documento: dadosNormalizados.nr_documento || prev.nr_documento,
-          descricao: dadosNormalizados.descricao || prev.descricao,
-          data_compra: dataCompraFormatada, // Incluir data da compra do OCR
-          // Pré-selecionar obra e funcionário se não estiverem preenchidos
-          obra_id: prev.obra_id || (obras.length > 0 ? obras[0].id : ''),
-          comprador_funcionario_id: prev.comprador_funcionario_id || (funcionarios.length > 0 ? funcionarios[0].id : '')
-        }));
 
         toast({
           title: "Dados extraídos com sucesso!",
@@ -886,7 +888,7 @@ const DespesasVariaveis = () => {
                     onChange={(e) => {
                       let valor = e.target.value;
                       // Permitir apenas números, vírgulas e pontos
-                      valor = valor.replace(/[^\d,\.]/g, '');
+                      valor = valor.replace(/[^\d,.]/g, '');
                       setFormData(prev => ({ ...prev, valor_compra: valor }));
                     }}
                     placeholder="237,90 ou 1.237,90"
