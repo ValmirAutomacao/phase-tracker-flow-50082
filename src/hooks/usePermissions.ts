@@ -14,6 +14,7 @@ export function usePermissions() {
     queryFn: async () => {
       if (!user?.id) return [];
 
+      console.log('Calling obtener_permissoes_funcionario with user_id:', user.id, typeof user.id);
       const { data, error } = await supabase
         .rpc('obter_permissoes_funcionario', { _user_id: user.id });
 

@@ -108,11 +108,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Logout realizado",
-      description: "Até logo!",
-    });
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Erro ao fazer logout:", error);
+      }
+    } catch (error) {
+      console.error("Exceção ao fazer logout:", error);
+    } finally {
+      // Força limpeza do estado local caso o onAuthStateChange não dispare
+      setSession(null);
+      setUser(null);
+      toast({
+        title: "Logout realizado",
+        description: "Até logo!",
+      });
+    }
   };
 
   return (
