@@ -12,6 +12,7 @@ import {
   Building2,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   FileText,
   Download
 } from "lucide-react";

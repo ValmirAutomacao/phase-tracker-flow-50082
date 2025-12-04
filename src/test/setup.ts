@@ -1,8 +1,0 @@
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
-
-// Setup das variáveis de ambiente para testes
-Object.assign(import.meta.env, {
-  VITE_SUPABASE_URL: 'https://ibnrtvrxogkksldvxici.supabase.co',
-  VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnJ0dnJ4b2dra3NsZHZ4aWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NDkxMTQsImV4cCI6MjA3NzMyNTExNH0.VcedR4bpqo__fVsnrdYLc09sZVONZovtsQT4kM4r0u0'
-})

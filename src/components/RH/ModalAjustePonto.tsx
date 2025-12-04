@@ -37,7 +37,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock, AlertTriangle, FileText, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useOptimizedSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabaseClient";
 import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { TIPO_REGISTRO_LABELS, TipoRegistroPonto } from "@/types/ponto";
 
@@ -48,7 +49,7 @@ const ajustePontoSchema = z.object({
   hora_nova: z
     .string()
     .min(5, "Hora deve estar no formato HH:MM")
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido. Use HH:MM"),
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/, "Formato inválido. Use HH:MM"),
   data_nova: z
     .string()
     .min(10, "Data é obrigatória"),
@@ -110,10 +111,25 @@ export function ModalAjustePonto({
     }
   });
 
-  // 🤖 CLAUDE-NOTE: Buscar tipos de justificativas disponíveis
-  const { data: justificativas = [] } = useOptimizedSupabaseQuery<TipoJustificativa>('tipos_justificativas_ponto', {
-    filters: [{ column: 'ativo', operator: 'eq', value: true }],
-    orderBy: [{ column: 'nome', ascending: true }]
+  // 🤖 CLAUDE-NOTE: Buscar tipos de justificativas disponíveis ordenados por nome
+  const { data: justificativas = [] } = useQuery({
+    queryKey: ['tipos-justificativas-ponto', 'ativo'],
+    queryFn: async (): Promise<TipoJustificativa[]> => {
+      // Busca direta com ordenação customizada
+      const { data, error } = await supabase
+        .from('tipos_justificativas_ponto')
+        .select('*')
+        .eq('ativo', true)
+        .order('nome', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar tipos de justificativas:', error);
+        return [];
+      }
+
+      return (data || []) as TipoJustificativa[];
+    },
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
   });
 
   // 🤖 CLAUDE-NOTE: Hook para criar ajuste usando MCP Supabase

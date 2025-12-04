@@ -248,7 +248,7 @@ const Jornadas = () => {
           <h1 className="page-title">Jornadas de Trabalho</h1>
           <p className="page-description">Configuração de horários e cargas horárias</p>
         </div>
-        <PermissionGuard permissions={['configurar_jornadas']}>
+        <PermissionGuard permissions={['criar_jornadas']}>
           <Dialog open={open} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
               <Button>
@@ -575,7 +575,7 @@ const Jornadas = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <PermissionGuard permissions={['configurar_jornadas']}>
+                    <PermissionGuard permissions={['criar_jornadas']}>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(jornada)}>
                         <Edit className="h-4 w-4 mr-1" />
                         Editar

@@ -78,45 +78,45 @@ interface ModalAfastamentoProps {
   funcionarioSelecionado?: string;
 }
 
-// Função para buscar tipos de afastamento usando MCP Supabase
+// Função para buscar tipos de afastamento usando SupabaseService
 const buscarTiposAfastamento = async (): Promise<TipoAfastamentoDb[]> => {
   try {
-    // Usar diretamente o MCP Supabase
-    const response = await (globalThis as any).mcp__supabase__execute_sql({
-      query: 'SELECT * FROM tipos_afastamento WHERE ativo = true ORDER BY nome'
-    });
-
-    return response || [];
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
+    const response = await supabaseService.getFromSupabase('tipos_afastamento_ponto');
+    return response?.filter((tipo: any) => tipo.ativo) || [];
   } catch (error) {
-    console.error('Erro ao buscar tipos de afastamento via MCP:', error);
-    throw new Error('Falha ao carregar tipos de afastamento do banco de dados');
+    console.error('Erro ao buscar tipos de afastamento:', error);
+    return [];
   }
 };
 
-// Função para verificar sobreposições de afastamento usando MCP Supabase
+// Função para verificar sobreposições de afastamento simplificada
 const verificarSobreposicaoAfastamento = async (
   funcionarioId: string,
   dataInicio: string,
   dataFim: string
 ): Promise<boolean> => {
   try {
-    const response = await (globalThis as any).mcp__supabase__execute_sql({
-      query: `
-        SELECT COUNT(*) as total FROM afastamentos
-        WHERE funcionario_id = $1
-          AND status IN ('pendente', 'aprovado')
-          AND (
-            (data_inicio <= $2 AND data_fim >= $2) OR
-            (data_inicio <= $3 AND data_fim >= $3) OR
-            (data_inicio >= $2 AND data_fim <= $3)
-          )
-      `,
-      params: [funcionarioId, dataInicio, dataFim]
-    });
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
+    const afastamentos = await supabaseService.getFromSupabase('afastamentos');
 
-    return (response?.[0]?.total || 0) > 0;
+    if (!afastamentos) return false;
+
+    return afastamentos.some((afastamento: any) => {
+      if (afastamento.funcionario_id !== funcionarioId) return false;
+      if (!['pendente', 'aprovado'].includes(afastamento.status)) return false;
+
+      const inicioExistente = new Date(afastamento.data_inicio);
+      const fimExistente = new Date(afastamento.data_fim);
+      const novoInicio = new Date(dataInicio);
+      const novoFim = new Date(dataFim);
+
+      return (novoInicio <= fimExistente && novoFim >= inicioExistente);
+    });
   } catch (error) {
-    console.error('Erro ao verificar sobreposição via MCP:', error);
+    console.error('Erro ao verificar sobreposição:', error);
     throw new Error('Falha ao verificar conflitos de afastamento');
   }
 };

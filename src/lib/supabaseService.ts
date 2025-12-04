@@ -24,6 +24,12 @@ const TABLE_MAP = {
   'RELATORIOS_BI': 'relatorios_bi',
   'tipos_justificativas_ponto': 'tipos_justificativas_ponto',
   'tipos_afastamento_ponto': 'tipos_afastamento',
+  'TIPOS_AFASTAMENTO': 'tipos_afastamento',
+  'afastamentos': 'afastamentos',
+  'ajustes_ponto': 'ajustes_ponto',
+  'registros_ponto': 'registros_ponto',
+  'comprovantes_ponto': 'comprovantes_ponto',
+  'auditoria_ponto': 'auditoria_ponto',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP

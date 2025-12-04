@@ -151,11 +151,40 @@ async function buscarAjustes(options: UseAjustesPontoOptions): Promise<AjustePon
 
     query += ` ORDER BY aj.created_at DESC`;
 
-    // Usar MCP Supabase diretamente
-    const response = await (globalThis as any).mcp__supabase__execute_sql({
-      query,
-      params
-    });
+    // Usar SupabaseService em vez de MCP
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
+
+    // Buscar dados usando o serviço
+    const ajustes = await supabaseService.getFromSupabase('ajustes_ponto') || [];
+    const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
+
+    // Aplicar filtros manualmente
+    let response = ajustes.filter((aj: any) => aj.status === 'ativo');
+
+    if (options.funcionario_id) {
+      response = response.filter((aj: any) => aj.funcionario_id === options.funcionario_id);
+    }
+
+    if (options.data_inicio) {
+      response = response.filter((aj: any) => aj.data_nova >= options.data_inicio);
+    }
+
+    if (options.data_fim) {
+      response = response.filter((aj: any) => aj.data_nova <= options.data_fim);
+    }
+
+    // Enriquecer com dados de funcionários
+    response = response.map((aj: any) => {
+      const funcionario = funcionarios.find((f: any) => f.id === aj.funcionario_id);
+      const usuarioAjuste = funcionarios.find((f: any) => f.id === aj.usuario_ajuste_id);
+
+      return {
+        ...aj,
+        funcionario_nome: funcionario?.nome || 'N/A',
+        usuario_ajuste_nome: usuarioAjuste?.nome || 'N/A'
+      };
+    }).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     // Mapear resultado para interface AjustePonto
     return (response || []).map((row: any) => ({
@@ -220,10 +249,43 @@ async function buscarAfastamentos(options: UseAjustesPontoOptions): Promise<Afas
 
     query += ` ORDER BY af.created_at DESC`;
 
-    const response = await (globalThis as any).mcp__supabase__execute_sql({
-      query,
-      params
-    });
+    // Usar SupabaseService em vez de MCP
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
+
+    // Buscar dados usando o serviço
+    const afastamentos = await supabaseService.getFromSupabase('afastamentos') || [];
+    const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
+    const tiposAfastamento = await supabaseService.getFromSupabase('tipos_afastamento_ponto') || [];
+
+    // Aplicar filtros manualmente
+    let response = afastamentos.filter((af: any) => ['pendente', 'aprovado'].includes(af.status));
+
+    if (options.funcionario_id) {
+      response = response.filter((af: any) => af.funcionario_id === options.funcionario_id);
+    }
+
+    if (options.data_inicio) {
+      response = response.filter((af: any) => af.data_fim >= options.data_inicio);
+    }
+
+    if (options.data_fim) {
+      response = response.filter((af: any) => af.data_inicio <= options.data_fim);
+    }
+
+    // Enriquecer com dados relacionados
+    response = response.map((af: any) => {
+      const funcionario = funcionarios.find((f: any) => f.id === af.funcionario_id);
+      const usuario = funcionarios.find((f: any) => f.id === af.solicitado_por_id);
+      const tipo = tiposAfastamento.find((t: any) => t.id === af.tipo_afastamento_id);
+
+      return {
+        ...af,
+        funcionario_nome: funcionario?.nome || 'N/A',
+        usuario_cadastro_nome: usuario?.nome || 'N/A',
+        tipo_nome: tipo?.nome || 'N/A'
+      };
+    }).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     // Mapear resultado para interface Afastamento
     return (response || []).map((row: any) => ({
@@ -289,66 +351,60 @@ async function buscarHistoricoCompleto(options: UseAjustesPontoOptions) {
 
 async function criarAjustePonto(data: AjustePontoInsert): Promise<AjustePonto> {
   try {
-    console.log("Criando ajuste de ponto via MCP:", data);
+    console.log("Criando ajuste de ponto:", data);
+
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
 
     // 1. Validar se registro existe (para ajustes) - só se tiver registro_ponto_id
     if (data.registro_ponto_id) {
-      const validacao = await (globalThis as any).mcp__supabase__execute_sql({
-        query: `SELECT id FROM registros_ponto WHERE id = $1 AND funcionario_id = $2`,
-        params: [data.registro_ponto_id, data.funcionario_id]
-      });
+      const registrosPonto = await supabaseService.getFromSupabase('registros_ponto') || [];
+      const registroValido = registrosPonto.find((r: any) =>
+        r.id === data.registro_ponto_id && r.funcionario_id === data.funcionario_id
+      );
 
-      if (!validacao || validacao.length === 0) {
+      if (!registroValido) {
         throw new Error('Registro de ponto não encontrado ou não pertence ao funcionário');
       }
     }
 
-    // 2. Inserir ajuste na tabela usando MCP
-    const insertQuery = `
-      INSERT INTO ajustes_ponto (
-        registro_ponto_id, funcionario_id, tipo_registro_original,
-        hora_original, data_original, tipo_registro_novo,
-        hora_nova, data_nova, justificativa_id, justificativa_texto,
-        documento_url, usuario_ajuste_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'ativo')
-      RETURNING *
-    `;
+    // 2. Inserir ajuste usando SupabaseService
+    const novoAjuste = {
+      registro_ponto_id: data.registro_ponto_id || null,
+      funcionario_id: data.funcionario_id,
+      tipo_registro_original: data.tipo_registro_original || null,
+      hora_original: data.hora_original || null,
+      data_original: data.data_original || null,
+      tipo_registro_novo: data.tipo_registro_novo,
+      hora_nova: data.hora_nova,
+      data_nova: data.data_nova,
+      justificativa_id: data.justificativa_id || null,
+      justificativa_texto: data.justificativa_texto,
+      documento_url: data.documento_url || null,
+      usuario_ajuste_id: data.usuario_ajuste_id,
+      status: 'ativo',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-    const result = await (globalThis as any).mcp__supabase__execute_sql({
-      query: insertQuery,
-      params: [
-        data.registro_ponto_id || null,
-        data.funcionario_id,
-        data.tipo_registro_original || null,
-        data.hora_original || null,
-        data.data_original || null,
-        data.tipo_registro_novo,
-        data.hora_nova,
-        data.data_nova,
-        data.justificativa_id || null,
-        data.justificativa_texto,
-        data.documento_url || null,
-        data.usuario_ajuste_id
-      ]
-    });
+    const result = await supabaseService.addToSupabase('ajustes_ponto', novoAjuste);
 
-    if (!result || result.length === 0) {
+    if (!result) {
       throw new Error('Falha ao criar ajuste de ponto');
     }
 
-    const ajusteCriado = result[0];
+    const ajusteCriado = result;
 
     // 3. Buscar nomes para retorno completo
-    const nomes = await (globalThis as any).mcp__supabase__execute_sql({
-      query: `
-        SELECT f.nome as funcionario_nome, fu.nome as usuario_ajuste_nome
-        FROM funcionarios f, funcionarios fu
-        WHERE f.id = $1 AND fu.id = $2
-      `,
-      params: [data.funcionario_id, data.usuario_ajuste_id]
-    });
+    const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
 
-    const nomesInfo = nomes?.[0] || { funcionario_nome: '', usuario_ajuste_nome: '' };
+    const funcionario = funcionarios.find((f: any) => f.id === data.funcionario_id);
+    const usuarioAjuste = funcionarios.find((f: any) => f.id === data.usuario_ajuste_id);
+
+    const nomesInfo = {
+      funcionario_nome: funcionario?.nome || '',
+      usuario_ajuste_nome: usuarioAjuste?.nome || ''
+    };
 
     // 4. Retornar ajuste com nomes
     return {
@@ -408,55 +464,45 @@ async function criarAfastamento(data: AfastamentoInsert & { arquivo?: File }): P
       }
     }
 
-    // 2. Inserir afastamento na tabela usando MCP
-    const insertQuery = `
-      INSERT INTO afastamentos (
-        funcionario_id, tipo_afastamento_id, data_inicio, data_fim,
-        motivo, observacoes, documento_url, documento_nome,
-        documento_tamanho_bytes, status, solicitado_por_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendente', $10)
-      RETURNING *
-    `;
+    // 2. Inserir afastamento usando SupabaseService
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
 
-    const result = await (globalThis as any).mcp__supabase__execute_sql({
-      query: insertQuery,
-      params: [
-        data.funcionario_id,
-        data.tipo_afastamento_id,
-        data.data_inicio,
-        data.data_fim,
-        data.motivo,
-        data.observacoes || null,
-        documento_url,
-        documento_nome,
-        documento_tamanho,
-        data.usuario_cadastro_id
-      ]
-    });
+    const novoAfastamento = {
+      funcionario_id: data.funcionario_id,
+      tipo_afastamento_id: data.tipo_afastamento_id,
+      data_inicio: data.data_inicio,
+      data_fim: data.data_fim,
+      total_dias: Math.ceil((new Date(data.data_fim).getTime() - new Date(data.data_inicio).getTime()) / (1000 * 60 * 60 * 24)) + 1,
+      motivo: data.motivo,
+      observacoes: data.observacoes || null,
+      documento_url: documento_url,
+      documento_nome: documento_nome,
+      documento_tamanho_bytes: documento_tamanho,
+      status: 'pendente',
+      solicitado_por_id: data.usuario_cadastro_id || data.funcionario_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-    if (!result || result.length === 0) {
+    const afastamentoCriado = await supabaseService.addToSupabase('afastamentos', novoAfastamento);
+
+    if (!afastamentoCriado) {
       throw new Error('Falha ao criar afastamento');
     }
 
-    const afastamentoCriado = result[0];
+    // 3. Buscar dados para retorno completo
+    const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
+    const tiposAfastamento = await supabaseService.getFromSupabase('tipos_afastamento_ponto') || [];
 
-    // 3. Buscar nomes e tipo para retorno completo
-    const detalhes = await (globalThis as any).mcp__supabase__execute_sql({
-      query: `
-        SELECT
-          f.nome as funcionario_nome,
-          fu.nome as usuario_cadastro_nome,
-          ta.nome as tipo_nome
-        FROM funcionarios f, funcionarios fu, tipos_afastamento ta
-        WHERE f.id = $1 AND fu.id = $2 AND ta.id = $3
-      `,
-      params: [data.funcionario_id, data.usuario_cadastro_id, data.tipo_afastamento_id]
-    });
+    const funcionario = funcionarios.find((f: any) => f.id === data.funcionario_id);
+    const usuario = funcionarios.find((f: any) => f.id === (data.usuario_cadastro_id || data.funcionario_id));
+    const tipo = tiposAfastamento.find((t: any) => t.id === data.tipo_afastamento_id);
 
-    const info = detalhes?.[0] || {
-      funcionario_nome: '',
-      usuario_cadastro_nome: '',
-      tipo_nome: ''
+    const info = {
+      funcionario_nome: funcionario?.nome || '',
+      usuario_cadastro_nome: usuario?.nome || '',
+      tipo_nome: tipo?.nome || ''
     };
 
     // 4. Retornar afastamento completo
@@ -487,16 +533,19 @@ async function criarAfastamento(data: AfastamentoInsert & { arquivo?: File }): P
 
 async function deletarAjuste(ajusteId: string): Promise<void> {
   try {
-    console.log("Deletando ajuste via MCP:", ajusteId);
+    console.log("Deletando ajuste:", ajusteId);
+
+    const { SupabaseService } = await import('@/lib/supabaseService');
+    const supabaseService = new SupabaseService();
 
     // Usar soft delete marcando como cancelado
-    await (globalThis as any).mcp__supabase__execute_sql({
-      query: `UPDATE ajustes_ponto SET status = 'cancelado' WHERE id = $1`,
-      params: [ajusteId]
+    await supabaseService.updateInSupabase('ajustes_ponto', ajusteId, {
+      status: 'cancelado',
+      updated_at: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error("Erro ao deletar ajuste via MCP:", error);
+    console.error("Erro ao deletar ajuste:", error);
     throw error;
   }
 }
@@ -507,19 +556,27 @@ export function useFuncionarios() {
     queryKey: ['funcionarios-ativos'],
     queryFn: async (): Promise<FuncionarioCompleto[]> => {
       try {
-        const response = await (globalThis as any).mcp__supabase__execute_sql({
-          query: `
-            SELECT
-              f.*,
-              fn.id as funcao_id, fn.nome as funcao_nome,
-              s.id as setor_id, s.nome as setor_nome
-            FROM funcionarios f
-            LEFT JOIN funcoes fn ON fn.id = f.funcao_id
-            LEFT JOIN setores s ON s.id = fn.setor_id
-            WHERE f.ativo = true
-            ORDER BY f.nome
-          `
-        });
+        const { SupabaseService } = await import('@/lib/supabaseService');
+        const supabaseService = new SupabaseService();
+
+        const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
+        const funcoes = await supabaseService.getFromSupabase('FUNCOES') || [];
+        const setores = await supabaseService.getFromSupabase('SETORES') || [];
+
+        const funcionariosAtivos = funcionarios.filter((f: any) => f.ativo);
+
+        const response = funcionariosAtivos.map((f: any) => {
+          const funcao = funcoes.find((fn: any) => fn.id === f.funcao_id);
+          const setor = setores.find((s: any) => s.id === funcao?.setor_id);
+
+          return {
+            ...f,
+            funcao_id: funcao?.id || null,
+            funcao_nome: funcao?.nome || null,
+            setor_id: setor?.id || null,
+            setor_nome: setor?.nome || null
+          };
+        }).sort((a: any, b: any) => a.nome.localeCompare(b.nome));
 
         return (response || []).map((row: any) => ({
           id: row.id,

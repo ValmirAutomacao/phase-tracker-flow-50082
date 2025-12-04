@@ -34,14 +34,14 @@ Para executar os testes abaixo, você precisará de dois tipos de acesso:
 Antes de cadastrar pessoas, é necessário validar a estrutura base.
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Setores**.
-    *   [ ] **Criar Setor:** Cadastre um novo setor (ex: "Obras Civis"). Verifique se aparece na lista.
-    *   [ ] **Editar Setor:** Altere o nome do setor.
-    *   [ ] **Excluir Setor:** Tente excluir um setor sem vínculos.
+    *   [X] **Criar Setor:** Cadastre um novo setor (ex: "Obras Civis"). Verifique se aparece na lista.
+    *   [X] **Editar Setor:** Altere o nome do setor.
+    *   [X] **Excluir Setor:** Tente excluir um setor sem vínculos.
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Funções**.
-    *   [ ] **Criar Função:** Cadastre uma nova função (ex: "Mestre de Obras") vinculada ao setor criado acima.
-    *   [ ] **Permissões:** Na criação, verifique a aba "Permissões". Marque permissões específicas (ex: apenas "Registrar Ponto").
-    *   [ ] **Nível:** Defina como "Operacional".
+    *   [x] **Criar Função:** Cadastre uma nova função (ex: "Mestre de Obras") vinculada ao setor criado acima.
+    *   [x] **Permissões:** Na criação, verifique a aba "Permissões". Marque permissões específicas (ex: apenas "Registrar Ponto").
+    *   [x] **Nível:** Defina como "Operacional".
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Jornadas de Trabalho**.
     *   [ ] **Criar Jornada:** Cadastre uma jornada padrão (ex: 08:00 às 17:00, com almoço das 12:00 às 13:00).
@@ -52,11 +52,11 @@ Antes de cadastrar pessoas, é necessário validar a estrutura base.
 ### 3.2. Gestão de Colaboradores
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Funcionários**.
-    *   [ ] **Novo Funcionário:** Clique no botão "+" e cadastre um novo colaborador.
+    *   [X] **Novo Funcionário:** Clique no botão "+" e cadastre um novo colaborador.
         *   Preencha dados obrigatórios (Nome, CPF, CTPS).
         *   Vincule à Função e Jornada criadas anteriormente.
         *   Defina uma senha de acesso (mínimo 6 dígitos).
-    *   [ ] **Login do Colaborador:**
+    *   [X] **Login do Colaborador:**
         *   Abra uma janela anônima.
         *   Tente logar com o email e senha do novo funcionário.
         *   Verifique se ele vê apenas os menus permitidos (ex: Dashboard e Registrar Ponto).
@@ -68,9 +68,9 @@ Antes de cadastrar pessoas, é necessário validar a estrutura base.
 Realize este teste logado como o **Colaborador**.
 
 *   **Acesse:** Menu Lateral -> **Registrar Ponto**.
-    *   [ ] **Bater Ponto (Entrada):** Registre a entrada. Confirme se o horário e a localização (se permitido) foram capturados.
-    *   [ ] **Comprovante:** Verifique se o sistema gerou a visualização do comprovante digital.
-    *   [ ] **Tentativa de Fraude:** Tente bater o ponto duas vezes seguidas muito rápido (o sistema deve bloquear ou alertar).
+    *   [X] **Bater Ponto (Entrada):** Registre a entrada. Confirme se o horário e a localização (se permitido) foram capturados.
+    *   [ ] **Comprovante:** Verifique se o sistema gerou a visualização do comprovante digital. Não esta criando
+    *   [X] **Tentativa de Fraude:** Tente bater o ponto duas vezes seguidas muito rápido (o sistema deve bloquear ou alertar).
 
 ---
 
@@ -79,18 +79,18 @@ Realize este teste logado como o **Colaborador**.
 Realize este teste logado como **Gestor/Administrador**.
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Controle de Ponto**.
-    *   [ ] **Visualização Geral:** Verifique se a tabela exibe **todos** os funcionários ativos, inclusive os que faltaram hoje.
-    *   [ ] **Indicador de FALTA:**
+    *   [X] **Visualização Geral:** Verifique se a tabela exibe **todos** os funcionários ativos, inclusive os que faltaram hoje.
+    *   [X] **Indicador de FALTA:**
         *   Localize um funcionário que não bateu ponto hoje.
         *   Verifique se o horário esperado (que já passou) está marcado em **VERMELHO** com a palavra **"FALTA"**.
-    *   [ ] **Cálculo de Horas:**
+    *   [X] **Cálculo de Horas:**
         *   Verifique um funcionário com jornada completa. O total deve ser 08:00 (ou próximo).
         *   Verifique um funcionário com batida ímpar (esqueceu a volta do almoço). O sistema deve somar apenas os pares fechados ou alertar "Incompleto".
-    *   [ ] **Ajuste Manual (Tratamento):**
+    *   [ ] **Ajuste Manual (Tratamento):** - Não funciona
         *   Clique no ícone de "Lápis" (Editar) sobre um horário de FALTA ou errado.
         *   Insira o horário correto e uma justificativa (ex: "Esquecimento").
         *   Salve e verifique se o cálculo de horas foi atualizado e se o status mudou.
-    *   [ ] **Abono de Falta:** Use a função de ajuste para inserir os horários manualmente em caso de abono, ou utilize o módulo de Afastamentos (abaixo).
+    *   [ ] **Abono de Falta:** Use a função de ajuste para inserir os horários manualmente em caso de abono, ou utilize o módulo de Afastamentos (abaixo). - Não Funciona
 
 ---
 
@@ -99,7 +99,7 @@ Realize este teste logado como **Gestor/Administrador**.
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Gerenciar Afastamentos**.
     *   [ ] **Registrar Afastamento:**
         *   Selecione um funcionário.
-        *   Tipo: "Atestado Médico".
+        *   Tipo: "Atestado Médico".- Não esta vindo
         *   Data: Dia de hoje ou período futuro.
         *   Anexo: (Opcional) Teste o upload de um arquivo simulado.
     *   [ ] **Impacto no Ponto:**
@@ -112,6 +112,59 @@ Realize este teste logado como **Gestor/Administrador**.
 
 *   **Acesse:** Menu Lateral -> Recursos Humanos -> **Tipos de Justificativas** e **Tipos de Afastamento**.
     *   [ ] **CRUD:** Verifique se é possível criar novos tipos personalizados para sua empresa (ex: "Folga Aniversário").
+
+Erros no console:
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+main.tsx:14 ✅ LocalStorage já foi limpo anteriormente, mantendo tokens...
+react-router-dom.js?v=ea5510f6:4393 ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+react-router-dom.js?v=ea5510f6:4393 ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+client.ts:23 🔐 Supabase Auth Event: TOKEN_REFRESHED
+client.ts:30 🔄 Token Supabase renovado automaticamente
+client.ts:38 ✅ Sessão Supabase ativa até: Thu Dec 04 2025 10:42:48 GMT-0300 (Horário Padrão de Brasília)
+usePermissions.ts:17 Calling obtener_permissoes_funcionario with user_id: 241b01b6-928e-46c0-8d87-65ec2b81a553 string
+client.ts:23 🔐 Supabase Auth Event: INITIAL_SESSION
+client.ts:38 ✅ Sessão Supabase ativa até: Thu Dec 04 2025 10:42:48 GMT-0300 (Horário Padrão de Brasília)
+ibnrtvrxogkksldvxici…ssoes_funcionario:1 
+ Failed to load resource: the server responded with a status of 500 ()
+usePermissions.ts:22 Erro ao carregar permissões: 
+Object
+2
+NotFound.tsx:8 404 Error: User attempted to access non-existent route: /cronogramas
+client.ts:23 🔐 Supabase Auth Event: SIGNED_IN
+client.ts:28 📥 Usuário logado no Supabase
+client.ts:38 ✅ Sessão Supabase ativa até: Thu Dec 04 2025 10:42:48 GMT-0300 (Horário Padrão de Brasília)
+client.ts:23 🔐 Supabase Auth Event: SIGNED_IN
+client.ts:28 📥 Usuário logado no Supabase
+client.ts:38 ✅ Sessão Supabase ativa até: Thu Dec 04 2025 10:42:48 GMT-0300 (Horário Padrão de Brasília)
+usePermissions.ts:17 Calling obtener_permissoes_funcionario with user_id: 241b01b6-928e-46c0-8d87-65ec2b81a553 string
+client.ts:23 🔐 Supabase Auth Event: SIGNED_IN
+client.ts:28 📥 Usuário logado no Supabase
+client.ts:38 ✅ Sessão Supabase ativa até: Thu Dec 04 2025 10:42:48 GMT-0300 (Horário Padrão de Brasília)
+ibnrtvrxogkksldvxici…ssoes_funcionario:1 
+ Failed to load resource: the server responded with a status of 500 ()
+usePermissions.ts:22 Erro ao carregar permissões: 
+Object
+queryFn	@	usePermissions.ts:22
+ModalAfastamento.tsx:91 Erro ao buscar tipos de afastamento via MCP: TypeError: globalThis.mcp__supabase__execute_sql is not a function
+    at buscarTiposAfastamento (ModalAfastamento.tsx:85:48)
+buscarTiposAfastamento	@	ModalAfastamento.tsx:91
+3
+ModalAfastamento.tsx:91 Erro ao buscar tipos de afastamento via MCP: TypeError: globalThis.mcp__supabase__execute_sql is not a function
+    at buscarTiposAfastamento (ModalAfastamento.tsx:85:48)
+buscarTiposAfastamento	@	ModalAfastamento.tsx:91
+ibnrtvrxogkksldvxici…as_ponto?select=*:1 
+ Failed to load resource: the server responded with a status of 403 ()
+supabaseService.ts:427 Error adding to tipos_justificativas_ponto: 
+Object
+addToSupabase	@	supabaseService.ts:427
+supabaseService.ts:439 Error in addToSupabase for tipos_justificativas_ponto: Error: Erro ao adicionar em tipos_justificativas_ponto: new row violates row-level security policy for table "tipos_justificativas_ponto"
+    at SupabaseService.addToSupabase (supabaseService.ts:428:15)
+    at async Object.mutationFn (useSupabaseMutation.ts:23:14)
+addToSupabase	@	supabaseService.ts:439
+useSupabaseMutation.ts:38 Erro ao adicionar TIPOS_JUSTIFICATIVAS_PONTO: Error: Erro ao adicionar em tipos_justificativas_ponto: new row violates row-level security policy for table "tipos_justificativas_ponto"
+    at SupabaseService.addToSupabase (supabaseService.ts:428:15)
+    at async Object.mutationFn (useSupabaseMutation.ts:23:14)
+onError	@	useSupabaseMutation.ts:38
 
 ---
 

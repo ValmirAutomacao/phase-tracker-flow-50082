@@ -20,7 +20,8 @@ import {
   Wallet,
   TrendingUp,
   Calendar,
-  UserMinus
+  UserMinus,
+  GanttChart
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -48,6 +49,12 @@ const menuItems = [
     title: "Projetos",
     url: "/projetos",
     icon: FolderKanban,
+    permissions: ["visualizar_obras"],
+  },
+  {
+    title: "Cronogramas",
+    url: "/cronogramas",
+    icon: GanttChart,
     permissions: ["visualizar_obras"],
   },
   {
