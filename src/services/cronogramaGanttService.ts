@@ -299,15 +299,32 @@ export const cronogramaGanttService = {
   async addDependencia(
     predecessorId: string,
     sucessorId: string,
-    tipo: string = "FS",
+    tipo: string = "TI",
     defasagemHoras: number = 0
   ): Promise<DependenciaAtividade> {
+    // Mapear tipos inglês para português (enum do banco)
+    // FS (Finish-to-Start) = TI (Término-Início)
+    // SS (Start-to-Start) = II (Início-Início)  
+    // FF (Finish-to-Finish) = TT (Término-Término)
+    // SF (Start-to-Finish) = IT (Início-Término)
+    const tipoMap: Record<string, TipoDependencia> = {
+      'FS': 'TI',
+      'SS': 'II',
+      'FF': 'TT',
+      'SF': 'IT',
+      'TI': 'TI',
+      'II': 'II',
+      'TT': 'TT',
+      'IT': 'IT',
+    };
+    const tipoDb = tipoMap[tipo] || 'TI';
+
     const { data, error } = await supabase
       .from("dependencias_atividades")
       .insert({
         atividade_predecessora_id: predecessorId,
         atividade_sucessora_id: sucessorId,
-        tipo: tipo as TipoDependencia,
+        tipo: tipoDb,
         defasagem_horas: defasagemHoras,
       })
       .select()
