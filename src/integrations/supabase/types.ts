@@ -2049,6 +2049,7 @@ export type Database = {
           numero: string | null
           orcamento: number | null
           progresso: number | null
+          responsavel_id: string | null
           status: string | null
           tipo: string | null
           updated_at: string | null
@@ -2070,6 +2071,7 @@ export type Database = {
           numero?: string | null
           orcamento?: number | null
           progresso?: number | null
+          responsavel_id?: string | null
           status?: string | null
           tipo?: string | null
           updated_at?: string | null
@@ -2091,6 +2093,7 @@ export type Database = {
           numero?: string | null
           orcamento?: number | null
           progresso?: number | null
+          responsavel_id?: string | null
           status?: string | null
           tipo?: string | null
           updated_at?: string | null
@@ -2101,6 +2104,121 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obras_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obras_equipes: {
+        Row: {
+          ativo: boolean | null
+          carga_horaria_semanal: number | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          funcao_na_obra: string | null
+          funcionario_id: string
+          id: string
+          obra_id: string
+          observacoes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          carga_horaria_semanal?: number | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          funcao_na_obra?: string | null
+          funcionario_id: string
+          id?: string
+          obra_id: string
+          observacoes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          carga_horaria_semanal?: number | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          funcao_na_obra?: string | null
+          funcionario_id?: string
+          id?: string
+          obra_id?: string
+          observacoes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obras_equipes_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obras_equipes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obras_responsaveis: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          data_atribuicao: string | null
+          funcionario_id: string
+          id: string
+          obra_id: string
+          observacoes: string | null
+          tipo_responsabilidade: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          data_atribuicao?: string | null
+          funcionario_id: string
+          id?: string
+          obra_id: string
+          observacoes?: string | null
+          tipo_responsabilidade?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          data_atribuicao?: string | null
+          funcionario_id?: string
+          id?: string
+          obra_id?: string
+          observacoes?: string | null
+          tipo_responsabilidade?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obras_responsaveis_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obras_responsaveis_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
             referencedColumns: ["id"]
           },
         ]

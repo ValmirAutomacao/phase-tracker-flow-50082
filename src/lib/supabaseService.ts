@@ -30,6 +30,13 @@ const TABLE_MAP = {
   'registros_ponto': 'registros_ponto',
   'comprovantes_ponto': 'comprovantes_ponto',
   'auditoria_ponto': 'auditoria_ponto',
+  // Gestão de Obras/Projetos - Gantt
+  'cronogramas': 'cronogramas',
+  'eap_itens': 'eap_itens',
+  'calendarios_trabalho': 'calendarios_trabalho',
+  'recursos_empresa': 'recursos_empresa',
+  'obras_responsaveis': 'obras_responsaveis',
+  'obras_equipes': 'obras_equipes',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
@@ -663,4 +670,11 @@ export const SUPABASE_KEYS = {
   RELATORIOS_BI: 'RELATORIOS_BI',
   TIPOS_JUSTIFICATIVAS_PONTO: 'tipos_justificativas_ponto',
   TIPOS_AFASTAMENTO_PONTO: 'tipos_afastamento_ponto',
+  // Gestão de Obras/Projetos
+  CRONOGRAMAS: 'cronogramas',
+  EAP_ITENS: 'eap_itens',
+  CALENDARIOS_TRABALHO: 'calendarios_trabalho',
+  RECURSOS_EMPRESA: 'recursos_empresa',
+  OBRAS_RESPONSAVEIS: 'obras_responsaveis',
+  OBRAS_EQUIPES: 'obras_equipes',
 } as const
