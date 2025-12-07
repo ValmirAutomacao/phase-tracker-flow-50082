@@ -48,7 +48,7 @@ const CORES_PADRAO_AFASTAMENTO = {
   outros: '#6B7280'              // Cinza
 } as const;
 
-const CATEGORIA_VALUES = ['ferias', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade', 'atestado', 'falta_justificada', 'outros'] as const;
+type CategoriaValue = 'ferias' | 'licenca_medica' | 'licenca_maternidade' | 'licenca_paternidade' | 'atestado' | 'falta_justificada' | 'outros';
 
 const tipoAfastamentoSchema = z.object({
   nome: z
@@ -61,10 +61,11 @@ const tipoAfastamentoSchema = z.object({
     .max(500, "Descrição deve ter no máximo 500 caracteres")
     .optional()
     .or(z.literal("")),
-  categoria: z.enum(CATEGORIA_VALUES, {
-    required_error: "Categoria é obrigatória",
-  }),
-  cor: z.string().min(1, "Cor é obrigatória").default('#6B7280'),
+  categoria: z.string().refine((val): val is CategoriaValue => 
+    ['ferias', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade', 'atestado', 'falta_justificada', 'outros'].includes(val),
+    { message: "Categoria é obrigatória" }
+  ),
+  cor: z.string().min(1, "Cor é obrigatória"),
   dias_max_permitidos: z
     .number()
     .int("Deve ser um número inteiro")
@@ -72,9 +73,9 @@ const tipoAfastamentoSchema = z.object({
     .max(365, "Não pode exceder 365 dias")
     .nullable()
     .optional(),
-  remunerado: z.boolean().default(true),
-  obriga_documentacao: z.boolean().default(false),
-  ativo: z.boolean().default(true),
+  remunerado: z.boolean(),
+  obriga_documentacao: z.boolean(),
+  ativo: z.boolean(),
 }).refine((data) => {
   // 🤖 CLAUDE-NOTE: Validações específicas por categoria
   if (data.categoria === 'ferias' && data.dias_max_permitidos && data.dias_max_permitidos > 30) {

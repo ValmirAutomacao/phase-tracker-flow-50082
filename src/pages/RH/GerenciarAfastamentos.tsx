@@ -233,9 +233,9 @@ export default function GerenciarAfastamentos() {
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: afastamento.tipo_afastamento?.cor }}
+                          style={{ backgroundColor: (afastamento.tipo_afastamento as { cor?: string })?.cor }}
                         />
-                        <span className="font-medium">{afastamento.tipo_afastamento?.nome}</span>
+                        <span className="font-medium">{(afastamento.tipo_afastamento as { nome?: string })?.nome}</span>
                       </div>
                     </TableCell>
                     <TableCell>

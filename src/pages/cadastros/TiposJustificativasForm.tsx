@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 
+type CategoriaJustificativa = 'erro_sistema' | 'problema_localizacao' | 'esquecimento' | 'outros';
+
 const tipoJustificativaSchema = z.object({
   nome: z
     .string()
@@ -47,12 +49,13 @@ const tipoJustificativaSchema = z.object({
     .max(500, "Descrição deve ter no máximo 500 caracteres")
     .optional()
     .or(z.literal("")),
-  categoria: z.enum(['erro_sistema', 'problema_localizacao', 'esquecimento', 'outros'], {
-    required_error: "Categoria é obrigatória",
-  }),
-  cor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Cor deve ser um código hexadecimal válido").default("#3B82F6"),
-  ativo: z.boolean().default(true),
-  obriga_documentacao: z.boolean().default(false),
+  categoria: z.string().refine((val): val is CategoriaJustificativa => 
+    ['erro_sistema', 'problema_localizacao', 'esquecimento', 'outros'].includes(val),
+    { message: "Categoria é obrigatória" }
+  ),
+  cor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Cor deve ser um código hexadecimal válido"),
+  ativo: z.boolean(),
+  obriga_documentacao: z.boolean(),
 });
 
 export type TipoJustificativaFormData = z.infer<typeof tipoJustificativaSchema>;
