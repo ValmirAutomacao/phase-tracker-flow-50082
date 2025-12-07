@@ -307,17 +307,61 @@ export function MSProjectGantt({
       const fromIndex = flatTasks.findIndex((t) => t.id === dep.fromTaskId);
       const toIndex = flatTasks.findIndex((t) => t.id === dep.toTaskId);
       if (fromIndex === -1 || toIndex === -1) return null;
-      const fromBar = getTaskBarStyle(flatTasks[fromIndex]);
-      const toBar = getTaskBarStyle(flatTasks[toIndex]);
+      
+      const fromTask = flatTasks[fromIndex];
+      const toTask = flatTasks[toIndex];
+      const fromBar = getTaskBarStyle(fromTask);
+      const toBar = getTaskBarStyle(toTask);
+      
+      // Sair do centro-direita da barra predecessora
       const fromY = fromIndex * rowHeight + rowHeight / 2;
       const toY = toIndex * rowHeight + rowHeight / 2;
-      const fromX = fromBar.left + fromBar.width;
-      const toX = toBar.left;
-      const midX = (fromX + toX) / 2;
+      const fromX = fromBar.left + fromBar.width + 2;
+      const toX = toBar.left - 2;
+      
+      // Linha mais reta: sai horizontal, desce/sobe, entra horizontal
+      const horizontalGap = 12;
+      const cornerX = fromX + horizontalGap;
+      
+      // Caminho: sair horizontal -> descer/subir vertical -> entrar horizontal
+      const path = `M ${fromX} ${fromY} 
+                    L ${cornerX} ${fromY} 
+                    L ${cornerX} ${toY} 
+                    L ${toX} ${toY}`;
+      
       return (
-        <g key={dep.id} className="cursor-pointer" onClick={() => editable && onDependencyDelete?.(dep.id)}>
-          <path d={`M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX - 5} ${toY}`} fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.5" opacity="0.5" />
-          <polygon points={`${toX},${toY} ${toX - 6},${toY - 4} ${toX - 6},${toY + 4}`} fill="hsl(var(--muted-foreground))" opacity="0.5" />
+        <g key={dep.id} className="cursor-pointer group" onClick={() => editable && onDependencyDelete?.(dep.id)}>
+          {/* Linha de fundo para facilitar clique */}
+          <path 
+            d={path} 
+            fill="none" 
+            stroke="transparent" 
+            strokeWidth="12" 
+          />
+          {/* Linha visível */}
+          <path 
+            d={path} 
+            fill="none" 
+            stroke="hsl(210, 100%, 45%)" 
+            strokeWidth="2.5" 
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="group-hover:stroke-[3.5px] transition-all"
+          />
+          {/* Seta no final */}
+          <polygon 
+            points={`${toX},${toY} ${toX - 8},${toY - 5} ${toX - 8},${toY + 5}`} 
+            fill="hsl(210, 100%, 45%)" 
+            className="group-hover:scale-110 transition-transform origin-center"
+          />
+          {/* Círculo no início */}
+          <circle 
+            cx={fromX} 
+            cy={fromY} 
+            r="4" 
+            fill="hsl(210, 100%, 45%)" 
+            className="group-hover:r-5"
+          />
         </g>
       );
     });
@@ -336,7 +380,46 @@ export function MSProjectGantt({
               <>
                 <Button size="sm" variant="outline" onClick={() => onTaskCreate?.(selectedTaskId)}><Plus className="h-4 w-4 mr-1" />Subtarefa</Button>
                 <Button size="sm" variant={linkingFrom ? "default" : "outline"} onClick={() => linkingFrom ? setLinkingFrom(null) : setLinkingFrom(selectedTaskId)}><Link className="h-4 w-4 mr-1" />{linkingFrom ? "Cancelar" : "Vincular"}</Button>
-                <Button size="sm" variant="outline" className="text-destructive" onClick={() => onTaskDelete?.(selectedTaskId)}><Trash2 className="h-4 w-4 mr-1" />Excluir</Button>
+                
+                {/* Ações Rápidas de Progresso */}
+                <div className="border-l pl-2 ml-1 flex items-center gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-amber-600 hover:bg-amber-50"
+                    onClick={() => {
+                      const task = tasks.find(t => t.id === selectedTaskId);
+                      if (task && task.percentual_concluido === 0) {
+                        onTaskUpdate?.(selectedTaskId, { percentual_concluido: 25 });
+                      }
+                    }}
+                  >
+                    Iniciar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-sky-600 hover:bg-sky-50"
+                    onClick={() => {
+                      onTaskUpdate?.(selectedTaskId, { percentual_concluido: 50 });
+                    }}
+                  >
+                    50%
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-emerald-600 hover:bg-emerald-50"
+                    onClick={() => {
+                      onTaskUpdate?.(selectedTaskId, { percentual_concluido: 100 });
+                    }}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Concluir
+                  </Button>
+                </div>
+                
+                <Button size="sm" variant="outline" className="text-destructive ml-2" onClick={() => onTaskDelete?.(selectedTaskId)}><Trash2 className="h-4 w-4 mr-1" />Excluir</Button>
               </>
             )}
           </div>
@@ -381,10 +464,48 @@ export function MSProjectGantt({
                     {editingCell?.taskId === task.id && editingCell.field === "duracao" ? <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={commitEdit} onKeyDown={handleKeyDown} className="h-6 text-xs w-12 text-center" autoFocus /> : <span className="cursor-pointer hover:text-primary" onDoubleClick={(e) => { e.stopPropagation(); startEditing(task.id, "duracao", String(task.duracao_dias || 1)); }}>{task.duracao_dias || 1}d</span>}
                   </div>
                   <div className="px-1 border-r h-full flex items-center justify-center" style={{ width: columns.start }}>
-                    {editable ? <Popover><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1 text-xs">{task.data_inicio_planejada ? format(new Date(task.data_inicio_planejada), "dd/MM/yy") : "-"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={task.data_inicio_planejada ? new Date(task.data_inicio_planejada) : undefined} onSelect={(date) => handleDateChange(task.id, "start", date)} initialFocus className="p-3 pointer-events-auto" /></PopoverContent></Popover> : <span>{task.data_inicio_planejada ? format(new Date(task.data_inicio_planejada), "dd/MM/yy") : "-"}</span>}
+                    {editable ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 px-1 text-xs">
+                            {task.data_inicio_planejada ? format(new Date(task.data_inicio_planejada + 'T12:00:00'), "dd/MM/yy") : "-"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50" align="start">
+                          <CalendarComponent 
+                            mode="single" 
+                            selected={task.data_inicio_planejada ? new Date(task.data_inicio_planejada + 'T12:00:00') : undefined} 
+                            onSelect={(date) => handleDateChange(task.id, "start", date)} 
+                            initialFocus 
+                            className="p-3 pointer-events-auto" 
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span>{task.data_inicio_planejada ? format(new Date(task.data_inicio_planejada + 'T12:00:00'), "dd/MM/yy") : "-"}</span>
+                    )}
                   </div>
                   <div className="px-1 border-r h-full flex items-center justify-center" style={{ width: columns.end }}>
-                    {editable ? <Popover><PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1 text-xs">{task.data_fim_planejada ? format(new Date(task.data_fim_planejada), "dd/MM/yy") : "-"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent mode="single" selected={task.data_fim_planejada ? new Date(task.data_fim_planejada) : undefined} onSelect={(date) => handleDateChange(task.id, "end", date)} initialFocus className="p-3 pointer-events-auto" /></PopoverContent></Popover> : <span>{task.data_fim_planejada ? format(new Date(task.data_fim_planejada), "dd/MM/yy") : "-"}</span>}
+                    {editable ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 px-1 text-xs">
+                            {task.data_fim_planejada ? format(new Date(task.data_fim_planejada + 'T12:00:00'), "dd/MM/yy") : "-"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50" align="start">
+                          <CalendarComponent 
+                            mode="single" 
+                            selected={task.data_fim_planejada ? new Date(task.data_fim_planejada + 'T12:00:00') : undefined} 
+                            onSelect={(date) => handleDateChange(task.id, "end", date)} 
+                            initialFocus 
+                            className="p-3 pointer-events-auto" 
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span>{task.data_fim_planejada ? format(new Date(task.data_fim_planejada + 'T12:00:00'), "dd/MM/yy") : "-"}</span>
+                    )}
                   </div>
                   <div className="px-2 border-r h-full flex items-center justify-center" style={{ width: columns.progress }}>
                     {editingCell?.taskId === task.id && editingCell.field === "percentual" ? <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={commitEdit} onKeyDown={handleKeyDown} className="h-6 text-xs w-10 text-center" autoFocus /> : <span className="cursor-pointer hover:text-primary" onDoubleClick={(e) => { e.stopPropagation(); startEditing(task.id, "percentual", String(task.percentual_concluido || 0)); }}>{task.percentual_concluido || 0}%</span>}
