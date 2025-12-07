@@ -141,11 +141,19 @@ export const cronogramaGanttService = {
     }
 
     // Calcular próximo posicao_irmao
-    const { data: existing } = await supabase
+    let query = supabase
       .from("eap_itens")
       .select("posicao_irmao")
-      .eq("cronograma_id", tarefa.cronograma_id)
-      .eq("item_pai_id", tarefa.parent_id || null)
+      .eq("cronograma_id", tarefa.cronograma_id);
+    
+    // Usar .is() para null, .eq() para valores reais
+    if (tarefa.parent_id) {
+      query = query.eq("item_pai_id", tarefa.parent_id);
+    } else {
+      query = query.is("item_pai_id", null);
+    }
+    
+    const { data: existing } = await query
       .order("posicao_irmao", { ascending: false })
       .limit(1);
 
@@ -153,14 +161,17 @@ export const cronogramaGanttService = {
 
     // Gerar código WBS
     let codigoWbs = String(nextPosition);
+    let nivelHierarquia = 1;
+    
     if (tarefa.parent_id) {
       const { data: parent } = await supabase
         .from("eap_itens")
-        .select("codigo_wbs")
+        .select("codigo_wbs, nivel_hierarquia")
         .eq("id", tarefa.parent_id)
         .single();
       if (parent) {
         codigoWbs = `${parent.codigo_wbs}.${nextPosition}`;
+        nivelHierarquia = (parent.nivel_hierarquia || 1) + 1;
       }
     }
 
@@ -183,7 +194,7 @@ export const cronogramaGanttService = {
         nome: tarefa.nome,
         descricao: tarefa.descricao || null,
         tipo: tipoDb,
-        nivel_hierarquia: tarefa.nivel || 0,
+        nivel_hierarquia: nivelHierarquia,
         posicao_irmao: nextPosition,
         data_inicio_planejada: tarefa.data_inicio_planejada,
         data_fim_planejada: tarefa.data_fim_planejada,
