@@ -46,6 +46,8 @@ import CronogramasPage from "./pages/Cronogramas";
 import CalendariosPage from "./pages/Cronogramas/Calendarios";
 import RecursosPage from "./pages/Cronogramas/Recursos";
 import PlanejamentoObra from "./pages/obras/Planejamento";
+import ObrasIndex from "./pages/obras/index";
+import ObraDetalhes from "./pages/obras/ObraDetalhes";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -164,11 +166,14 @@ function AppLayout() {
               
               <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
               
-              {/* Módulo Cronogramas/Gantt */}
+              {/* Módulo Gestão de Obras/Gantt */}
+              <Route path="/obras" element={<ProtectedRoute><ObrasIndex /></ProtectedRoute>} />
+              <Route path="/obras/cadastro" element={<ProtectedRoute><Obras /></ProtectedRoute>} />
+              <Route path="/obras/:id" element={<ProtectedRoute><ObraDetalhes /></ProtectedRoute>} />
+              <Route path="/obras/:id/planejamento" element={<ProtectedRoute><PlanejamentoObra /></ProtectedRoute>} />
               <Route path="/cronogramas" element={<ProtectedRoute><CronogramasPage /></ProtectedRoute>} />
               <Route path="/cronogramas/calendarios" element={<ProtectedRoute><CalendariosPage /></ProtectedRoute>} />
               <Route path="/cronogramas/recursos" element={<ProtectedRoute><RecursosPage /></ProtectedRoute>} />
-              <Route path="/obras/:id/planejamento" element={<ProtectedRoute><PlanejamentoObra /></ProtectedRoute>} />
               
               <Route path="/cadastros/clientes" element={
                 <ProtectedRoute>

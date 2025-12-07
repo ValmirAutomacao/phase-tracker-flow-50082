@@ -21,7 +21,11 @@ import {
   TrendingUp,
   Calendar,
   UserMinus,
-  GanttChart
+  GanttChart,
+  HardHat,
+  Settings,
+  CalendarDays,
+  Package
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -36,19 +40,52 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useRole } from "@/components/auth/RoleGuard";
 
 const menuItems = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
-    permissions: [], // Livre para todos
+    permissions: [],
   },
   {
-    title: "Projetos",
-    url: "/projetos",
+    title: "CRM Kanban",
+    url: "/kanban",
+    icon: KanbanIcon,
+    permissions: ["visualizar_clientes"],
+  },
+  {
+    title: "Vídeos",
+    url: "/videos",
+    icon: Video,
+    permissions: ["visualizar_videos"],
+  },
+  {
+    title: "Trabalhe Conosco",
+    url: "/trabalhe-conosco",
+    icon: UserPlus,
+    permissions: [],
+  },
+  {
+    title: "Registrar Ponto",
+    url: "/ponto",
+    icon: Clock,
+    permissions: ["registrar_ponto"],
+  },
+];
+
+// Menu de Gestão de Obras/Projetos (novo menu separado)
+const gestaoObrasItems = [
+  {
+    title: "Visão Geral",
+    url: "/obras",
     icon: FolderKanban,
+    permissions: ["visualizar_obras"],
+  },
+  {
+    title: "Obras e Projetos",
+    url: "/obras/cadastro",
+    icon: Building2,
     permissions: ["visualizar_obras"],
   },
   {
@@ -58,28 +95,16 @@ const menuItems = [
     permissions: ["visualizar_obras"],
   },
   {
-    title: "Vídeos",
-    url: "/videos",
-    icon: Video,
-    permissions: ["visualizar_videos"],
+    title: "Calendários",
+    url: "/cronogramas/calendarios",
+    icon: CalendarDays,
+    permissions: ["visualizar_obras"],
   },
   {
-    title: "CRM Kanban",
-    url: "/kanban",
-    icon: KanbanIcon,
-    permissions: ["visualizar_clientes"], // CRM relacionado a clientes
-  },
-  {
-    title: "Trabalhe Conosco",
-    url: "/trabalhe-conosco",
-    icon: UserPlus,
-    permissions: [], // Livre para todos
-  },
-  {
-    title: "Registrar Ponto",
-    url: "/ponto",
-    icon: Clock,
-    permissions: ["registrar_ponto"], // Funcionários podem registrar ponto
+    title: "Recursos",
+    url: "/cronogramas/recursos",
+    icon: Package,
+    permissions: ["visualizar_obras"],
   },
 ];
 
@@ -89,12 +114,6 @@ const cadastrosItems = [
     url: "/cadastros/clientes",
     icon: Users,
     permissions: ["visualizar_clientes"],
-  },
-  {
-    title: "Obras",
-    url: "/cadastros/obras",
-    icon: Building2,
-    permissions: ["visualizar_obras"],
   },
   {
     title: "Categorias",
@@ -215,9 +234,12 @@ const biItems = [
 export function AppSidebar() {
   const { hasAnyPermission } = usePermissions();
 
-  // Filtrar itens baseados em permissões
   const filteredMenuItems = menuItems.filter(item =>
     item.permissions.length === 0 || hasAnyPermission(item.permissions)
+  );
+
+  const filteredGestaoObrasItems = gestaoObrasItems.filter(item =>
+    hasAnyPermission(item.permissions)
   );
 
   const filteredCadastrosItems = cadastrosItems.filter(item =>
@@ -240,6 +262,34 @@ export function AppSidebar() {
     hasAnyPermission(item.permissions)
   );
 
+  const renderMenuSection = (items: typeof menuItems, label: string) => (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to={item.url}
+                  end={item.url === "/"}
+                  className={({ isActive }) =>
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "hover:bg-sidebar-primary text-sidebar-foreground"
+                  }
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+
   return (
     <Sidebar className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="border-b border-sidebar-border px-4 md:px-6 py-4 bg-sidebar">
@@ -255,166 +305,43 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="bg-sidebar">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filteredMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderMenuSection(filteredMenuItems, "Principal")}
 
-        {filteredCadastrosItems.length > 0 && (
+        {filteredGestaoObrasItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Cadastros</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold flex items-center gap-2">
+              <HardHat className="h-4 w-4" />
+              Gestão de Obras
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {filteredCadastrosItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {filteredGestaoObrasItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) =>
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "hover:bg-sidebar-primary text-sidebar-foreground"
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
-        {filteredComprasItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Compras</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredComprasItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredFinanceiroItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Financeiro</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredFinanceiroItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredRhItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Recursos Humanos</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredRhItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredBiItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-accent-foreground font-semibold">Business Intelligence</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredBiItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-primary text-sidebar-foreground"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {filteredCadastrosItems.length > 0 && renderMenuSection(filteredCadastrosItems, "Cadastros")}
+        {filteredComprasItems.length > 0 && renderMenuSection(filteredComprasItems, "Compras")}
+        {filteredFinanceiroItems.length > 0 && renderMenuSection(filteredFinanceiroItems, "Financeiro")}
+        {filteredRhItems.length > 0 && renderMenuSection(filteredRhItems, "Recursos Humanos")}
+        {filteredBiItems.length > 0 && renderMenuSection(filteredBiItems, "Business Intelligence")}
       </SidebarContent>
     </Sidebar>
   );
