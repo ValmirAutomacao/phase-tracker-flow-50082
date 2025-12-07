@@ -34,9 +34,11 @@ import {
   Afastamento,
   FuncionarioCompleto
 } from "@/types/ponto";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function GerenciarAfastamentos() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [afastamentos, setAfastamentos] = useState<Afastamento[]>([]);
   const [funcionarios, setFuncionarios] = useState<FuncionarioCompleto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,8 +73,8 @@ export default function GerenciarAfastamentos() {
         .from('funcionarios')
         .select(`
           *,
-          funcao:funcao_id(id, nome, nivel),
-          jornada:jornada_trabalho_id(id, nome)
+          funcao:funcoes!funcao_id(id, nome, nivel),
+          jornada:jornadas_trabalho!jornada_trabalho_id(id, nome)
         `)
         .eq('ativo', true)
         .order('nome');
@@ -104,13 +106,25 @@ export default function GerenciarAfastamentos() {
   };
 
   const handleAprovarAfastamento = async (id: string) => {
+    if (!user?.id) {
+      toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+      return;
+    }
+    
     try {
+      // Buscar funcionário vinculado ao user_id para obter o funcionario_id
+      const { data: funcionarioData } = await supabase
+        .from('funcionarios')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
       const { error } = await supabase
         .from('afastamentos')
         .update({
           status: 'aprovado',
           data_aprovacao: new Date().toISOString(),
-          aprovado_por_id: 'current_user_id' // TODO: Pegar do contexto de auth
+          aprovado_por_id: funcionarioData?.id || null
         })
         .eq('id', id);
 
@@ -132,13 +146,24 @@ export default function GerenciarAfastamentos() {
   };
 
   const handleRejeitarAfastamento = async (id: string, motivo: string) => {
+    if (!user?.id) {
+      toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+      return;
+    }
+    
     try {
+      const { data: funcionarioData } = await supabase
+        .from('funcionarios')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
       const { error } = await supabase
         .from('afastamentos')
         .update({
           status: 'rejeitado',
           motivo_rejeicao: motivo,
-          aprovado_por_id: 'current_user_id' // TODO: Pegar do contexto de auth
+          aprovado_por_id: funcionarioData?.id || null
         })
         .eq('id', id);
 
@@ -318,7 +343,19 @@ export default function GerenciarAfastamentos() {
         onOpenChange={setModalOpen}
         funcionarios={funcionarios}
         onSubmit={async (data) => {
+          if (!user?.id) {
+            toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+            return;
+          }
+          
           try {
+            // Buscar funcionário vinculado ao user para usar como solicitante
+            const { data: funcionarioData } = await supabase
+              .from('funcionarios')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
             const afastamentoData = {
               funcionario_id: data.funcionario_id,
               tipo_afastamento_id: data.tipo_afastamento_id,
@@ -326,9 +363,9 @@ export default function GerenciarAfastamentos() {
               data_fim: data.data_fim,
               motivo: data.motivo,
               observacoes: data.observacoes,
-              documento_url: data.arquivo ? 'arquivo_url_aqui' : null, // TODO: Implementar upload
+              documento_url: data.arquivo ? 'arquivo_url_aqui' : null, // TODO: Implementar upload real
               status: 'pendente',
-              solicitado_por_id: 'current_user_id',
+              solicitado_por_id: funcionarioData?.id || data.funcionario_id, // Usa o funcionário logado ou o próprio funcionário
               total_dias: Math.ceil((new Date(data.data_fim).getTime() - new Date(data.data_inicio).getTime()) / (1000 * 60 * 60 * 24)) + 1,
             };
 

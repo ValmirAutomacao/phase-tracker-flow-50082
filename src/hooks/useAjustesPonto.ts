@@ -256,7 +256,7 @@ async function buscarAfastamentos(options: UseAjustesPontoOptions): Promise<Afas
     // Buscar dados usando o serviço
     const afastamentos = await supabaseService.getFromSupabase('afastamentos') || [];
     const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
-    const tiposAfastamento = await supabaseService.getFromSupabase('tipos_afastamento_ponto') || [];
+    const tiposAfastamento = await supabaseService.getFromSupabase('TIPOS_AFASTAMENTO') || [];
 
     // Aplicar filtros manualmente
     let response = afastamentos.filter((af: any) => ['pendente', 'aprovado'].includes(af.status));
@@ -493,7 +493,7 @@ async function criarAfastamento(data: AfastamentoInsert & { arquivo?: File }): P
 
     // 3. Buscar dados para retorno completo
     const funcionarios = await supabaseService.getFromSupabase('FUNCIONARIOS') || [];
-    const tiposAfastamento = await supabaseService.getFromSupabase('tipos_afastamento_ponto') || [];
+    const tiposAfastamento = await supabaseService.getFromSupabase('TIPOS_AFASTAMENTO') || [];
 
     const funcionario = funcionarios.find((f: any) => f.id === data.funcionario_id);
     const usuario = funcionarios.find((f: any) => f.id === (data.usuario_cadastro_id || data.funcionario_id));
