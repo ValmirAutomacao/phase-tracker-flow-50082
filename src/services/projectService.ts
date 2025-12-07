@@ -1,13 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Tipos
+type TipoTarefa = 'tarefa' | 'etapa' | 'marco';
+type TipoRecursoType = 'humano' | 'material' | 'equipamento' | 'custo';
+
 export interface Tarefa {
   id: string;
   cronograma_id: string;
   parent_id?: string | null;
   nome: string;
   descricao?: string;
-  tipo: 'tarefa' | 'etapa' | 'marco';
+  tipo: TipoTarefa;
   data_inicio_planejada: string;
   data_fim_planejada: string;
   duracao_dias: number;
@@ -30,7 +33,7 @@ export interface Cronograma {
 export interface RecursoTarefa {
   id: string;
   tarefa_id: string;
-  tipo_recurso: 'humano' | 'material' | 'equipamento' | 'custo';
+  tipo_recurso: TipoRecursoType;
   funcionario_id?: string | null;
   nome_recurso_externo?: string | null;
   unidade_medida: string;
@@ -103,14 +106,33 @@ export const projectService = {
 
   // Criar nova tarefa
   async createTarefa(tarefa: Partial<Tarefa>): Promise<Tarefa> {
+    // Garantir campos obrigatórios
+    if (!tarefa.cronograma_id || !tarefa.nome) {
+      throw new Error('cronograma_id e nome são obrigatórios');
+    }
+    
     const { data, error } = await supabase
       .from('projeto_tarefas')
-      .insert(tarefa)
+      .insert({
+        cronograma_id: tarefa.cronograma_id,
+        nome: tarefa.nome,
+        descricao: tarefa.descricao,
+        tipo: tarefa.tipo,
+        data_inicio_planejada: tarefa.data_inicio_planejada,
+        data_fim_planejada: tarefa.data_fim_planejada,
+        duracao_dias: tarefa.duracao_dias,
+        percentual_concluido: tarefa.percentual_concluido,
+        status: tarefa.status,
+        ordem_wbs: tarefa.ordem_wbs,
+        indice: tarefa.indice,
+        nivel: tarefa.nivel,
+        parent_id: tarefa.parent_id,
+      })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as Tarefa;
   },
 
   // Atualizar tarefa
@@ -120,13 +142,13 @@ export const projectService = {
 
     const { data, error } = await supabase
       .from('projeto_tarefas')
-      .update(validUpdates)
+      .update(validUpdates as Record<string, unknown>)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as Tarefa;
   },
 
   // Excluir tarefa
@@ -162,9 +184,22 @@ export const projectService = {
 
   // Adicionar recurso a uma tarefa
   async addRecursoTarefa(recurso: Partial<RecursoTarefa>): Promise<RecursoTarefa> {
+    if (!recurso.tarefa_id) {
+      throw new Error('tarefa_id é obrigatório');
+    }
+    
     const { data, error } = await supabase
       .from('projeto_recursos')
-      .insert(recurso)
+      .insert({
+        tarefa_id: recurso.tarefa_id,
+        tipo_recurso: recurso.tipo_recurso,
+        funcionario_id: recurso.funcionario_id,
+        nome_recurso_externo: recurso.nome_recurso_externo,
+        unidade_medida: recurso.unidade_medida,
+        quantidade_planejada: recurso.quantidade_planejada,
+        custo_unitario: recurso.custo_unitario,
+        custo_total_planejado: recurso.custo_total_planejado,
+      })
       .select(`
         *,
         funcionario:funcionarios(nome)
@@ -172,7 +207,7 @@ export const projectService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as RecursoTarefa;
   },
 
   // Remover recurso de uma tarefa

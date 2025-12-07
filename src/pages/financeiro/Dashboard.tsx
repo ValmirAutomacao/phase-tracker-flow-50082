@@ -109,9 +109,9 @@ const Dashboard = () => {
   }, {} as Record<string, number>);
 
   const topCategorias = Object.entries(despesasPorCategoria)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([,a], [,b]) => (b as number) - (a as number))
     .slice(0, 5)
-    .map(([categoria, valor]) => ({ categoria, valor }));
+    .map(([categoria, valor]) => ({ categoria, valor: valor as number }));
 
   // Despesas por obra (top 5)
   const despesasPorObra = todasDespesas.reduce((acc, despesa) => {
@@ -124,9 +124,9 @@ const Dashboard = () => {
   }, {} as Record<string, number>);
 
   const topObras = Object.entries(despesasPorObra)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([,a], [,b]) => (b as number) - (a as number))
     .slice(0, 5)
-    .map(([obra, valor]) => ({ obra, valor }));
+    .map(([obra, valor]) => ({ obra, valor: valor as number }));
 
   // Dados para gráfico de evolução mensal
   const ultimosSeisMeses = Array.from({ length: 6 }, (_, i) => {
@@ -328,7 +328,7 @@ const Dashboard = () => {
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL'
-                      }).format(item.valor)}
+                      }).format(Number(item.valor))}
                     </p>
                   </div>
                 </div>

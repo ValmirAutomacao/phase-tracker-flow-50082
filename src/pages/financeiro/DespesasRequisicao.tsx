@@ -80,17 +80,20 @@ interface Despesa {
   };
   created_at?: string;
   updated_at?: string;
+  [key: string]: unknown;
 }
 
 interface Cliente {
   id: string;
   nome: string;
+  [key: string]: unknown;
 }
 
 interface Obra {
   id: string;
   nome: string;
   cliente_id: string;
+  [key: string]: unknown;
 }
 
 interface Requisicao {
@@ -98,6 +101,7 @@ interface Requisicao {
   titulo: string;
   obra_id: string;
   status: string;
+  [key: string]: unknown;
 }
 
 const despesaSchema = z.object({
