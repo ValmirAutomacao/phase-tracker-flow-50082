@@ -83,7 +83,7 @@ const buscarTiposAfastamento = async (): Promise<TipoAfastamentoDb[]> => {
   try {
     const { SupabaseService } = await import('@/lib/supabaseService');
     const supabaseService = new SupabaseService();
-    const response = await supabaseService.getFromSupabase('tipos_afastamento_ponto');
+    const response = await supabaseService.getFromSupabase('TIPOS_AFASTAMENTO_PONTO');
     return (response?.filter((tipo: TipoAfastamentoDb) => tipo.ativo) || []) as TipoAfastamentoDb[];
   } catch (error) {
     console.error('Erro ao buscar tipos de afastamento:', error);
@@ -206,7 +206,7 @@ export function ModalAfastamento({
         return;
       }
 
-      // Preparar dados para submissão
+      // Preparar dados para submissão (usuario_cadastro_id será obtido no componente pai)
       const submitData: AfastamentoInsert & { arquivo?: File } = {
         funcionario_id: data.funcionario_id,
         tipo_afastamento_id: data.tipo_afastamento_id,
@@ -214,7 +214,7 @@ export function ModalAfastamento({
         data_fim: data.data_fim,
         motivo: data.motivo,
         observacoes: data.observacoes,
-        usuario_cadastro_id: "current_user_id", // TODO: pegar do contexto de auth
+        usuario_cadastro_id: data.funcionario_id, // Default: próprio funcionário; será sobrescrito no pai se necessário
         arquivo: arquivoSelecionado || undefined,
       };
 

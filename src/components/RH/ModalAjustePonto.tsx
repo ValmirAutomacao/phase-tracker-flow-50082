@@ -41,6 +41,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { TIPO_REGISTRO_LABELS, TipoRegistroPonto } from "@/types/ponto";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ajustePontoSchema = z.object({
   tipo_registro_novo: z.string().min(1, "Tipo de registro é obrigatório"),
@@ -97,6 +98,7 @@ export function ModalAjustePonto({
 }: ModalAjustePontoProps) {
   const [documentoObrigatorio, setDocumentoObrigatorio] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const form = useForm<AjustePontoFormData>({
     resolver: zodResolver(ajustePontoSchema),
@@ -192,6 +194,11 @@ export function ModalAjustePonto({
 
   const handleSubmit = async (data: AjustePontoFormData) => {
     if (!registroOriginal) return;
+    
+    if (!user?.id) {
+      toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+      return;
+    }
 
     if (documentoObrigatorio && !data.documento_url) {
       form.setError("documento_url", {
@@ -208,6 +215,13 @@ export function ModalAjustePonto({
       return;
     }
 
+    // Buscar funcionário vinculado ao usuário para usar como usuario_ajuste_id
+    const { data: funcionarioData } = await supabase
+      .from('funcionarios')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
     const ajusteData = {
       registro_ponto_id: registroOriginal.registro_ponto_id || null,
       funcionario_id: registroOriginal.funcionario_id,
@@ -220,6 +234,7 @@ export function ModalAjustePonto({
       justificativa_id: data.justificativa_id,
       justificativa_texto: data.justificativa_texto,
       documento_url: data.documento_url || null,
+      usuario_ajuste_id: funcionarioData?.id || registroOriginal.funcionario_id,
       status: 'ativo'
     };
 

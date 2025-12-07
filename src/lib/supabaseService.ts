@@ -22,9 +22,13 @@ const TABLE_MAP = {
   'FUNCOES': 'funcoes',
   'SETORES': 'setores',
   'RELATORIOS_BI': 'relatorios_bi',
+  // Tipos de ponto
   'tipos_justificativas_ponto': 'tipos_justificativas_ponto',
+  'TIPOS_JUSTIFICATIVAS_PONTO': 'tipos_justificativas_ponto',
   'tipos_afastamento_ponto': 'tipos_afastamento',
+  'TIPOS_AFASTAMENTO_PONTO': 'tipos_afastamento',
   'TIPOS_AFASTAMENTO': 'tipos_afastamento',
+  // Registros de ponto
   'afastamentos': 'afastamentos',
   'ajustes_ponto': 'ajustes_ponto',
   'registros_ponto': 'registros_ponto',
@@ -37,6 +41,7 @@ const TABLE_MAP = {
   'recursos_empresa': 'recursos_empresa',
   'obras_responsaveis': 'obras_responsaveis',
   'obras_equipes': 'obras_equipes',
+  'tarefa_responsaveis': 'tarefa_responsaveis',
 } as const
 
 type StorageKey = keyof typeof TABLE_MAP
