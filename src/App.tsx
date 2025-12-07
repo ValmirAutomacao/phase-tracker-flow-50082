@@ -42,6 +42,10 @@ import GerenciarAfastamentos from "./pages/RH/GerenciarAfastamentos";
 import BIDashboard from "./pages/BI/index";
 import BIBuilder from "./pages/BI/Builder";
 import BIVisualizer from "./pages/BI/Visualizer";
+import CronogramasPage from "./pages/Cronogramas";
+import CalendariosPage from "./pages/Cronogramas/Calendarios";
+import RecursosPage from "./pages/Cronogramas/Recursos";
+import PlanejamentoObra from "./pages/obras/Planejamento";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -159,6 +163,12 @@ function AppLayout() {
               } />
               
               <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
+              
+              {/* Módulo Cronogramas/Gantt */}
+              <Route path="/cronogramas" element={<ProtectedRoute><CronogramasPage /></ProtectedRoute>} />
+              <Route path="/cronogramas/calendarios" element={<ProtectedRoute><CalendariosPage /></ProtectedRoute>} />
+              <Route path="/cronogramas/recursos" element={<ProtectedRoute><RecursosPage /></ProtectedRoute>} />
+              <Route path="/obras/:id/planejamento" element={<ProtectedRoute><PlanejamentoObra /></ProtectedRoute>} />
               
               <Route path="/cadastros/clientes" element={
                 <ProtectedRoute>
