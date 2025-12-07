@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MSProjectGantt, ViewMode, DependencyInfo } from "@/components/gantt/MSProjectGantt";
 import { TaskCreateDialog } from "@/components/gantt/TaskCreateDialog";
 import { TaskEditDialog } from "@/components/gantt/TaskEditDialog";
+import { TaskViewDialog } from "@/components/gantt/TaskViewDialog";
 import { Tarefa } from "@/services/projectService";
 import { TarefaGantt } from "@/services/cronogramaGanttService";
 import { useCronogramaGantt } from "@/hooks/useCronogramaGantt";
@@ -31,15 +32,20 @@ export default function CronogramaGanttView() {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TarefaGantt | null>(null);
   const [parentIdForCreate, setParentIdForCreate] = useState<string | null>(null);
 
+  // Clique simples abre visualização
   const handleTaskClick = (task: TarefaGantt) => {
     setSelectedTask(task);
+    setIsViewOpen(true);
   };
 
+  // Duplo clique abre edição diretamente
   const handleTaskDoubleClick = (task: TarefaGantt) => {
     setSelectedTask(task);
+    setIsViewOpen(false);
     setIsEditOpen(true);
   };
 
@@ -231,6 +237,22 @@ export default function CronogramaGanttView() {
           onSave={handleCreateTaskSubmit}
         />
       )}
+      
+      {/* Dialog de visualização - abre ao clicar */}
+      <TaskViewDialog
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        task={selectedTask}
+        allTasks={tarefas}
+        onEdit={() => {
+          setIsViewOpen(false);
+          setIsEditOpen(true);
+        }}
+        onDelete={(id) => {
+          deleteTarefa(id);
+          setIsViewOpen(false);
+        }}
+      />
       
       {/* Dialog de edição */}
       <TaskEditDialog 

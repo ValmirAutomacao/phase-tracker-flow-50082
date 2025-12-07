@@ -2734,6 +2734,72 @@ export type Database = {
         }
         Relationships: []
       }
+      tarefa_responsaveis: {
+        Row: {
+          criado_em: string | null
+          criado_por: string | null
+          funcionario_id: string
+          id: string
+          observacoes: string | null
+          papel: string | null
+          tarefa_id: string
+        }
+        Insert: {
+          criado_em?: string | null
+          criado_por?: string | null
+          funcionario_id: string
+          id?: string
+          observacoes?: string | null
+          papel?: string | null
+          tarefa_id: string
+        }
+        Update: {
+          criado_em?: string | null
+          criado_por?: string | null
+          funcionario_id?: string
+          id?: string
+          observacoes?: string | null
+          papel?: string | null
+          tarefa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_responsaveis_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefa_responsaveis_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "eap_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefa_responsaveis_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "vw_alocacoes_detalhadas"
+            referencedColumns: ["atividade_id"]
+          },
+          {
+            foreignKeyName: "tarefa_responsaveis_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "vw_dependencias_detalhadas"
+            referencedColumns: ["predecessora_id"]
+          },
+          {
+            foreignKeyName: "tarefa_responsaveis_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "vw_dependencias_detalhadas"
+            referencedColumns: ["sucessora_id"]
+          },
+        ]
+      }
       tipos_afastamento: {
         Row: {
           ativo: boolean | null
