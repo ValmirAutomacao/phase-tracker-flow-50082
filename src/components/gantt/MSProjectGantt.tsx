@@ -50,14 +50,86 @@ interface DragState {
   originalEnd: Date;
 }
 
-const getTaskColor = (task: Tarefa) => {
-  // Marcos sempre amarelo/dourado
-  if (task.tipo === "marco") return "bg-amber-500";
+// Calcula status automático baseado na data atual e dependências
+const calculateAutoStatus = (
+  task: Tarefa, 
+  allTasks: Tarefa[], 
+  dependencies: DependencyInfo[]
+): { autoProgress: number; statusLabel: string } => {
+  const now = new Date();
+  const startDate = task.data_inicio_planejada ? new Date(task.data_inicio_planejada + "T00:00:00") : null;
+  const endDate = task.data_fim_planejada ? new Date(task.data_fim_planejada + "T23:59:59") : null;
   
-  // Cores baseadas no progresso para tarefas e etapas
-  if (task.percentual_concluido === 100) return "bg-emerald-500";
-  if (task.percentual_concluido >= 50) return "bg-sky-500";
-  if (task.percentual_concluido > 0) return "bg-amber-400";
+  // Se já tem progresso manual definido, respeita
+  if (task.percentual_concluido && task.percentual_concluido > 0) {
+    return { 
+      autoProgress: task.percentual_concluido, 
+      statusLabel: task.percentual_concluido === 100 ? "Concluído" : 
+                   task.percentual_concluido >= 50 ? "Em andamento" : "Iniciado" 
+    };
+  }
+  
+  // Verifica dependências - predecessoras precisam estar concluídas
+  const predecessors = dependencies.filter(d => d.toTaskId === task.id);
+  const allPredecessorsComplete = predecessors.every(dep => {
+    const predTask = allTasks.find(t => t.id === dep.fromTaskId);
+    if (!predTask) return true;
+    // Para FS (Finish-to-Start), predecessora precisa estar 100%
+    if (dep.type === "FS" || dep.type === "finish_to_start") {
+      return predTask.percentual_concluido === 100;
+    }
+    // Para SS (Start-to-Start), predecessora precisa ter iniciado
+    if (dep.type === "SS" || dep.type === "start_to_start") {
+      return (predTask.percentual_concluido || 0) > 0;
+    }
+    return true;
+  });
+  
+  // Se predecessoras não estão prontas, não pode iniciar
+  if (predecessors.length > 0 && !allPredecessorsComplete) {
+    return { autoProgress: 0, statusLabel: "Aguardando predecessora" };
+  }
+  
+  // Verifica baseado nas datas
+  if (endDate && now > endDate) {
+    // Passou da data fim - deveria estar concluída (possível atraso)
+    return { autoProgress: 100, statusLabel: "Prazo expirado" };
+  }
+  
+  if (startDate && now >= startDate) {
+    // Passou da data início - deveria estar em andamento
+    if (endDate) {
+      // Calcula progresso proporcional ao tempo
+      const totalDuration = endDate.getTime() - startDate.getTime();
+      const elapsed = now.getTime() - startDate.getTime();
+      const proportionalProgress = Math.min(99, Math.max(1, Math.round((elapsed / totalDuration) * 100)));
+      return { autoProgress: proportionalProgress, statusLabel: "Em andamento" };
+    }
+    return { autoProgress: 50, statusLabel: "Em andamento" };
+  }
+  
+  // Ainda não chegou na data de início
+  return { autoProgress: 0, statusLabel: "Não iniciado" };
+};
+
+const getTaskColor = (task: Tarefa, allTasks: Tarefa[] = [], dependencies: DependencyInfo[] = []) => {
+  // Marcos sempre amarelo/dourado
+  if (task.tipo === "marco") {
+    const { autoProgress } = calculateAutoStatus(task, allTasks, dependencies);
+    if (autoProgress === 100) return "bg-emerald-500";
+    if (autoProgress > 0) return "bg-amber-500";
+    return "bg-amber-500/60";
+  }
+  
+  // Calcula status automático
+  const { autoProgress } = calculateAutoStatus(task, allTasks, dependencies);
+  
+  // Cores baseadas no progresso (manual ou automático)
+  const effectiveProgress = task.percentual_concluido || autoProgress;
+  
+  if (effectiveProgress === 100) return "bg-emerald-500";
+  if (effectiveProgress >= 50) return "bg-sky-500";
+  if (effectiveProgress > 0) return "bg-amber-400";
   
   // Etapas não iniciadas com cor diferenciada
   if (task.tipo === "etapa") return "bg-primary/60";
@@ -66,11 +138,22 @@ const getTaskColor = (task: Tarefa) => {
   return "bg-slate-400";
 };
 
-const getProgressColor = (task: Tarefa) => {
-  if (task.percentual_concluido === 100) return "bg-emerald-700";
-  if (task.percentual_concluido >= 50) return "bg-sky-700";
-  if (task.percentual_concluido > 0) return "bg-amber-600";
+const getProgressColor = (task: Tarefa, allTasks: Tarefa[] = [], dependencies: DependencyInfo[] = []) => {
+  const { autoProgress } = calculateAutoStatus(task, allTasks, dependencies);
+  const effectiveProgress = task.percentual_concluido || autoProgress;
+  
+  if (effectiveProgress === 100) return "bg-emerald-700";
+  if (effectiveProgress >= 50) return "bg-sky-700";
+  if (effectiveProgress > 0) return "bg-amber-600";
   return "bg-slate-500";
+};
+
+const getEffectiveProgress = (task: Tarefa, allTasks: Tarefa[], dependencies: DependencyInfo[]): number => {
+  if (task.percentual_concluido && task.percentual_concluido > 0) {
+    return task.percentual_concluido;
+  }
+  const { autoProgress } = calculateAutoStatus(task, allTasks, dependencies);
+  return autoProgress;
 };
 
 export function MSProjectGantt({
@@ -516,7 +599,7 @@ export function MSProjectGantt({
                     )}
                   </div>
                   <div className="px-2 border-r h-full flex items-center justify-center" style={{ width: columns.progress }}>
-                    {editingCell?.taskId === task.id && editingCell.field === "percentual" ? <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={commitEdit} onKeyDown={handleKeyDown} className="h-6 text-xs w-10 text-center" autoFocus /> : <span className="cursor-pointer hover:text-primary" onDoubleClick={(e) => { e.stopPropagation(); startEditing(task.id, "percentual", String(task.percentual_concluido || 0)); }}>{task.percentual_concluido || 0}%</span>}
+                    {editingCell?.taskId === task.id && editingCell.field === "percentual" ? <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={commitEdit} onKeyDown={handleKeyDown} className="h-6 text-xs w-10 text-center" autoFocus /> : <span className={cn("cursor-pointer hover:text-primary", getEffectiveProgress(task, tasks, dependencies) !== (task.percentual_concluido || 0) && "text-muted-foreground")} onDoubleClick={(e) => { e.stopPropagation(); startEditing(task.id, "percentual", String(task.percentual_concluido || 0)); }} title={getEffectiveProgress(task, tasks, dependencies) !== (task.percentual_concluido || 0) ? "Auto-calculado" : ""}>{getEffectiveProgress(task, tasks, dependencies)}%</span>}
                   </div>
                   <div className="px-2 h-full flex items-center justify-center text-muted-foreground" style={{ width: columns.predecessors }}><span className="truncate">{predecessorText || "-"}</span></div>
                 </div>
@@ -528,24 +611,31 @@ export function MSProjectGantt({
               {timelineHeaders.map((header, i) => { let offset = 0; for (let j = 0; j < i; j++) offset += timelineHeaders[j].width; return <div key={i} className={cn("absolute top-0 bottom-0 border-r border-border/30", header.isWeekend && "bg-muted/30")} style={{ left: offset, width: header.width }} />; })}
               {flatTasks.map((_, index) => <div key={index} className={cn("absolute left-0 right-0 border-b border-border/20", index % 2 === 0 ? "bg-transparent" : "bg-muted/10")} style={{ top: index * rowHeight, height: rowHeight }} />)}
               <svg className="absolute inset-0" width={totalWidth} height={flatTasks.length * rowHeight} style={{ pointerEvents: editable ? "auto" : "none" }}>{renderDependencyLines()}</svg>
-              {flatTasks.map((task, index) => {
+{flatTasks.map((task, index) => {
                 const barStyle = getTaskBarStyle(task);
                 if (barStyle.width === 0) return null;
                 const isSelected = selectedTaskId === task.id;
+                const effectiveProgress = getEffectiveProgress(task, tasks, dependencies);
+                const { statusLabel } = calculateAutoStatus(task, tasks, dependencies);
                 return (
                   <Tooltip key={task.id}>
                     <TooltipTrigger asChild>
-                      <div className={cn("absolute rounded transition-all group", task.tipo === "marco" ? "flex items-center justify-center" : getTaskColor(task), isSelected && "ring-2 ring-primary", editable && "cursor-grab")} style={{ left: barStyle.left, top: index * rowHeight + (task.tipo === "marco" ? 8 : 10), width: task.tipo === "marco" ? 20 : barStyle.width, height: task.tipo === "marco" ? 20 : 16, transform: task.tipo === "marco" ? "rotate(45deg)" : undefined }} onClick={(e) => { e.stopPropagation(); if (linkingFrom) handleLinkEnd(task.id); else { setSelectedTaskId(task.id); onTaskClick?.(task); } }} onMouseDown={(e) => handleBarMouseDown(e, task, "move")}>
+                      <div className={cn("absolute rounded transition-all group", task.tipo === "marco" ? "flex items-center justify-center" : getTaskColor(task, tasks, dependencies), isSelected && "ring-2 ring-primary", editable && "cursor-grab")} style={{ left: barStyle.left, top: index * rowHeight + (task.tipo === "marco" ? 8 : 10), width: task.tipo === "marco" ? 20 : barStyle.width, height: task.tipo === "marco" ? 20 : 16, transform: task.tipo === "marco" ? "rotate(45deg)" : undefined }} onClick={(e) => { e.stopPropagation(); if (linkingFrom) handleLinkEnd(task.id); else { setSelectedTaskId(task.id); onTaskClick?.(task); } }} onMouseDown={(e) => handleBarMouseDown(e, task, "move")}>
                         {task.tipo !== "marco" && (
                           <>
                             {editable && <><div className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 opacity-0 group-hover:opacity-100" onMouseDown={(e) => handleBarMouseDown(e, task, "resize-start")} /><div className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 opacity-0 group-hover:opacity-100" onMouseDown={(e) => handleBarMouseDown(e, task, "resize-end")} /></>}
-                            <div className={cn("absolute left-0 top-0 bottom-0 rounded", getProgressColor(task))} style={{ width: `${task.percentual_concluido}%` }} />
+                            <div className={cn("absolute left-0 top-0 bottom-0 rounded", getProgressColor(task, tasks, dependencies))} style={{ width: `${effectiveProgress}%` }} />
                             <span className="absolute inset-0 flex items-center px-2 text-[10px] text-white font-medium truncate z-10">{barStyle.width > 80 ? task.nome : ""}</span>
                           </>
                         )}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent side="top"><p className="font-semibold">{task.nome}</p><p className="text-xs">{task.data_inicio_planejada && format(new Date(task.data_inicio_planejada), "dd/MM/yyyy")} → {task.data_fim_planejada && format(new Date(task.data_fim_planejada), "dd/MM/yyyy")}</p><p className="text-xs">Progresso: {task.percentual_concluido}%</p></TooltipContent>
+                    <TooltipContent side="top">
+                      <p className="font-semibold">{task.nome}</p>
+                      <p className="text-xs">{task.data_inicio_planejada && format(new Date(task.data_inicio_planejada), "dd/MM/yyyy")} → {task.data_fim_planejada && format(new Date(task.data_fim_planejada), "dd/MM/yyyy")}</p>
+                      <p className="text-xs">Progresso: {effectiveProgress}% {task.percentual_concluido !== effectiveProgress && `(manual: ${task.percentual_concluido || 0}%)`}</p>
+                      <p className="text-xs text-muted-foreground">{statusLabel}</p>
+                    </TooltipContent>
                   </Tooltip>
                 );
               })}
@@ -554,12 +644,13 @@ export function MSProjectGantt({
           </ScrollArea>
         </div>
         <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20 text-xs">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span>Concluído (100%)</span></div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span>Concluído</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-sky-500" /><span>Em progresso (≥50%)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-400" /><span>Iniciado (&lt;50%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-400" /><span>Iniciado</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-slate-400" /><span>Não iniciado</span></div>
             <div className="flex items-center gap-1.5"><Diamond className="w-3 h-3 text-amber-500 fill-amber-500" /><span>Marco</span></div>
+            <div className="flex items-center gap-1.5 text-muted-foreground"><span className="text-[10px]">% auto = baseado em datas</span></div>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground"><span>{flatTasks.length} tarefas</span><span>•</span><span>{dependencies.length} dependências</span></div>
         </div>
