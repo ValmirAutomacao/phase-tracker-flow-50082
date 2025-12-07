@@ -15,9 +15,6 @@ export function useBIData() {
   const executeQuery = useCallback(async (consulta: ConsultaBI): Promise<ResultadoBI> => {
     setIsExecuting(true);
     try {
-      // 🔄 CLAUDE-MODIFIED: 2025-11-28 - Removidos dados mock, agora usa dados reais do Supabase
-      // 📌 Original: biDataService.gerarDadosMock(consulta)
-      // ✨ Novo: biDataService.executarConsulta(consulta)
       const resultado = await biDataService.executarConsulta(consulta);
       return resultado;
     } catch (error) {

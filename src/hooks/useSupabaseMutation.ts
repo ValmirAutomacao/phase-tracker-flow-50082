@@ -117,7 +117,7 @@ export function useSupabaseDelete(
 }
 
 /**
- * Hook para substituição completa de dados (equivale a saveToStorage)
+ * Hook para substituição completa de dados
  * USO COM CUIDADO: Remove todos os dados existentes
  */
 export function useSupabaseSave<T extends BaseEntity>(

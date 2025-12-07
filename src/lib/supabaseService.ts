@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import type { Database, Tables, TablesInsert, TablesUpdate } from './types/database'
 import { ErrorHandler, withErrorHandling, withRetry } from './errorHandler'
 
-// Mapeamento de chaves localStorage para nomes de tabelas Supabase
+// Mapeamento de chaves para nomes de tabelas Supabase
 const TABLE_MAP = {
   'engflow_clientes': 'clientes',
   'engflow_obras': 'obras',
@@ -42,8 +42,7 @@ interface BaseEntity {
 }
 
 /**
- * Serviço Supabase que mantém compatibilidade 100% com localStorage.ts
- * Implementa as mesmas assinaturas de função para facilitar migração
+ * Serviço Supabase - única fonte de dados do sistema
  */
 export class SupabaseService {
   private getTableName(key: string): TableName {
@@ -81,7 +80,6 @@ export class SupabaseService {
   }
 
   /**
-   * Compatível com getFromStorage<T>(key: string): T[]
    * Busca todos os registros de uma tabela
    */
   async getFromSupabase<T extends BaseEntity>(key: string): Promise<T[]> {
@@ -155,7 +153,6 @@ export class SupabaseService {
   }
 
   /**
-   * Compatível com saveToStorage<T>(key: string, data: T[]): void
    * Substitui todos os dados da tabela (uso com cuidado!)
    */
   async saveToSupabase<T extends BaseEntity>(key: string, data: T[]): Promise<void> {
@@ -413,7 +410,6 @@ export class SupabaseService {
   }
 
   /**
-   * Compatível com addToStorage<T>(key: string, item: T): T
    * Adiciona um novo item e retorna o item criado
    */
   async addToSupabase<T extends BaseEntity>(key: string, item: Omit<T, 'id' | 'created_at' | 'updated_at'>): Promise<T> {
@@ -448,7 +444,6 @@ export class SupabaseService {
   }
 
   /**
-   * Compatível com updateInStorage<T>(key: string, id: string, updates: Partial<T>): T
    * Atualiza um item específico e retorna o item atualizado
    */
   async updateInSupabase<T extends BaseEntity>(
@@ -488,7 +483,6 @@ export class SupabaseService {
   }
 
   /**
-   * Compatível com deleteFromStorage(key: string, id: string): void
    * Remove um item específico
    */
   async deleteFromSupabase(key: string, id: string): Promise<void> {
@@ -650,7 +644,7 @@ export const deleteFromSupabase = withRetry(
   2, 1000
 )
 
-// Chaves de storage compatíveis com localStorage
+// Chaves de tabelas Supabase
 export const SUPABASE_KEYS = {
   CLIENTES: 'engflow_clientes',
   OBRAS: 'engflow_obras',
