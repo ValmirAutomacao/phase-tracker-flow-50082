@@ -494,7 +494,7 @@ export default function ControlePonto() {
       funcionario_id: funcionarioId,
       funcionario_nome: funcionarioNome,
       data_registro: dataRegistro,
-      tipo_registro_original: tipoRegistro,
+      tipo_registro_original: tipoRegistro as TipoRegistroPonto,
       hora_original: horaOriginal || '',
     });
     setModalAjusteAberto(true);

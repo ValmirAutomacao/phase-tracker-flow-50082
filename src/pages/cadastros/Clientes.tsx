@@ -243,7 +243,25 @@ const Clientes = () => {
           <Plus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
-        <ClientesForm open={open} onOpenChange={setOpen} onSubmit={onSubmit} editData={editingCliente ? { ...editingCliente } : undefined} />
+        <ClientesForm 
+          open={open} 
+          onOpenChange={setOpen} 
+          onSubmit={onSubmit} 
+          editData={editingCliente ? {
+            id: editingCliente.id,
+            nome: editingCliente.nome,
+            tipo: editingCliente.tipo === 'fisico' ? 'fisica' : editingCliente.tipo === 'juridico' ? 'juridica' : editingCliente.tipo,
+            documento: editingCliente.documento,
+            email: editingCliente.contato?.email || '',
+            telefone: editingCliente.contato?.telefone || '',
+            endereco: editingCliente.endereco?.logradouro || '',
+            numero: editingCliente.endereco?.numero || '',
+            bairro: editingCliente.endereco?.bairro || '',
+            cidade: editingCliente.endereco?.cidade || '',
+            estado: editingCliente.endereco?.estado || '',
+            cep: editingCliente.endereco?.cep || '',
+          } : undefined} 
+        />
       </div>
 
       {/* Stats */}

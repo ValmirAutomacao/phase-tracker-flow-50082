@@ -176,7 +176,7 @@ export default function TiposAfastamento() {
       key: 'actions',
       title: 'Ações',
       width: '120px',
-      render: (_, tipo: TipoAfastamento) => (
+      render: (_, tipo: TipoAfastamentoLocal) => (
         <div className="flex gap-2">
           <Button
             variant="ghost"

@@ -26,6 +26,7 @@ interface TipoJustificativa {
   obriga_documentacao: boolean;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 const CATEGORIA_LABELS = {
@@ -257,7 +258,7 @@ export default function TiposJustificativas() {
             data={tipos}
             columns={columns}
             searchPlaceholder="Buscar tipos de justificativas..."
-            isLoading={isLoading}
+            loading={isLoading}
             emptyMessage="Nenhum tipo de justificativa encontrado"
           />
         </CardContent>
