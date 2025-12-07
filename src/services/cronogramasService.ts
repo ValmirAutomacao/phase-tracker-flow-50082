@@ -227,17 +227,17 @@ export class EAPService {
 
       if (filters?.tipos && filters.tipos.length > 0) {
         query += ` AND tipo = ANY($${params.length + 1})`;
-        params.push(filters.tipos);
+        params.push(filters.tipos.join(','));
       }
 
       if (filters?.status && filters.status.length > 0) {
         query += ` AND status = ANY($${params.length + 1})`;
-        params.push(filters.status);
+        params.push(filters.status.join(','));
       }
 
       if (filters?.e_critica !== undefined) {
         query += ` AND e_critica = $${params.length + 1}`;
-        params.push(filters.e_critica);
+        params.push(String(filters.e_critica));
       }
 
       query += ` ORDER BY nivel_hierarquia, posicao_irmao`;
@@ -626,16 +626,6 @@ export class RecursosService {
 // ============================================================
 // EXPORTAÇÕES
 // ============================================================
-
-export {
-  CronogramasService,
-  EAPService,
-  DependenciasService,
-  AlocacoesService,
-  BaselinesService,
-  CalendariosService,
-  RecursosService,
-};
 
 // Serviço unificado para facilitar importação
 export const CronogramaServices = {

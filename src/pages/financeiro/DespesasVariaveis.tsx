@@ -47,6 +47,8 @@ import { ptBR } from "date-fns/locale";
 import { OCRService } from "@/services/ocrService";
 import { supabase } from "@/lib/supabaseClient";
 
+type FormaPagamentoType = 'cartao_avista' | 'cartao_parcelado' | 'pix' | 'dinheiro' | 'transferencia' | 'boleto' | 'debito';
+
 interface DespesaVariavel {
   id: string;
   obra_id: string;
@@ -56,7 +58,7 @@ interface DespesaVariavel {
   nome_fornecedor: string;
   cnpj_fornecedor: string;
   valor_compra: number;
-  forma_pagamento: 'cartao_avista' | 'cartao_parcelado' | 'pix' | 'dinheiro' | 'transferencia' | 'boleto' | 'debito';
+  forma_pagamento: FormaPagamentoType;
   numero_parcelas?: number;
   nr_documento: string;
   comprovante_url?: string;
@@ -64,11 +66,14 @@ interface DespesaVariavel {
   categorias: string[];
   descricao?: string;
   data_compra?: string;
-  data_lancamento?: string; // Nova data de lançamento
+  data_lancamento?: string;
   status_ocr: 'pendente' | 'processando' | 'concluido' | 'erro';
-  dados_ocr: any;
+  dados_ocr: unknown;
+  origem_dados?: string;
+  funcionario_nome_ocr?: string;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 interface FormularioDespesa {
@@ -77,14 +82,14 @@ interface FormularioDespesa {
   nome_fornecedor: string;
   cnpj_fornecedor: string;
   valor_compra: string;
-  forma_pagamento: 'cartao_avista' | 'cartao_parcelado' | 'pix' | 'dinheiro' | 'transferencia' | 'boleto' | 'debito';
+  forma_pagamento: FormaPagamentoType;
   numero_parcelas: number;
   nr_documento: string;
   cartao_vinculado_id: string;
   categorias: string[];
   descricao: string;
   data_compra: string;
-  data_lancamento: string; // Nova data de lançamento
+  data_lancamento: string;
 }
 
 const DespesasVariaveis = () => {
@@ -263,22 +268,24 @@ const DespesasVariaveis = () => {
 
         const formaPagamentoMapeada = mapearFormaPagamento(dadosNormalizados.forma_pagamento || '');
 
-        setFormData(prev => {
+        setFormData((prev: FormularioDespesa): FormularioDespesa => {
           // Formatar valor_compra corretamente para o input
           const valorFormatado = dadosNormalizados.valor_compra
             ? typeof dadosNormalizados.valor_compra === 'number'
               ? dadosNormalizados.valor_compra.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              : dadosNormalizados.valor_compra
+              : String(dadosNormalizados.valor_compra)
             : prev.valor_compra;
 
           // Formatar data da compra do OCR para o formato YYYY-MM-DD
-          const dataCompraFormatada = dadosNormalizados.data_compra
-            ? typeof dadosNormalizados.data_compra === 'string'
-              ? dadosNormalizados.data_compra // Já formatada como YYYY-MM-DD pelo normalizeData
-              : dadosNormalizados.data_compra instanceof Date
-              ? dadosNormalizados.data_compra.toISOString().split('T')[0]
-              : prev.data_compra
-            : prev.data_compra;
+          let dataCompraFormatada = prev.data_compra;
+          if (dadosNormalizados.data_compra) {
+            const dataOCR = dadosNormalizados.data_compra;
+            if (typeof dataOCR === 'string') {
+              dataCompraFormatada = dataOCR;
+            } else if (dataOCR && typeof dataOCR === 'object' && 'toISOString' in dataOCR) {
+              dataCompraFormatada = (dataOCR as Date).toISOString().split('T')[0];
+            }
+          }
 
           console.log('📅 Data da compra processada:', {
             original: dadosNormalizados.data_compra,
@@ -290,10 +297,11 @@ const DespesasVariaveis = () => {
             nome_fornecedor: dadosNormalizados.nome_fornecedor || prev.nome_fornecedor,
             cnpj_fornecedor: dadosNormalizados.cnpj_fornecedor || prev.cnpj_fornecedor,
             valor_compra: valorFormatado,
-            forma_pagamento: formaPagamentoMapeada,
+            forma_pagamento: formaPagamentoMapeada as FormaPagamentoType,
             nr_documento: dadosNormalizados.nr_documento || prev.nr_documento,
             descricao: dadosNormalizados.descricao || prev.descricao,
-            data_compra: dataCompraFormatada, // Incluir data da compra do OCR
+            data_compra: dataCompraFormatada,
+            data_lancamento: prev.data_lancamento,
             // Pré-selecionar obra e funcionário se não estiverem preenchidos
             obra_id: prev.obra_id || (obras.length > 0 ? obras[0].id : ''),
             comprador_funcionario_id: prev.comprador_funcionario_id || (funcionarios.length > 0 ? funcionarios[0].id : '')
@@ -1104,12 +1112,14 @@ const DespesasVariaveis = () => {
                         nome_fornecedor: despesa.nome_fornecedor || '',
                         cnpj_fornecedor: despesa.cnpj_fornecedor || '',
                         valor_compra: valorFormatado,
-                        forma_pagamento: despesa.forma_pagamento || formasAtivas[0]?.codigo || 'pix',
+                        forma_pagamento: (despesa.forma_pagamento || formasAtivas[0]?.codigo || 'pix') as FormaPagamentoType,
                         numero_parcelas: despesa.numero_parcelas || 1,
                         nr_documento: despesa.nr_documento || '',
                         cartao_vinculado_id: despesa.cartao_vinculado_id || '',
                         categorias: despesa.categorias || [],
-                        descricao: despesa.descricao || ''
+                        descricao: despesa.descricao || '',
+                        data_compra: despesa.data_compra || new Date().toISOString().split('T')[0],
+                        data_lancamento: despesa.data_lancamento || new Date().toISOString().split('T')[0]
                       });
                       setEditingDespesa(despesa);
                       setOpen(true);

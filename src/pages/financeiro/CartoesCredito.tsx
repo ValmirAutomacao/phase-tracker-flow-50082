@@ -36,18 +36,21 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMascaras } from "@/hooks/useMascaras";
 
+type Bandeira = 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'outros';
+
 interface CartaoCredito {
   id: string;
   funcionario_id: string;
   numero_cartao_hash: string;
   numero_cartao_masked: string;
-  bandeira: 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'outros';
+  bandeira: Bandeira;
   vencimento_mes: number;
   vencimento_ano: number;
   ativo: boolean;
   observacoes?: string;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 interface FormularioCartao {
@@ -140,7 +143,7 @@ const CartoesCredito = () => {
       funcionario_id: formData.funcionario_id,
       numero_cartao_hash: hashNumeroCartao(formData.numero_cartao),
       numero_cartao_masked: mascarNumeroCartao(formData.numero_cartao),
-      bandeira: bandeiraFinal,
+      bandeira: bandeiraFinal as Bandeira,
       vencimento_mes: formData.vencimento_mes,
       vencimento_ano: formData.vencimento_ano,
       observacoes: formData.observacoes,
