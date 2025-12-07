@@ -76,17 +76,17 @@ export default function CronogramasPage() {
     },
   });
 
-  // Fetch obras
+  // Fetch obras (todas exceto canceladas)
   const { data: obras = [] } = useQuery({
-    queryKey: ["obras_ativas"],
+    queryKey: ["obras_para_cronograma"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obras")
-        .select("id, nome")
-        .eq("status", "em_andamento")
+        .select("id, nome, status")
+        .neq("status", "cancelada")
         .order("nome");
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
