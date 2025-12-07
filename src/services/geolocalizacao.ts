@@ -86,19 +86,19 @@ class GeolocalizacaoService {
   }
 
   /**
-   * Carrega locais permitidos do banco de dados
+   * Carrega locais permitidos
+   * TODO: Criar tabela locais_permitidos no Supabase para configuração dinâmica
    */
   private async carregarLocaisPermitidos(): Promise<void> {
     try {
-      // TODO: Implementar busca no Supabase
-      // Por enquanto, usar dados mock da sede principal
+      // Configuração padrão - deve ser configurada via banco de dados
       this.locaisPermitidos = [
         {
           id: '1',
           nome: 'Sede Principal - SecEngenharia',
-          latitude: -23.5505, // São Paulo - exemplo
+          latitude: -23.5505,
           longitude: -46.6333,
-          raioPermitido: 200, // 200 metros
+          raioPermitido: 200,
           ativo: true,
           tipo: 'sede'
         }

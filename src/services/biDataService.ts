@@ -319,9 +319,6 @@ export class BiDataService {
     }
   }
 
-  // 🚨 CLAUDE-WARNING: Função gerarDadosMock removida em 2025-11-28
-  // 💡 TODO: Sistema agora usa apenas dados reais via executarConsulta()
-  // ✨ NOVO: Todos os dados vêm diretamente do Supabase, sem mocks
 }
 
 // Instância singleton do serviço
