@@ -51,18 +51,26 @@ interface DragState {
 }
 
 const getTaskColor = (task: Tarefa) => {
+  // Marcos sempre amarelo/dourado
   if (task.tipo === "marco") return "bg-amber-500";
-  if (task.tipo === "etapa") return "bg-primary/80";
+  
+  // Cores baseadas no progresso para tarefas e etapas
   if (task.percentual_concluido === 100) return "bg-emerald-500";
   if (task.percentual_concluido >= 50) return "bg-sky-500";
   if (task.percentual_concluido > 0) return "bg-amber-400";
+  
+  // Etapas não iniciadas com cor diferenciada
+  if (task.tipo === "etapa") return "bg-primary/60";
+  
+  // Tarefas não iniciadas
   return "bg-slate-400";
 };
 
 const getProgressColor = (task: Tarefa) => {
-  if (task.percentual_concluido === 100) return "bg-emerald-600";
-  if (task.percentual_concluido >= 50) return "bg-sky-600";
-  return "bg-amber-500";
+  if (task.percentual_concluido === 100) return "bg-emerald-700";
+  if (task.percentual_concluido >= 50) return "bg-sky-700";
+  if (task.percentual_concluido > 0) return "bg-amber-600";
+  return "bg-slate-500";
 };
 
 export function MSProjectGantt({
@@ -547,11 +555,11 @@ export function MSProjectGantt({
         </div>
         <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20 text-xs">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span>Concluído</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-sky-500" /><span>Em progresso</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-400" /><span>Iniciado</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-500" /><span>Concluído (100%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-sky-500" /><span>Em progresso (≥50%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-400" /><span>Iniciado (&lt;50%)</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-slate-400" /><span>Não iniciado</span></div>
-            <div className="flex items-center gap-1.5"><Diamond className="w-3 h-3 text-amber-500" /><span>Marco</span></div>
+            <div className="flex items-center gap-1.5"><Diamond className="w-3 h-3 text-amber-500 fill-amber-500" /><span>Marco</span></div>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground"><span>{flatTasks.length} tarefas</span><span>•</span><span>{dependencies.length} dependências</span></div>
         </div>

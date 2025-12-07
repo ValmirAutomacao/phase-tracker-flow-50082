@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Cronograma, StatusCronograma } from "@/types/cronogramas";
+import { useMascaras } from "@/hooks/useMascaras";
 
 type CronogramaFormData = {
   nome: string;
@@ -58,10 +59,12 @@ const statusLabels: Record<StatusCronograma, string> = {
 export default function CronogramasPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { formatarMoeda } = useMascaras();
   const [activeTab, setActiveTab] = useState("cronogramas");
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CronogramaFormData>(defaultForm);
+  const [orcamentoDisplay, setOrcamentoDisplay] = useState("R$ 0,00");
 
   // Fetch cronogramas
   const { data: cronogramas = [], isLoading } = useQuery({
@@ -181,6 +184,7 @@ export default function CronogramasPage() {
     setIsOpen(false);
     setEditingId(null);
     setFormData(defaultForm);
+    setOrcamentoDisplay("R$ 0,00");
   };
 
   const handleEdit = (cron: Cronograma) => {
@@ -194,6 +198,7 @@ export default function CronogramasPage() {
       data_fim: cron.data_fim || "",
       orcamento_total: cron.orcamento_total || 0,
     });
+    setOrcamentoDisplay(formatarMoeda(String((cron.orcamento_total || 0) * 100)));
     setIsOpen(true);
   };
 
@@ -449,12 +454,17 @@ export default function CronogramasPage() {
             </div>
 
             <div>
-              <Label>Orçamento Total (R$)</Label>
+              <Label>Orçamento Total</Label>
               <Input
-                type="number"
-                step="0.01"
-                value={formData.orcamento_total}
-                onChange={(e) => setFormData({ ...formData, orcamento_total: Number(e.target.value) })}
+                type="text"
+                placeholder="R$ 0,00"
+                value={orcamentoDisplay}
+                onChange={(e) => {
+                  const rawValue = e.target.value.replace(/\D/g, '');
+                  const numValue = parseInt(rawValue || '0', 10) / 100;
+                  setFormData({ ...formData, orcamento_total: numValue });
+                  setOrcamentoDisplay(formatarMoeda(rawValue));
+                }}
               />
             </div>
           </div>
