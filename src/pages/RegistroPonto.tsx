@@ -24,7 +24,7 @@ import {
   DIAS_SEMANA,
   MESES_EXTENSO,
   FuncionarioCompleto,
-  RegistroPonto
+  RegistroPonto as RegistroPontoType
 } from "@/types/ponto";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -36,7 +36,7 @@ import { LocalizacaoCompleta } from "@/services/geolocalizacao";
 export default function RegistroPonto() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [funcionario, setFuncionario] = useState<FuncionarioCompleto | null>(null);
-  const [registrosHoje, setRegistrosHoje] = useState<RegistroPonto[]>([]);
+  const [registrosHoje, setRegistrosHoje] = useState<RegistroPontoType[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoRegistroPonto | null>(null);
   const [senhaInput, setSenhaInput] = useState("");

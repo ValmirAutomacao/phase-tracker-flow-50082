@@ -84,7 +84,7 @@ const buscarTiposAfastamento = async (): Promise<TipoAfastamentoDb[]> => {
     const { SupabaseService } = await import('@/lib/supabaseService');
     const supabaseService = new SupabaseService();
     const response = await supabaseService.getFromSupabase('tipos_afastamento_ponto');
-    return response?.filter((tipo: any) => tipo.ativo) || [];
+    return (response?.filter((tipo: TipoAfastamentoDb) => tipo.ativo) || []) as TipoAfastamentoDb[];
   } catch (error) {
     console.error('Erro ao buscar tipos de afastamento:', error);
     return [];

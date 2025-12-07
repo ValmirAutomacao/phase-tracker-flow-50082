@@ -366,9 +366,8 @@ export function DataTable<T extends { id: string }>({
               {showSelection && (
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={isAllSelected}
+                    checked={isIndeterminate ? "indeterminate" : isAllSelected}
                     onCheckedChange={handleSelectAll}
-                    indeterminate={isIndeterminate}
                   />
                 </TableHead>
               )}

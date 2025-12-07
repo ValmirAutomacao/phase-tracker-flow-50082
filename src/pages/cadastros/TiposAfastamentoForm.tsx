@@ -48,6 +48,8 @@ const CORES_PADRAO_AFASTAMENTO = {
   outros: '#6B7280'              // Cinza
 } as const;
 
+const CATEGORIA_VALUES = ['ferias', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade', 'atestado', 'falta_justificada', 'outros'] as const;
+
 const tipoAfastamentoSchema = z.object({
   nome: z
     .string()
@@ -59,13 +61,10 @@ const tipoAfastamentoSchema = z.object({
     .max(500, "Descrição deve ter no máximo 500 caracteres")
     .optional()
     .or(z.literal("")),
-  categoria: z.enum([
-    'ferias', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade',
-    'atestado', 'falta_justificada', 'outros'
-  ], {
+  categoria: z.enum(CATEGORIA_VALUES, {
     required_error: "Categoria é obrigatória",
   }),
-  cor: z.string().default('#6B7280'),
+  cor: z.string().min(1, "Cor é obrigatória").default('#6B7280'),
   dias_max_permitidos: z
     .number()
     .int("Deve ser um número inteiro")
