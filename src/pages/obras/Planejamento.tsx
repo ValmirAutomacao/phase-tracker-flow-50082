@@ -1,98 +1,75 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Gantt, Task, ViewMode } from "gantt-task-react";
-import "gantt-task-react/dist/index.css";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Calendar as CalendarIcon, Indent, Outdent } from "lucide-react";
+import { ArrowLeft, Plus, Calendar as CalendarIcon, Indent, Outdent, ZoomIn, ZoomOut } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { MSProjectGantt, ViewMode } from "@/components/gantt/MSProjectGantt";
+import { TaskCreateDialog } from "@/components/gantt/TaskCreateDialog";
 import { TaskEditDialog } from "@/components/gantt/TaskEditDialog";
-import { Tarefa } from "@/services/projectService";
+import { Tarefa, projectService } from "@/services/projectService";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function PlanejamentoObra() {
   const { id: obraId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { cronograma, tarefas, isLoading, createTarefa, updateTarefa, deleteTarefa } = useProject(obraId!);
   
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTaskName, setNewTaskName] = useState("");
-  
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Tarefa | null>(null);
 
-  const ganttTasks: Task[] = useMemo(() => {
-    if (!tarefas.length) return [];
-    
-    // Ordenar por índice/ordem para garantir hierarquia visual correta
-    const sortedTasks = [...tarefas].sort((a, b) => (a.indice || 0) - (b.indice || 0));
+  // Fetch dependencies
+  const { data: dependencies = [] } = useQuery({
+    queryKey: ["dependencies", cronograma?.id],
+    queryFn: async () => {
+      if (!cronograma?.id) return [];
+      const deps = await projectService.getDependencias(cronograma.id);
+      return deps.map(d => ({
+        id: d.id,
+        fromTaskId: d.tarefa_origem_id,
+        toTaskId: d.tarefa_destino_id,
+        type: d.tipo_vinculo,
+        lag: d.lag_dias || 0
+      }));
+    },
+    enabled: !!cronograma?.id,
+  });
 
-    return sortedTasks.map(t => ({
-      start: new Date(t.data_inicio_planejada),
-      end: new Date(t.data_fim_planejada),
-      name: t.nome,
-      id: t.id,
-      type: t.tipo === 'etapa' ? 'project' : t.tipo === 'marco' ? 'milestone' : 'task',
-      progress: t.percentual_concluido,
-      isDisabled: false,
-      styles: { progressColor: '#ffbb54', progressSelectedColor: '#ff9e0d', backgroundSelectedColor: '#ff9e0d' },
-      project: t.parent_id || undefined,
-      dependencies: t.dependencias,
-      // Custom properties that might be used by custom renderers
-      displayOrder: t.indice
-    }));
-  }, [tarefas]);
+  const handleTaskClick = (task: Tarefa) => {
+    setSelectedTask(task);
+  };
 
-  const handleTaskChange = (task: Task) => {
+  const handleTaskDoubleClick = (task: Tarefa) => {
+    setSelectedTask(task);
+    setIsEditOpen(true);
+  };
+
+  const handleDateChange = (taskId: string, start: Date, end: Date) => {
     updateTarefa({
-      id: task.id,
+      id: taskId,
       updates: {
-        data_inicio_planejada: task.start.toISOString(),
-        data_fim_planejada: task.end.toISOString(),
-        percentual_concluido: task.progress
+        data_inicio_planejada: start.toISOString(),
+        data_fim_planejada: end.toISOString(),
       }
     });
   };
 
-  const handleProgressChange = async (task: Task) => {
-    updateTarefa({
-      id: task.id,
-      updates: { percentual_concluido: task.progress }
-    });
-  };
-
-  const handleDblClick = (task: Task) => {
-    const fullTask = tarefas.find(t => t.id === task.id);
-    if (fullTask) {
-      setSelectedTask(fullTask);
-      setIsEditOpen(true);
-    }
-  };
-
-  const onAddTask = () => {
+  const handleCreateTask = async (taskData: Partial<Tarefa>, deps: { predecessorId: string; type: string; lag: number }[]) => {
     if (!cronograma) return;
-    const now = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(now.getDate() + 7);
 
+    // First create the task
     createTarefa({
       cronograma_id: cronograma.id,
-      nome: newTaskName || "Nova Tarefa",
-      tipo: 'tarefa',
-      data_inicio_planejada: now.toISOString(),
-      data_fim_planejada: nextWeek.toISOString(),
-      percentual_concluido: 0,
-      status: 'nao_iniciado',
-      indice: tarefas.length + 1
+      ...taskData
     });
     
-    setNewTaskName("");
-    setIsCreateOpen(false);
+    // Note: Dependencies will be handled separately after task creation
+    // This is a simplified version - full dependency creation would need the task ID from the mutation result
+    toast.success("Tarefa criada com sucesso!");
   };
 
   if (isLoading) {
@@ -113,7 +90,7 @@ export default function PlanejamentoObra() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="border-r pr-4 mr-2">
-            <h1 className="font-semibold text-lg">{cronograma?.nome}</h1>
+            <h1 className="font-semibold text-lg">{cronograma?.nome || "Planejamento"}</h1>
           </div>
           
           <div className="flex items-center gap-1">
@@ -131,6 +108,36 @@ export default function PlanejamentoObra() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Zoom controls */}
+          <div className="flex items-center border rounded-md">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => {
+                const modes: ViewMode[] = ["day", "week", "month", "quarter"];
+                const idx = modes.indexOf(viewMode);
+                if (idx > 0) setViewMode(modes[idx - 1]);
+              }}
+              disabled={viewMode === "day"}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => {
+                const modes: ViewMode[] = ["day", "week", "month", "quarter"];
+                const idx = modes.indexOf(viewMode);
+                if (idx < modes.length - 1) setViewMode(modes[idx + 1]);
+              }}
+              disabled={viewMode === "quarter"}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+          </div>
+
           <Select 
             value={viewMode} 
             onValueChange={(v) => setViewMode(v as ViewMode)}
@@ -139,33 +146,25 @@ export default function PlanejamentoObra() {
               <SelectValue placeholder="Visualização" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ViewMode.Day}>Dia</SelectItem>
-              <SelectItem value={ViewMode.Week}>Semana</SelectItem>
-              <SelectItem value={ViewMode.Month}>Mês</SelectItem>
-              <SelectItem value={ViewMode.Year}>Ano</SelectItem>
+              <SelectItem value="day">Dia</SelectItem>
+              <SelectItem value="week">Semana</SelectItem>
+              <SelectItem value="month">Mês</SelectItem>
+              <SelectItem value="quarter">Trimestre</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Área Principal Full Screen */}
-      <div className="flex-1 overflow-hidden relative">
-        {ganttTasks.length > 0 ? (
-          <Gantt
-            tasks={ganttTasks}
+      {/* Área Principal Full Screen - Novo MSProjectGantt */}
+      <div className="flex-1 overflow-hidden">
+        {tarefas.length > 0 ? (
+          <MSProjectGantt
+            tasks={tarefas}
+            dependencies={dependencies}
             viewMode={viewMode}
-            onDateChange={handleTaskChange}
-            onDelete={(task) => {
-              if (confirm("Excluir esta tarefa?")) deleteTarefa(task.id);
-            }}
-            onProgressChange={handleProgressChange}
-            onDoubleClick={handleDblClick}
-            listCellWidth="155px" // Estreito para focar no gráfico
-            columnWidth={viewMode === ViewMode.Month ? 300 : 65}
-            locale="pt-BR"
-            barFill={70}
-            ganttHeight={800} // Altura fixa grande ou calc
-            // Customização visual das colunas seria aqui via props avançadas se necessário
+            onTaskClick={handleTaskClick}
+            onTaskDoubleClick={handleTaskDoubleClick}
+            onDateChange={handleDateChange}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -177,17 +176,18 @@ export default function PlanejamentoObra() {
         )}
       </div>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova Tarefa</DialogTitle></DialogHeader>
-          <div className="py-4">
-            <Label>Nome da Tarefa</Label>
-            <Input value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} className="mt-2" autoFocus />
-          </div>
-          <DialogFooter><Button onClick={onAddTask}>Adicionar</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog de criação completa */}
+      {cronograma && (
+        <TaskCreateDialog
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          cronogramaId={cronograma.id}
+          allTasks={tarefas}
+          onSave={handleCreateTask}
+        />
+      )}
       
+      {/* Dialog de edição */}
       <TaskEditDialog 
         open={isEditOpen} 
         onOpenChange={setIsEditOpen} 
