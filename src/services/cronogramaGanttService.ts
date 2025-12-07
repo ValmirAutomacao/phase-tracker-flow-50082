@@ -67,6 +67,24 @@ const mapStatusToString = (status: StatusAtividade | null): string => {
   return status;
 };
 
+// Helper para validar e formatar datas
+const safeDate = (dateValue: string | null | undefined): string => {
+  if (!dateValue) {
+    return new Date().toISOString().split('T')[0];
+  }
+  try {
+    const date = new Date(dateValue);
+    // Verifica se a data é válida
+    if (isNaN(date.getTime())) {
+      return new Date().toISOString().split('T')[0];
+    }
+    // Retorna no formato YYYY-MM-DD
+    return date.toISOString().split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+};
+
 export const cronogramaGanttService = {
   // Buscar tarefas (eap_itens) de um cronograma
   async getTarefas(cronogramaId: string): Promise<TarefaGantt[]> {
@@ -101,8 +119,8 @@ export const cronogramaGanttService = {
       nome: item.nome,
       descricao: item.descricao || undefined,
       tipo: mapTipoToGantt(item.tipo as TipoItemWBS, item.e_marco),
-      data_inicio_planejada: item.data_inicio_planejada || new Date().toISOString(),
-      data_fim_planejada: item.data_fim_planejada || new Date().toISOString(),
+      data_inicio_planejada: safeDate(item.data_inicio_planejada),
+      data_fim_planejada: safeDate(item.data_fim_planejada),
       duracao_dias: item.duracao_planejada || 1,
       percentual_concluido: item.percentual_conclusao || 0,
       status: mapStatusToString(item.status as StatusAtividade | null),
@@ -215,8 +233,8 @@ export const cronogramaGanttService = {
       nome: data.nome,
       descricao: data.descricao || undefined,
       tipo: mapTipoToGantt(data.tipo as TipoItemWBS, data.e_marco),
-      data_inicio_planejada: data.data_inicio_planejada || new Date().toISOString(),
-      data_fim_planejada: data.data_fim_planejada || new Date().toISOString(),
+      data_inicio_planejada: safeDate(data.data_inicio_planejada),
+      data_fim_planejada: safeDate(data.data_fim_planejada),
       duracao_dias: data.duracao_planejada || 1,
       percentual_concluido: data.percentual_conclusao || 0,
       status: mapStatusToString(data.status as StatusAtividade | null),
@@ -268,8 +286,8 @@ export const cronogramaGanttService = {
       nome: data.nome,
       descricao: data.descricao || undefined,
       tipo: mapTipoToGantt(data.tipo as TipoItemWBS, data.e_marco),
-      data_inicio_planejada: data.data_inicio_planejada || new Date().toISOString(),
-      data_fim_planejada: data.data_fim_planejada || new Date().toISOString(),
+      data_inicio_planejada: safeDate(data.data_inicio_planejada),
+      data_fim_planejada: safeDate(data.data_fim_planejada),
       duracao_dias: data.duracao_planejada || 1,
       percentual_concluido: data.percentual_conclusao || 0,
       status: mapStatusToString(data.status as StatusAtividade | null),
