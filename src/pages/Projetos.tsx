@@ -3,20 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import GanttTimeline from "@/components/GanttTimeline";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useNavigate } from "react-router-dom";
 import {
   FolderKanban,
   Calendar,
   Users,
   Clock,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from "lucide-react";
 
 const Projetos = () => {
-  const [selectedProject, setSelectedProject] = useState(null);
+  const navigate = useNavigate();
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
   // Buscar obras e funcionários do Supabase
   const { data: obras = [], isLoading } = useSupabaseQuery<any>('OBRAS');
@@ -31,39 +33,31 @@ const Projetos = () => {
   const calculateProjectProgress = (etapas: any) => {
     if (!etapas || etapas.length === 0) return 0;
     const totalWeight = etapas.length;
-    const completedWeight = etapas.filter(e => e.status === "completed" || e.progresso === 100).length;
+    const completedWeight = etapas.filter((e: any) => e.status === "completed" || e.progresso === 100).length;
     return Math.round((completedWeight / totalWeight) * 100);
   };
 
-  const calculateRemainingDays = (dataPrevisao) => {
+  const calculateRemainingDays = (dataPrevisao: string | null) => {
     if (!dataPrevisao) return "N/A";
     const hoje = new Date();
     const previsao = new Date(dataPrevisao);
-    const diffTime = (previsao as any) - (hoje as any);
+    const diffTime = previsao.getTime() - hoje.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? `${diffDays} dias` : "Atrasado";
   };
 
-  const getProjectStatus = (dataPrevisao, progresso) => {
+  const getProjectStatus = (dataPrevisao: string | null, progresso: number) => {
     if (progresso === 100) return "concluido";
     if (!dataPrevisao) return "em-dia";
 
     const hoje = new Date();
     const previsao = new Date(dataPrevisao);
-    const diffDays = Math.ceil(((previsao as any) - (hoje as any)) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((previsao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return "atraso";
     if (diffDays < 7) return "atencao";
     return "em-dia";
   };
-
-  const etapas = [
-    { nome: "Fundação", progresso: 100, status: "concluido", inicio: "01/12/2024", fim: "15/12/2024" },
-    { nome: "Estrutura", progresso: 85, status: "em-andamento", inicio: "16/12/2024", fim: "10/01/2025" },
-    { nome: "Alvenaria", progresso: 60, status: "em-andamento", inicio: "11/01/2025", fim: "05/02/2025" },
-    { nome: "Elétrica", progresso: 30, status: "em-andamento", inicio: "20/01/2025", fim: "15/02/2025" },
-    { nome: "Acabamento", progresso: 0, status: "pendente", inicio: "16/02/2025", fim: "10/03/2025" },
-  ];
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
@@ -84,6 +78,8 @@ const Projetos = () => {
     );
   };
 
+  const selectedObra = obras.find((o: any) => o.id === selectedProject);
+
   return (
     <PageContainer
       title="Módulo Projetos"
@@ -92,12 +88,12 @@ const Projetos = () => {
 
       {/* Projects Overview */}
       <div className="row g-3 g-sm-4">
-        {obras.map((obra) => {
+        {obras.map((obra: any) => {
           const progresso = obra.progresso || calculateProjectProgress(obra.etapas);
           const status = getProjectStatus(obra.dataPrevisao, progresso);
           const prazoRestante = calculateRemainingDays(obra.dataPrevisao);
           const etapasCount = obra.etapas ? obra.etapas.length : 0;
-          const etapasConcluidas = obra.etapas ? obra.etapas.filter(e => e.status === "completed" || e.progresso === 100).length : 0;
+          const etapasConcluidas = obra.etapas ? obra.etapas.filter((e: any) => e.status === "completed" || e.progresso === 100).length : 0;
 
           return (
             <div key={obra.id} className="col-12 col-md-6 col-lg-4">
@@ -159,15 +155,42 @@ const Projetos = () => {
         <TabsContent value="timeline" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Timeline do Projeto</CardTitle>
-              <CardDescription>
-                {selectedProject
-                  ? `Visualização Gantt da obra: ${obras.find(o => o.id === selectedProject)?.nome || 'Selecionada'}`
-                  : 'Selecione uma obra para visualizar o timeline'}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Timeline do Projeto</CardTitle>
+                  <CardDescription>
+                    {selectedProject
+                      ? `Visualização Gantt da obra: ${selectedObra?.nome || 'Selecionada'}`
+                      : 'Selecione uma obra para visualizar o timeline'}
+                  </CardDescription>
+                </div>
+                {selectedProject && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/obras/${selectedProject}/planejamento`)}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir Planejamento Completo
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <GanttTimeline obra={obras.find(o => o.id === selectedProject)} />
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Calendar className="h-16 w-16 mb-4 opacity-20" />
+                <h3 className="text-lg font-medium mb-2">Cronograma Gantt</h3>
+                <p className="text-sm text-center max-w-md mb-4">
+                  {selectedProject 
+                    ? "Clique no botão acima para acessar o cronograma completo com todas as funcionalidades de planejamento."
+                    : "Selecione uma obra acima para visualizar o cronograma."}
+                </p>
+                {selectedProject && (
+                  <Button onClick={() => navigate(`/obras/${selectedProject}/planejamento`)}>
+                    Ir para Planejamento
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -178,14 +201,14 @@ const Projetos = () => {
               <CardTitle>Etapas do Projeto</CardTitle>
               <CardDescription>
                 {selectedProject
-                  ? `Status detalhado das etapas da obra: ${obras.find(o => o.id === selectedProject)?.nome || 'Selecionada'}`
+                  ? `Status detalhado das etapas da obra: ${selectedObra?.nome || 'Selecionada'}`
                   : 'Selecione uma obra para visualizar as etapas'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {selectedProject && obras.find(o => o.id === selectedProject)?.etapas ?
-                  obras.find(o => o.id === selectedProject).etapas.map((etapa, index) => (
+                {selectedProject && selectedObra?.etapas ?
+                  selectedObra.etapas.map((etapa: any, index: number) => (
                     <div key={etapa.id || index} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -239,7 +262,7 @@ const Projetos = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {funcionarios.length > 0 ? funcionarios.slice(0, 6).map((funcionario, index) => (
+                {funcionarios.length > 0 ? funcionarios.slice(0, 6).map((funcionario: any, index: number) => (
                   <div key={funcionario.id || index} className="flex items-center gap-3 p-3 border rounded-lg">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Users className="h-5 w-5 text-primary" />

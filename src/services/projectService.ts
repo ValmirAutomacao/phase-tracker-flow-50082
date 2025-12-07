@@ -30,6 +30,15 @@ export interface Cronograma {
   data_base_inicial: string;
 }
 
+export interface Dependencia {
+  id: string;
+  cronograma_id: string;
+  tarefa_origem_id: string;
+  tarefa_destino_id: string;
+  tipo_vinculo: string; // FS, SS, FF, SF
+  lag_dias: number;
+}
+
 export interface RecursoTarefa {
   id: string;
   tarefa_id: string;
@@ -40,7 +49,6 @@ export interface RecursoTarefa {
   quantidade_planejada: number;
   custo_unitario: number;
   custo_total_planejado: number;
-  // Join fields
   funcionario?: {
     nome: string;
   };
@@ -50,7 +58,6 @@ export interface RecursoTarefa {
 export const projectService = {
   // Buscar ou criar cronograma padrão
   async getOrCreateCronograma(obraId: string): Promise<Cronograma> {
-    // 1. Tentar buscar cronograma ativo
     const { data: cronogramas, error } = await supabase
       .from('projeto_cronogramas')
       .select('*')
@@ -64,14 +71,13 @@ export const projectService = {
       return cronogramas[0];
     }
 
-    // 2. Se não existir, criar um padrão
     const { data: novoCronograma, error: createError } = await supabase
       .from('projeto_cronogramas')
       .insert({
         obra_id: obraId,
         nome: 'Cronograma Principal',
         ativo: true,
-        data_base_inicial: new Date().toISOString().split('T')[0] // Hoje
+        data_base_inicial: new Date().toISOString().split('T')[0]
       })
       .select()
       .single();
@@ -82,63 +88,98 @@ export const projectService = {
 
   // Listar todas as tarefas de um cronograma
   async getTarefas(cronogramaId: string): Promise<Tarefa[]> {
-    // Buscar tarefas e suas dependências
-    // Nota: Supabase JOINs podem ser complexos, vamos buscar tarefas primeiro
-    // e dependências em uma segunda query se necessário, ou usar select nested.
-    
     const { data: tarefas, error } = await supabase
       .from('projeto_tarefas')
-      .select(`
-        *,
-        dependencias:projeto_dependencias!tarefa_destino_id(tarefa_origem_id, tipo_vinculo, lag_dias)
-      `)
+      .select('*')
       .eq('cronograma_id', cronogramaId)
       .order('indice', { ascending: true });
 
     if (error) throw error;
-    
-    // Mapear para formato mais limpo
-    return tarefas.map((t: any) => ({
+
+    // Buscar dependências separadamente
+    const { data: deps } = await supabase
+      .from('projeto_dependencias')
+      .select('tarefa_destino_id, tarefa_origem_id')
+      .eq('cronograma_id', cronogramaId);
+
+    // Mapear dependências por tarefa destino
+    const depsMap = new Map<string, string[]>();
+    deps?.forEach((d) => {
+      if (!depsMap.has(d.tarefa_destino_id)) {
+        depsMap.set(d.tarefa_destino_id, []);
+      }
+      depsMap.get(d.tarefa_destino_id)!.push(d.tarefa_origem_id);
+    });
+
+    return (tarefas || []).map((t) => ({
       ...t,
-      dependencias: t.dependencias?.map((d: any) => d.tarefa_origem_id) || []
+      tipo: t.tipo as TipoTarefa,
+      dependencias: depsMap.get(t.id) || []
     }));
+  },
+
+  // Listar dependências de um cronograma
+  async getDependencias(cronogramaId: string): Promise<Dependencia[]> {
+    const { data, error } = await supabase
+      .from('projeto_dependencias')
+      .select('*')
+      .eq('cronograma_id', cronogramaId);
+
+    if (error) throw error;
+    return data || [];
   },
 
   // Criar nova tarefa
   async createTarefa(tarefa: Partial<Tarefa>): Promise<Tarefa> {
-    // Garantir campos obrigatórios
     if (!tarefa.cronograma_id || !tarefa.nome) {
       throw new Error('cronograma_id e nome são obrigatórios');
     }
-    
+
+    // Calcular duração em dias
+    let duracao_dias = 1;
+    if (tarefa.data_inicio_planejada && tarefa.data_fim_planejada) {
+      const start = new Date(tarefa.data_inicio_planejada);
+      const end = new Date(tarefa.data_fim_planejada);
+      duracao_dias = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    }
+
     const { data, error } = await supabase
       .from('projeto_tarefas')
       .insert({
         cronograma_id: tarefa.cronograma_id,
         nome: tarefa.nome,
         descricao: tarefa.descricao,
-        tipo: tarefa.tipo,
+        tipo: tarefa.tipo || 'tarefa',
         data_inicio_planejada: tarefa.data_inicio_planejada,
         data_fim_planejada: tarefa.data_fim_planejada,
-        duracao_dias: tarefa.duracao_dias,
-        percentual_concluido: tarefa.percentual_concluido,
-        status: tarefa.status,
+        duracao_dias,
+        percentual_concluido: tarefa.percentual_concluido || 0,
+        status: tarefa.status || 'nao_iniciado',
         ordem_wbs: tarefa.ordem_wbs,
-        indice: tarefa.indice,
-        nivel: tarefa.nivel,
+        indice: tarefa.indice || 1,
+        nivel: tarefa.nivel || 0,
         parent_id: tarefa.parent_id,
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data as unknown as Tarefa;
+    return { ...data, tipo: data.tipo as TipoTarefa } as Tarefa;
   },
 
   // Atualizar tarefa
   async updateTarefa(id: string, updates: Partial<Tarefa>): Promise<Tarefa> {
-    // Remover campos calculados ou não persistíveis se houver
     const { dependencias, ...validUpdates } = updates;
+
+    // Recalcular duração se datas mudaram
+    if (validUpdates.data_inicio_planejada && validUpdates.data_fim_planejada) {
+      const start = new Date(validUpdates.data_inicio_planejada);
+      const end = new Date(validUpdates.data_fim_planejada);
+      (validUpdates as Record<string, unknown>).duracao_dias = Math.max(
+        1,
+        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
 
     const { data, error } = await supabase
       .from('projeto_tarefas')
@@ -148,11 +189,17 @@ export const projectService = {
       .single();
 
     if (error) throw error;
-    return data as unknown as Tarefa;
+    return { ...data, tipo: data.tipo as TipoTarefa } as Tarefa;
   },
 
   // Excluir tarefa
   async deleteTarefa(id: string): Promise<void> {
+    // Primeiro excluir dependências relacionadas
+    await supabase
+      .from('projeto_dependencias')
+      .delete()
+      .or(`tarefa_origem_id.eq.${id},tarefa_destino_id.eq.${id}`);
+
     const { error } = await supabase
       .from('projeto_tarefas')
       .delete()
@@ -161,9 +208,60 @@ export const projectService = {
     if (error) throw error;
   },
 
+  // === DEPENDÊNCIAS ===
+
+  // Adicionar dependência
+  async addDependencia(
+    cronogramaId: string,
+    origemId: string,
+    destinoId: string,
+    tipo: string = 'FS',
+    lag: number = 0
+  ): Promise<Dependencia> {
+    const { data, error } = await supabase
+      .from('projeto_dependencias')
+      .insert({
+        cronograma_id: cronogramaId,
+        tarefa_origem_id: origemId,
+        tarefa_destino_id: destinoId,
+        tipo_vinculo: tipo,
+        lag_dias: lag,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Remover dependência
+  async removeDependencia(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('projeto_dependencias')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // Atualizar dependência
+  async updateDependencia(
+    id: string,
+    updates: { tipo_vinculo?: string; lag_dias?: number }
+  ): Promise<Dependencia> {
+    const { data, error } = await supabase
+      .from('projeto_dependencias')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   // === RECURSOS ===
 
-  // Listar recursos de uma tarefa
   async getRecursosTarefa(tarefaId: string): Promise<RecursoTarefa[]> {
     const { data, error } = await supabase
       .from('projeto_recursos')
@@ -174,31 +272,30 @@ export const projectService = {
       .eq('tarefa_id', tarefaId);
 
     if (error) throw error;
-    
-    // Mapear para simplificar acesso ao nome do funcionário
-    return data.map((r: any) => ({
+    return (data || []).map((r) => ({
       ...r,
       funcionario: r.funcionario
     }));
   },
 
-  // Adicionar recurso a uma tarefa
   async addRecursoTarefa(recurso: Partial<RecursoTarefa>): Promise<RecursoTarefa> {
     if (!recurso.tarefa_id) {
       throw new Error('tarefa_id é obrigatório');
     }
-    
+
+    const custoTotal = (recurso.quantidade_planejada || 0) * (recurso.custo_unitario || 0);
+
     const { data, error } = await supabase
       .from('projeto_recursos')
       .insert({
         tarefa_id: recurso.tarefa_id,
-        tipo_recurso: recurso.tipo_recurso,
+        tipo_recurso: recurso.tipo_recurso || 'humano',
         funcionario_id: recurso.funcionario_id,
         nome_recurso_externo: recurso.nome_recurso_externo,
-        unidade_medida: recurso.unidade_medida,
-        quantidade_planejada: recurso.quantidade_planejada,
-        custo_unitario: recurso.custo_unitario,
-        custo_total_planejado: recurso.custo_total_planejado,
+        unidade_medida: recurso.unidade_medida || 'horas',
+        quantidade_planejada: recurso.quantidade_planejada || 0,
+        custo_unitario: recurso.custo_unitario || 0,
+        custo_total_planejado: custoTotal,
       })
       .select(`
         *,
@@ -210,7 +307,6 @@ export const projectService = {
     return data as unknown as RecursoTarefa;
   },
 
-  // Remover recurso de uma tarefa
   async removeRecursoTarefa(id: string): Promise<void> {
     const { error } = await supabase
       .from('projeto_recursos')
@@ -219,37 +315,4 @@ export const projectService = {
 
     if (error) throw error;
   },
-
-  // Adicionar dependência
-  async addDependencia(origemId: string, destinoId: string, tipo = 'FS') {
-    const { error } = await supabase
-      .from('projeto_dependencias')
-      .insert({
-        tarefa_origem_id: origemId,
-        tarefa_destino_id: destinoId,
-        tipo_vinculo: tipo,
-        cronograma_id: (await this.getTarefaCronogramaId(origemId)) // Helper needed? 
-        // Simplificação: assumimos que o caller sabe o cronograma ou buscamos.
-        // Mas o SQL requer cronograma_id na tabela de dependencias? Sim.
-        // Vamos buscar o cronograma_id da tarefa origem.
-      });
-      
-    // Precisamos do cronograma_id. Para evitar round-trip, vamos assumir que
-    // o frontend passa ou a gente busca. Vou ajustar para receber cronograma_id opcional
-    // ou buscar. Por performance, melhor passar.
-    // ... Ajuste no hook para passar cronograma_id
-    
-    if (error) throw error;
-  },
-
-  // Helper interno
-  async getTarefaCronogramaId(tarefaId: string): Promise<string> {
-    const { data, error } = await supabase
-      .from('projeto_tarefas')
-      .select('cronograma_id')
-      .eq('id', tarefaId)
-      .single();
-    if (error || !data) throw new Error("Tarefa não encontrada");
-    return data.cronograma_id;
-  }
 };
