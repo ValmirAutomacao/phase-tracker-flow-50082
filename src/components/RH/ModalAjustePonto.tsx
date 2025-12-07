@@ -37,15 +37,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock, AlertTriangle, FileText, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { useSupabaseCRUD } from "@/hooks/useSupabaseMutation";
 import { TIPO_REGISTRO_LABELS, TipoRegistroPonto } from "@/types/ponto";
+import { toast } from "@/hooks/use-toast";
 
 const ajustePontoSchema = z.object({
-  tipo_registro_novo: z.enum(['PE', 'PS', 'INT_ENTRADA', 'INT_SAIDA', 'SE', 'SS', 'HE_INICIO', 'HE_FIM'], {
-    required_error: "Tipo de registro é obrigatório",
-  }),
+  tipo_registro_novo: z.string().min(1, "Tipo de registro é obrigatório"),
   hora_nova: z
     .string()
     .min(5, "Hora deve estar no formato HH:MM")
@@ -98,6 +96,7 @@ export function ModalAjustePonto({
   onSuccess
 }: ModalAjustePontoProps) {
   const [documentoObrigatorio, setDocumentoObrigatorio] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<AjustePontoFormData>({
     resolver: zodResolver(ajustePontoSchema),
@@ -115,7 +114,6 @@ export function ModalAjustePonto({
   const { data: justificativas = [] } = useQuery({
     queryKey: ['tipos-justificativas-ponto', 'ativo'],
     queryFn: async (): Promise<TipoJustificativa[]> => {
-      // Busca direta com ordenação customizada
       const { data, error } = await supabase
         .from('tipos_justificativas_ponto')
         .select('*')
@@ -129,11 +127,41 @@ export function ModalAjustePonto({
 
       return (data || []) as TipoJustificativa[];
     },
-    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    staleTime: 10 * 60 * 1000,
   });
 
-  // 🤖 CLAUDE-NOTE: Hook para criar ajuste usando MCP Supabase
-  const { add } = useSupabaseCRUD('ajustes_ponto');
+  // Mutation para criar ajuste
+  const addAjusteMutation = useMutation({
+    mutationFn: async (ajusteData: Record<string, unknown>) => {
+      const { data, error } = await supabase
+        .from('ajustes_ponto')
+        .insert([ajusteData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ajustes-ponto'] });
+      queryClient.invalidateQueries({ queryKey: ['registros-ponto'] });
+      onSuccess?.();
+      onOpenChange(false);
+      form.reset();
+      toast({
+        title: "Sucesso",
+        description: "Ajuste de ponto registrado com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error('Erro ao salvar ajuste:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar o ajuste.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // 🤖 CLAUDE-NOTE: Configurar formulário quando dados originais mudarem
   useEffect(() => {
@@ -156,7 +184,6 @@ export function ModalAjustePonto({
       const justificativa = justificativas.find(j => j.id === justificativaId);
       setDocumentoObrigatorio(justificativa?.obriga_documentacao || false);
 
-      // Limpar URL do documento se não for obrigatório
       if (!justificativa?.obriga_documentacao) {
         form.setValue("documento_url", "");
       }
@@ -166,7 +193,6 @@ export function ModalAjustePonto({
   const handleSubmit = async (data: AjustePontoFormData) => {
     if (!registroOriginal) return;
 
-    // 🤖 CLAUDE-NOTE: Validar se documentação é obrigatória
     if (documentoObrigatorio && !data.documento_url) {
       form.setError("documento_url", {
         message: "Documentação é obrigatória para esta justificativa"
@@ -174,7 +200,6 @@ export function ModalAjustePonto({
       return;
     }
 
-    // 🤖 CLAUDE-NOTE: Validar horário não futuro
     const dataHoraAjuste = new Date(`${data.data_nova}T${data.hora_nova}`);
     if (dataHoraAjuste > new Date()) {
       form.setError("hora_nova", {
@@ -186,37 +211,19 @@ export function ModalAjustePonto({
     const ajusteData = {
       registro_ponto_id: registroOriginal.registro_ponto_id || null,
       funcionario_id: registroOriginal.funcionario_id,
-
-      // Dados originais (preservar para auditoria)
       tipo_registro_original: registroOriginal.tipo_registro_original || null,
       hora_original: registroOriginal.hora_original || null,
       data_original: registroOriginal.data_registro,
-
-      // Dados do ajuste
       tipo_registro_novo: data.tipo_registro_novo,
       hora_nova: data.hora_nova,
       data_nova: data.data_nova,
-
-      // Justificativa
       justificativa_id: data.justificativa_id,
       justificativa_texto: data.justificativa_texto,
       documento_url: data.documento_url || null,
-
-      // Auditoria (será preenchido automaticamente pelo RLS)
-      ip_address: null, // TODO: Capturar IP real se necessário
       status: 'ativo'
     };
 
-    add.mutate(ajusteData, {
-      onSuccess: () => {
-        onSuccess?.();
-        onOpenChange(false);
-        form.reset();
-      },
-      onError: (error) => {
-        console.error('Erro ao salvar ajuste:', error);
-      }
-    });
+    addAjusteMutation.mutate(ajusteData);
   };
 
   const handleCancel = () => {
@@ -433,16 +440,16 @@ export function ModalAjustePonto({
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
-                disabled={add.isPending}
+                disabled={addAjusteMutation.isPending}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                disabled={add.isPending}
+                disabled={addAjusteMutation.isPending}
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                {add.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {addAjusteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirmar Ajuste
               </Button>
             </div>

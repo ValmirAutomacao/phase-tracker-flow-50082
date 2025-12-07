@@ -2,7 +2,7 @@
 
 export interface RelatorioBi {
   id: string;
-  usuario_id: string;
+  usuario_id?: string;
   nome: string;
   descricao?: string;
   setor: 'financeiro' | 'obras' | 'rh' | 'geral';
@@ -12,6 +12,7 @@ export interface RelatorioBi {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown; // Index signature for BaseEntity compatibility
 }
 
 export interface CampoSelecionado {
@@ -31,7 +32,7 @@ export interface FormatacaoCampo {
 }
 
 export interface FiltrosPadrao {
-  periodo_obrigatorio: true;
+  periodo_obrigatorio?: boolean;
   data_inicio?: string;
   data_fim?: string;
   cliente_id?: string;

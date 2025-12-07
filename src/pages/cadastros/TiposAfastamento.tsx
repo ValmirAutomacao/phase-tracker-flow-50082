@@ -16,7 +16,7 @@ import { DataTable, Column } from "@/components/ui/DataTable";
 import { TiposAfastamentoForm, TipoAfastamentoFormData } from "./TiposAfastamentoForm";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
-interface TipoAfastamento {
+interface TipoAfastamentoLocal {
   id: string;
   nome: string;
   descricao?: string;
@@ -28,6 +28,7 @@ interface TipoAfastamento {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 const CATEGORIA_LABELS = {
@@ -64,14 +65,14 @@ const CORES_PADRAO_AFASTAMENTO = {
 export default function TiposAfastamento() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [editingTipo, setEditingTipo] = useState<TipoAfastamento | null>(null);
+  const [editingTipo, setEditingTipo] = useState<TipoAfastamentoLocal | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // 🤖 CLAUDE-NOTE: Hooks Supabase - sem localStorage conforme diretrizes
-  const { data: tipos = [], isLoading, error } = useOptimizedSupabaseQuery<TipoAfastamento>('TIPOS_AFASTAMENTO_PONTO');
-  const { add, update, delete: deleteTipo } = useSupabaseCRUD<TipoAfastamento>('TIPOS_AFASTAMENTO_PONTO');
+  const { data: tipos = [], isLoading, error } = useOptimizedSupabaseQuery<TipoAfastamentoLocal>('TIPOS_AFASTAMENTO_PONTO');
+  const { add, update, delete: deleteTipo } = useSupabaseCRUD<TipoAfastamentoLocal>('TIPOS_AFASTAMENTO_PONTO');
 
-  const columns: Column<TipoAfastamento>[] = [
+  const columns: Column<TipoAfastamentoLocal>[] = [
     {
       key: 'nome',
       title: 'Nome',
@@ -240,7 +241,7 @@ export default function TiposAfastamento() {
     }
   };
 
-  const handleEdit = (tipo: TipoAfastamento) => {
+  const handleEdit = (tipo: TipoAfastamentoLocal) => {
     setEditingTipo(tipo);
     setOpen(true);
   };
@@ -308,7 +309,7 @@ export default function TiposAfastamento() {
             data={tipos}
             columns={columns}
             searchPlaceholder="Buscar tipos de afastamento..."
-            isLoading={isLoading}
+            loading={isLoading}
             emptyMessage="Nenhum tipo de afastamento encontrado"
           />
         </CardContent>

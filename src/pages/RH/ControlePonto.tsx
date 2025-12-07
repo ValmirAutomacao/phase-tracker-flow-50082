@@ -32,7 +32,8 @@ import {
   FuncionarioCompleto,
   JornadaTrabalho,
   AjustePonto,
-  Afastamento
+  Afastamento,
+  TipoRegistroPonto
 } from "@/types/ponto";
 import { ModalAjustePonto } from "@/components/RH/ModalAjustePonto";
 import { ModalAfastamento } from "@/components/RH/ModalAfastamento";
@@ -52,6 +53,7 @@ interface FiltrosPonto {
 
 // Extended interface to handle FALTA status locally
 interface PontoDiarioEstendido extends PontoDiario {
+  cpf?: string;
   status_pe?: 'ok' | 'falta' | 'atraso' | 'ajuste';
   status_ps?: 'ok' | 'falta' | 'antecipada' | 'ajuste';
   status_ie?: 'ok' | 'falta' | 'atraso' | 'ajuste';
@@ -95,7 +97,7 @@ export default function ControlePonto() {
     funcionario_id: string;
     funcionario_nome: string;
     data_registro: string;
-    tipo_registro_original?: string;
+    tipo_registro_original?: TipoRegistroPonto;
     hora_original?: string;
     registro_ponto_id?: string;
   } | null>(null);
@@ -326,7 +328,7 @@ export default function ControlePonto() {
         const pontoData: PontoDiarioEstendido = {
           funcionario_id: funcionario.id,
           funcionario_nome: funcionario.nome,
-          funcionario_cpf: funcionario.cpf,
+          cpf: funcionario.cpf,
           funcao_nome: funcionario.funcao?.nome || '',
           setor_nome: funcionario.funcao?.setor?.nome || '',
           jornada_nome: funcionario.jornada?.nome || '',
@@ -1053,7 +1055,7 @@ export default function ControlePonto() {
         isOpen={modalAfastamentoAberto}
         onOpenChange={setModalAfastamentoAberto}
         funcionarios={funcionarios}
-        onAfastamentoCriado={() => {
+        onSubmit={async () => {
           carregarRegistrosPonto();
           toast({
             title: "Sucesso",

@@ -169,33 +169,42 @@ export interface AjustePonto {
 export interface AjustePontoInsert {
   registro_ponto_id?: string;
   funcionario_id: string;
-  data_ajuste: string;
-  tipo_ajuste: TipoAjustePonto;
-  tipo_registro: TipoRegistroPonto;
+  tipo_registro_original?: string;
   hora_original?: string;
-  hora_ajustada: string;
-  justificativa: string;
+  data_original?: string;
+  tipo_registro_novo: string;
+  hora_nova: string;
+  data_nova: string;
+  justificativa_id?: string;
+  justificativa_texto: string;
+  documento_url?: string;
   usuario_ajuste_id: string;
   observacoes?: string;
 }
 
 // CLAUDE-NOTE: Tipos para sistema de afastamentos
-export type TipoAfastamento = 'atestado' | 'ferias' | 'licenca_maternidade' | 'licenca_paternidade' | 'licenca_sem_vencimento' | 'falta_justificada' | 'falta_injustificada' | 'suspensao' | 'outro';
+export type TipoAfastamentoEnum = 'atestado' | 'ferias' | 'licenca_maternidade' | 'licenca_paternidade' | 'licenca_sem_vencimento' | 'falta_justificada' | 'falta_injustificada' | 'suspensao' | 'outro';
 
 export interface Afastamento {
   id: string;
   funcionario_id: string;
   funcionario_nome: string;
-  tipo_afastamento: TipoAfastamento;
+  tipo_afastamento: TipoAfastamentoEnum | string;
+  tipo_afastamento_id?: string;
   data_inicio: string; // DATE format
   data_fim: string; // DATE format
   total_dias: number;
   motivo: string;
   observacoes?: string;
-  documento_anexo_url?: string; // Supabase Storage URL
+  documento_url?: string; // Supabase Storage URL
+  documento_anexo_url?: string;
   documento_anexo_nome?: string;
   usuario_cadastro_id: string;
   usuario_cadastro_nome: string;
+  status?: string;
+  solicitado_por?: { id: string; nome: string };
+  funcionario?: { id: string; nome: string; email?: string };
+  tipo_afastamento_obj?: { id: string; nome: string; cor?: string; categoria?: string };
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -203,15 +212,19 @@ export interface Afastamento {
 
 export interface AfastamentoInsert {
   funcionario_id: string;
-  tipo_afastamento: TipoAfastamento;
+  tipo_afastamento_id: string;
   data_inicio: string;
   data_fim: string;
   motivo: string;
   observacoes?: string;
+  documento_url?: string;
   documento_anexo_url?: string;
   documento_anexo_nome?: string;
   usuario_cadastro_id: string;
 }
+
+// Manter compatibilidade com tipo antigo
+export type TipoAfastamento = TipoAfastamentoEnum;
 
 export const TIPO_AJUSTE_LABELS: Record<TipoAjustePonto, string> = {
   'entrada': 'Ajuste de Entrada',
