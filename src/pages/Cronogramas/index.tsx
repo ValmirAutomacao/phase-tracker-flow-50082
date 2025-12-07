@@ -329,7 +329,7 @@ export default function CronogramasPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigate(`/obras/${cron.obra_id}/planejamento`)}
+                              onClick={() => navigate(`/cronogramas/${cron.id}/gantt`)}
                               title="Abrir Gantt"
                             >
                               <Eye className="h-4 w-4" />
