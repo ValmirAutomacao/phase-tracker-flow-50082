@@ -274,6 +274,7 @@ export const projectService = {
     if (error) throw error;
     return (data || []).map((r) => ({
       ...r,
+      tipo_recurso: r.tipo_recurso as TipoRecursoType,
       funcionario: r.funcionario
     }));
   },
